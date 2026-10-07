@@ -102,6 +102,7 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.players[0].hand.length).toBe(1);
       expect(nextState.players[0].hand[0].id).toBe('c4');
       expect(nextState.melds.A.length).toBe(1);
+      expect(nextState.melds.A[0].id).toBe('meld-A-1');
       expect(nextState.melds.A[0].cards.map((c) => c.id)).toEqual(['c1', 'c2', 'c3']);
     });
 
@@ -246,6 +247,8 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.players[0].hand.length).toBe(0);
       expect(nextState.roundStatus).toBe('ROUND_OVER');
       expect(nextState.isRoundOver).toBe(true);
+      expect(nextState.totalScores).toBeDefined();
+      expect(nextState.totalScores).toEqual(nextState.scores);
     });
   });
 
@@ -311,6 +314,8 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.players[0].hand.length).toBe(0);
       expect(nextState.roundStatus).toBe('ROUND_OVER');
       expect(nextState.isRoundOver).toBe(true);
+      expect(nextState.totalScores).toBeDefined();
+      expect(nextState.totalScores).toEqual(nextState.scores);
     });
 
     it('rejects discarding card not present in player hand', () => {
@@ -430,6 +435,17 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.melds.B).toEqual([]);
       expect(nextState.players.every((p) => p.hand.length === 13)).toBe(true);
       expect(nextState.pukarPool.length).toBe(2);
+    });
+
+    it('rejects START_NEXT_ROUND when round is still in progress', () => {
+      const state = dealInitialState(4);
+      expect(state.roundStatus).toBe('PLAYING');
+      expect(state.isRoundOver).toBeFalsy();
+
+      const { state: nextState, error } = pukarReducer(state, { type: 'START_NEXT_ROUND' });
+      expect(error).toBeDefined();
+      expect(error).toContain('current round is not over');
+      expect(nextState).toBe(state);
     });
 
     it('RESET_GAME resets match scores to 0 and deals fresh game', () => {

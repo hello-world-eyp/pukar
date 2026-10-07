@@ -220,7 +220,7 @@ function handlePlayNewMeld(
   const remainingHand = activePlayer.hand.filter((c) => !cardIdSet.has(c.id));
 
   const team = activePlayer.team;
-  const meldId = `meld-${team}-${Date.now()}-${state.melds[team].length + 1}`;
+  const meldId = `meld-${team}-${state.melds[team].length + 1}`;
   const scoreInfo = evaluateMeldScore({
     id: meldId,
     team,
@@ -380,6 +380,7 @@ function handlePostMeldState(
       ...nextState,
       roundScores: finalScores.roundScores,
       scores: finalScores.totalScores,
+      totalScores: finalScores.totalScores,
     };
   }
 
@@ -489,6 +490,7 @@ function handleDiscardCard(
       ...nextState,
       roundScores: finalScores.roundScores,
       scores: finalScores.totalScores,
+      totalScores: finalScores.totalScores,
     };
   }
 
@@ -499,6 +501,13 @@ function handleStartNextRound(state: GameState): {
   state: GameState;
   error?: string;
 } {
+  if (!state.isRoundOver && state.roundStatus !== 'ROUND_OVER') {
+    return {
+      state,
+      error: 'Cannot start next round: current round is not over',
+    };
+  }
+
   const preservedScores = { ...state.scores };
   const freshState = dealInitialState(state.playerCount);
 
