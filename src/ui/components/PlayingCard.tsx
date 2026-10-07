@@ -81,7 +81,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   // Size specific styles
   const sizeStyles = {
     sm: {
-      card: 'w-12 h-18 text-[11px] rounded-md shadow-xs',
+      card: 'w-12 h-[72px] text-[11px] rounded-md shadow-sm',
       cornerRank: 'text-[11px]',
       cornerSuit: 'text-[10px]',
       centerSuit: 'text-base',
