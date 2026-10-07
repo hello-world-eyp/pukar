@@ -78,6 +78,12 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const suitSymbol = getSuitSymbol(card.suit);
   const isRed = isRedSuit(card.suit);
 
+  const imageSrc = isJoker
+    ? '/cards/joker.svg'
+    : card.suit
+    ? `/cards/${card.suit.toLowerCase()}_${rankStr}.svg`
+    : null;
+
   // Size specific styles
   const sizeStyles = {
     sm: {
@@ -172,17 +178,30 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           : ''
       } ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
     >
+      {/* Card Illustration Asset */}
+      {imageSrc && (
+        <img
+          src={imageSrc}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover rounded-[inherit] pointer-events-none select-none z-0"
+          onError={(e) => {
+            (e.currentTarget as HTMLElement).style.display = 'none';
+          }}
+        />
+      )}
+
       {/* Wildcard Badge */}
       {wildBadgeText && (
         <span
-          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-xs whitespace-nowrap z-10 ${sizeStyles.badge}`}
+          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-xs whitespace-nowrap z-20 ${sizeStyles.badge}`}
         >
           {wildBadgeText}
         </span>
       )}
 
       {/* Top-Left Corner Index */}
-      <div className={`flex flex-col items-center leading-none ${colorClass}`}>
+      <div className={`relative z-10 flex flex-col items-center leading-none ${colorClass}`}>
         <span className={sizeStyles.cornerRank}>{rankStr}</span>
         <span className={sizeStyles.cornerSuit}>{suitSymbol}</span>
       </div>
