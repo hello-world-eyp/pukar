@@ -6,7 +6,7 @@ import {
   RoundStatus,
   TurnPhase,
 } from './types';
-import { dealInitialState } from './deck';
+import { dealInitialState, shuffleDeck } from './deck';
 import {
   validateNewMeld,
   canAddCardsToMeld,
@@ -36,8 +36,9 @@ function calculateRoundEndScores(state: GameState): {
   const roundScoreA = meldPointsA + pukarsA * 50;
   const roundScoreB = meldPointsB + pukarsB * 50;
 
-  const baseTotalA = state.totalScores?.A ?? 0;
-  const baseTotalB = state.totalScores?.B ?? 0;
+  // Base total from prior rounds (subtracting any mid-round Pukars already added to totalScores during this round)
+  const baseTotalA = state.totalScores ? state.totalScores.A - pukarsA * 50 : 0;
+  const baseTotalB = state.totalScores ? state.totalScores.B - pukarsB * 50 : 0;
 
   return {
     roundScores: { A: roundScoreA, B: roundScoreB },
@@ -120,8 +121,8 @@ function handleDrawFromStock(state: GameState): {
   // Stock deck exhaustion handling
   if (remainingStock.length === 0) {
     if (pukarPool.length >= 1) {
-      // Pop 1 Pukar to become new Stock deck
-      remainingStock = [...pukarPool[0]];
+      // Pop 1 Pukar to become new Stock deck (shuffled per Spec Section 3.5)
+      remainingStock = shuffleDeck(pukarPool[0]);
       pukarPool = pukarPool.slice(1);
     } else {
       // Deck exhausted with 0 Pukars: trigger final turn flag
@@ -220,7 +221,7 @@ function handlePlayNewMeld(
   const remainingHand = activePlayer.hand.filter((c) => !cardIdSet.has(c.id));
 
   const team = activePlayer.team;
-  const meldId = `meld-${team}-${state.melds[team].length + 1}`;
+  const meldId = `meld-r${state.round}-${team}-${(state.melds[team]?.length || 0) + 1}`;
   const scoreInfo = evaluateMeldScore({
     id: meldId,
     team,
@@ -326,6 +327,7 @@ function handlePostMeldState(
     A: state.roundScores?.A ?? 0,
     B: state.roundScores?.B ?? 0,
   };
+  let totalScores = state.totalScores ? { ...state.totalScores } : undefined;
   let pukarsClaimed = {
     A: state.pukarsClaimed?.A ?? 0,
     B: state.pukarsClaimed?.B ?? 0,
@@ -345,6 +347,9 @@ function handlePostMeldState(
 
       scores[team] += 50;
       roundScores[team] += 50;
+      if (totalScores) {
+        totalScores[team] += 50;
+      }
       pukarsClaimed[team] += 1;
     } else {
       // Hand emptied with 0 Pukars remaining: Player went out!
@@ -369,6 +374,7 @@ function handlePostMeldState(
     pukars: pukarPool,
     scores,
     roundScores,
+    ...(totalScores ? { totalScores } : {}),
     pukarsClaimed,
     roundStatus,
     isRoundOver,
@@ -413,6 +419,7 @@ function handleDiscardCard(
     A: state.roundScores?.A ?? 0,
     B: state.roundScores?.B ?? 0,
   };
+  let totalScores = state.totalScores ? { ...state.totalScores } : undefined;
   let pukarsClaimed = {
     A: state.pukarsClaimed?.A ?? 0,
     B: state.pukarsClaimed?.B ?? 0,
@@ -431,6 +438,9 @@ function handleDiscardCard(
 
       scores[team] += 50;
       roundScores[team] += 50;
+      if (totalScores) {
+        totalScores[team] += 50;
+      }
       pukarsClaimed[team] += 1;
     } else {
       // Hand emptied with 0 Pukars remaining: Player went out!
@@ -475,6 +485,7 @@ function handleDiscardCard(
     pukars: pukarPool,
     scores,
     roundScores,
+    ...(totalScores ? { totalScores } : {}),
     pukarsClaimed,
     currentPlayerIndex: nextPlayerIndex,
     phase: nextPhase,

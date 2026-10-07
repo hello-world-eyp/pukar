@@ -6,7 +6,9 @@ import { Eye, EyeOff, Wrench, Layers, ChevronDown, ChevronUp } from 'lucide-reac
 export interface DevInspectorProps {
   players: Array<Player | SanitizedPlayer>;
   currentPlayerIndex: number;
+  activeTurnIndex?: number;
   onSwitchPlayer: (playerIndex: number) => void;
+  onForceTurn?: (playerIndex: number) => void;
   pukarPoolCount?: number;
   pukarPool?: Card[][];
   stockDeckCount?: number;
@@ -19,7 +21,9 @@ export interface DevInspectorProps {
 export const DevInspector: React.FC<DevInspectorProps> = ({
   players,
   currentPlayerIndex,
+  activeTurnIndex,
   onSwitchPlayer,
+  onForceTurn,
   pukarPoolCount,
   pukarPool,
   stockDeckCount,
@@ -61,49 +65,79 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
           </div>
         </div>
 
-        {/* HOT-SEAT PLAYER SWITCHER TABS */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" role="tablist" aria-label="Player Tabs">
-          {players.map((player, index) => {
-            const isActive = index === currentPlayerIndex;
-            const isTeamA = player.team === 'A';
-            const cardCount = 'hand' in player && player.hand ? player.hand.length : ('cardCount' in player ? player.cardCount : 0);
+        {/* HOT-SEAT PLAYER SWITCHER TABS & FORCE TURN BUTTON */}
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" role="tablist" aria-label="Player Tabs">
+            {players.map((player, index) => {
+              const isActive = index === currentPlayerIndex;
+              const isTurn = index === (activeTurnIndex ?? currentPlayerIndex);
+              const isTeamA = player.team === 'A';
+              const cardCount = 'hand' in player && player.hand ? player.hand.length : ('cardCount' in player ? player.cardCount : 0);
 
-            return (
-              <button
-                key={player.id || `p-${index}`}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                data-testid={`switcher-p${index + 1}`}
-                onClick={() => onSwitchPlayer(index)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shrink-0 ${
-                  isActive
-                    ? isTeamA
-                      ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50 ring-2 ring-blue-400/50 scale-105'
-                      : 'bg-amber-500 text-slate-950 border-amber-300 shadow-lg shadow-amber-900/50 ring-2 ring-amber-400/50 scale-105'
-                    : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <span>{player.name || `P${index + 1}`}</span>
-                <span
-                  className={`text-[10px] px-1 py-0.5 rounded uppercase ${
+              return (
+                <button
+                  key={player.id || `p-${index}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  data-testid={`switcher-p${index + 1}`}
+                  onClick={() => onSwitchPlayer(index)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shrink-0 ${
                     isActive
                       ? isTeamA
-                        ? 'bg-blue-800 text-blue-100'
-                        : 'bg-amber-700 text-amber-100'
-                      : isTeamA
-                      ? 'bg-blue-950 text-blue-400 border border-blue-800'
-                      : 'bg-amber-950 text-amber-400 border border-amber-800'
+                        ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50 ring-2 ring-blue-400/50 scale-105'
+                        : 'bg-amber-500 text-slate-950 border-amber-300 shadow-lg shadow-amber-900/50 ring-2 ring-amber-400/50 scale-105'
+                      : 'bg-slate-900/80 hover:bg-slate-800 border-slate-700/80 text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {`T${player.team}`}
-                </span>
-                <span className="text-[10px] opacity-75 font-normal">
-                  {`(${cardCount}c)`}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{player.name || `P${index + 1}`}</span>
+                  <span
+                    className={`text-[10px] px-1 py-0.5 rounded uppercase ${
+                      isActive
+                        ? isTeamA
+                          ? 'bg-blue-800 text-blue-100'
+                          : 'bg-amber-700 text-amber-100'
+                        : isTeamA
+                        ? 'bg-blue-950 text-blue-400 border border-blue-800'
+                        : 'bg-amber-950 text-amber-400 border border-amber-800'
+                    }`}
+                  >
+                    {`T${player.team}`}
+                  </span>
+                  {isTurn && (
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/30 text-emerald-300 font-extrabold uppercase">
+                      Turn
+                    </span>
+                  )}
+                  <span className="text-[10px] opacity-75 font-normal">
+                    {`(${cardCount}c)`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* FORCE TURN TO THIS PLAYER TOGGLE BUTTON */}
+          {onForceTurn && (
+            <button
+              type="button"
+              data-testid="btn-force-turn"
+              onClick={() => onForceTurn(currentPlayerIndex)}
+              disabled={activeTurnIndex !== undefined && currentPlayerIndex === activeTurnIndex}
+              title={
+                activeTurnIndex !== undefined && currentPlayerIndex === activeTurnIndex
+                  ? `Already ${players[currentPlayerIndex]?.name || `Player ${currentPlayerIndex + 1}`}'s active turn`
+                  : `Force game turn to ${players[currentPlayerIndex]?.name || `Player ${currentPlayerIndex + 1}`}`
+              }
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shrink-0 ${
+                activeTurnIndex !== undefined && currentPlayerIndex === activeTurnIndex
+                  ? 'bg-slate-900/50 border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400 shadow-md shadow-amber-900/40 ring-1 ring-amber-400'
+              }`}
+            >
+              <span>Force Turn To This Player</span>
+            </button>
+          )}
         </div>
 
         {/* GOD MODE TOGGLE BUTTON */}
@@ -185,6 +219,16 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
                         <span className="text-[9px] font-semibold text-emerald-400 bg-emerald-950/80 border border-emerald-600/40 px-1 rounded">
                           Current Turn
                         </span>
+                      )}
+                      {onForceTurn && pIdx !== (activeTurnIndex ?? currentPlayerIndex) && (
+                        <button
+                          type="button"
+                          data-testid={`btn-force-turn-p${pIdx + 1}`}
+                          onClick={() => onForceTurn(pIdx)}
+                          className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-slate-950 border border-amber-500/40 transition-colors"
+                        >
+                          Force Turn
+                        </button>
                       )}
                     </div>
                     <span className="text-[11px] text-slate-400 font-medium">

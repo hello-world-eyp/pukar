@@ -56,6 +56,7 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(html).toContain('data-testid="switcher-p2"');
       expect(html).toContain('data-testid="switcher-p3"');
       expect(html).toContain('data-testid="switcher-p4"');
+      expect(html).toContain('data-testid="btn-force-turn"');
       expect(html).toContain('data-testid="btn-toggle-godmode"');
     });
 

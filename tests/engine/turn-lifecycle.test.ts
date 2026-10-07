@@ -102,7 +102,7 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.players[0].hand.length).toBe(1);
       expect(nextState.players[0].hand[0].id).toBe('c4');
       expect(nextState.melds.A.length).toBe(1);
-      expect(nextState.melds.A[0].id).toBe('meld-A-1');
+      expect(nextState.melds.A[0].id).toBe('meld-r1-A-1');
       expect(nextState.melds.A[0].cards.map((c) => c.id)).toEqual(['c1', 'c2', 'c3']);
     });
 
@@ -359,7 +359,7 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.players[0].hand.some((c) => c.id === 'last-stock')).toBe(true);
       expect(nextState.pukarPool.length).toBe(initialPukarCount - 1);
       expect(nextState.stockDeck.length).toBe(13);
-      expect(nextState.stockDeck.map((c) => c.id)).toEqual(pukarDeck.map((c) => c.id));
+      expect([...nextState.stockDeck.map((c) => c.id)].sort()).toEqual([...pukarDeck.map((c) => c.id)].sort());
     });
 
     it('stock deck exhaust with 0 Pukars triggers final turn for next player, then concludes round', () => {
@@ -461,6 +461,72 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.roundStatus).toBe('PLAYING');
       expect(nextState.phase).toBe('DRAW');
       expect(nextState.players.every((p) => p.hand.length === 13)).toBe(true);
+    });
+
+    it('syncs totalScores (+50) immediately on mid-round Pukar claim during Round 2 and avoids double-counting at round end', () => {
+      const state = dealInitialState(4);
+      state.round = 2;
+      state.scores = { A: 120, B: 85 };
+      state.totalScores = { A: 120, B: 85 };
+      state.roundScores = { A: 0, B: 0 };
+      state.phase = 'MELD';
+      state.currentPlayerIndex = 0; // Team A
+      const lastCard = createCard('last', 'HEARTS', 4);
+      state.players[0].hand = [lastCard];
+
+      // Discard last card while Pukars remain (claims Pukar)
+      const { state: step1, error: err1 } = pukarReducer(state, {
+        type: 'DISCARD_CARD',
+        cardId: 'last',
+      });
+
+      expect(err1).toBeUndefined();
+      // Live scores and totalScores reflect +50 immediately during Round 2 play
+      expect(step1.scores.A).toBe(170);
+      expect(step1.totalScores?.A).toBe(170);
+      expect(step1.roundScores?.A).toBe(50);
+      expect(step1.pukarsClaimed?.A).toBe(1);
+
+      // Now conclude the round by going out (0 Pukars left)
+      step1.pukarPool = [];
+      if (step1.pukars) step1.pukars = [];
+      step1.phase = 'MELD';
+      step1.currentPlayerIndex = 0;
+      const endCard = createCard('end-card', 'DIAMONDS', 7);
+      step1.players[0].hand = [endCard];
+
+      const { state: step2, error: err2 } = pukarReducer(step1, {
+        type: 'DISCARD_CARD',
+        cardId: 'end-card',
+      });
+
+      expect(err2).toBeUndefined();
+      expect(step2.roundStatus).toBe('ROUND_OVER');
+      // Round 2 score is 50 (from 1 pukar). Total match score is 120 (R1) + 50 (R2) = 170 (no double count!)
+      expect(step2.roundScores?.A).toBe(50);
+      expect(step2.totalScores?.A).toBe(170);
+      expect(step2.scores.A).toBe(170);
+    });
+
+    it('scopes meld IDs with round prefix meld-r{round}-{team}-{index}', () => {
+      const state = dealInitialState(4);
+      state.round = 3;
+      state.phase = 'MELD';
+      state.currentPlayerIndex = 0; // Team A
+      state.players[0].hand = [
+        createCard('c1', 'SPADES', 7),
+        createCard('c2', 'SPADES', 8),
+        createCard('c3', 'SPADES', 9),
+        createCard('other', 'CLUBS', 4),
+      ];
+
+      const { state: nextState, error } = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['c1', 'c2', 'c3'],
+      });
+
+      expect(error).toBeUndefined();
+      expect(nextState.melds.A[0].id).toBe('meld-r3-A-1');
     });
   });
 

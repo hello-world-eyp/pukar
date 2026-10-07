@@ -37,7 +37,12 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   const resolvedPhase: TurnPhase = phase ?? gameState?.phase ?? 'DRAW';
 
   const resolvedRoundScores = roundScores ?? gameState?.roundScores ?? { A: 0, B: 0 };
-  const resolvedTotalScores = totalScores ?? gameState?.totalScores ?? scores ?? gameState?.scores ?? { A: 0, B: 0 };
+  const rawTotalScores = totalScores ?? gameState?.totalScores;
+  const rawScores = scores ?? gameState?.scores;
+  const resolvedTotalScores = {
+    A: Math.max(rawTotalScores?.A ?? 0, rawScores?.A ?? 0),
+    B: Math.max(rawTotalScores?.B ?? 0, rawScores?.B ?? 0),
+  };
   const resolvedPukarsClaimed = pukarsClaimed ?? gameState?.pukarsClaimed ?? { A: 0, B: 0 };
 
   const resolvedPlayerIndex = currentPlayerIndex ?? gameState?.currentPlayerIndex ?? 0;

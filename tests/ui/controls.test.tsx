@@ -101,6 +101,23 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
 
       expect(html).toContain('Round Finished');
     });
+
+    it('reliably displays match total with mid-round bonuses when scores exceeds initial totalScores', () => {
+      const html = renderToString(
+        <ScoreBoard
+          round={2}
+          roundStatus="PLAYING"
+          totalScores={{ A: 120, B: 85 }}
+          scores={{ A: 170, B: 85 }}
+          roundScores={{ A: 50, B: 0 }}
+        />
+      );
+
+      // Should display 170 for Team A reflecting live +50 mid-round pukar
+      expect(html).toContain('170');
+      expect(html).toContain('(+50)');
+      expect(html).toContain('85');
+    });
   });
 
   /* ========================================================================
@@ -433,6 +450,22 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
       expect(html).toContain('7 of SPADES');
       expect(html).toContain('8 of SPADES');
       expect(html).toContain('9 of HEARTS');
+    });
+
+    it('renders Force Turn button when onForceTurn is provided and differentiates active turn from viewed player', () => {
+      const html = renderToString(
+        <DevInspector
+          players={mockPlayers}
+          currentPlayerIndex={1}
+          activeTurnIndex={0}
+          onSwitchPlayer={() => {}}
+          onForceTurn={() => {}}
+        />
+      );
+
+      expect(html).toContain('data-testid="btn-force-turn"');
+      expect(html).toContain('Force Turn To This Player');
+      expect(html).toContain('Turn');
     });
   });
 

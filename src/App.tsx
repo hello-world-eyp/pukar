@@ -205,7 +205,14 @@ export function App() {
   // ---------------------------------------------------------------------------
   const handleSwitchPlayer = useCallback((targetIndex: number) => {
     // When switching player in hot-seat mode, update viewed player
-    // AND sync currentPlayerIndex so user can directly inspect and play for that player
+    // without mutating gameState.currentPlayerIndex
+    setViewedPlayerIndex(targetIndex);
+    setSelectedCardIds([]);
+    setSelectedMeldId(null);
+  }, []);
+
+  const handleForceTurn = useCallback((targetIndex: number) => {
+    // Explicit dev override: force game turn to the target player
     setViewedPlayerIndex(targetIndex);
     setGameState((prev) => ({
       ...prev,
@@ -484,7 +491,7 @@ export function App() {
           <ActionControls
             phase={gameState.phase}
             selectedCardIds={selectedCardIds}
-            allHandCards={activePlayer.hand}
+            allHandCards={viewingPlayer.hand}
             selectedMeld={selectedMeld}
             canDrawStock={
               gameState.phase === 'DRAW' &&
@@ -528,7 +535,9 @@ export function App() {
           <DevInspector
             players={gameState.players}
             currentPlayerIndex={currentViewIndex}
+            activeTurnIndex={activeTurnIndex}
             onSwitchPlayer={handleSwitchPlayer}
+            onForceTurn={handleForceTurn}
             stockDeckCount={gameState.stockDeck.length}
             discardPileCount={gameState.discardPile.length}
             pukarPoolCount={gameState.pukarPool.length}
