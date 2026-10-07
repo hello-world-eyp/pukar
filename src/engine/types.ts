@@ -68,6 +68,7 @@ export interface GameState {
   players: Player[];
   currentPlayerIndex: number;
   phase: TurnPhase;
+  turnPhase?: TurnPhase;
   stockDeck: Card[];
   discardPile: Card[];
   pukarPool: Card[][]; // array of 13-card Pukar decks
@@ -80,14 +81,29 @@ export interface GameState {
     A: number;
     B: number;
   };
+  roundScores?: {
+    A: number;
+    B: number;
+  };
+  totalScores?: {
+    A: number;
+    B: number;
+  };
+  pukarsClaimed?: {
+    A: number;
+    B: number;
+  };
   round: number;
   roundStatus: RoundStatus;
+  isRoundOver?: boolean;
   finalTurnPlayerIndex?: number | null;
+  lastTurnTriggeredByDeckExhaust?: boolean;
 }
 
 export type GameAction =
   | { type: 'DRAW_FROM_STOCK' }
   | { type: 'TAKE_DISCARD' }
+  | { type: 'DRAW_CARD'; source?: 'DECK' | 'STOCK' | 'BOTTOM' | 'DISCARD' }
   | { type: 'PLAY_NEW_MELD'; cardIds: string[] }
   | { type: 'ADD_TO_MELD'; meldId: string; cardIds: string[] }
   | { type: 'DISCARD_CARD'; cardId: string }
@@ -112,6 +128,7 @@ export interface SanitizedGameState {
   players: SanitizedPlayer[];
   currentPlayerIndex: number;
   phase: TurnPhase;
+  turnPhase?: TurnPhase;
   stockDeckCount: number;
   discardPile: Card[];
   pukarPoolCount: number;
@@ -123,8 +140,21 @@ export interface SanitizedGameState {
     A: number;
     B: number;
   };
+  roundScores?: {
+    A: number;
+    B: number;
+  };
+  totalScores?: {
+    A: number;
+    B: number;
+  };
+  pukarsClaimed?: {
+    A: number;
+    B: number;
+  };
   round: number;
   roundStatus: RoundStatus;
+  isRoundOver?: boolean;
 }
 
 /**
