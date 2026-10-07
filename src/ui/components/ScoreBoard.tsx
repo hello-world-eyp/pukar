@@ -71,12 +71,12 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
                 <span className="font-semibold text-slate-200">{`Round ${resolvedRound}`}</span>
                 <span className="text-slate-600">•</span>
                 {resolvedStatus === 'FINAL_TURN' ? (
-                  <span className="inline-flex items-center gap-1 text-amber-400 font-bold bg-amber-950/60 border border-amber-600/40 px-1.5 py-0.2 rounded text-[11px] animate-pulse">
+                  <span className="inline-flex items-center gap-1 text-amber-400 font-bold bg-amber-950/60 border border-amber-600/40 px-1.5 py-0.5 rounded text-[11px] animate-pulse">
                     <AlertTriangle className="w-3 h-3" />
                     Final Turn!
                   </span>
                 ) : resolvedStatus === 'ROUND_OVER' || resolvedStatus === 'GAME_OVER' ? (
-                  <span className="text-red-400 font-semibold text-[11px] bg-red-950/50 border border-red-700/40 px-1.5 py-0.2 rounded">
+                  <span className="text-red-400 font-semibold text-[11px] bg-red-950/50 border border-red-700/40 px-1.5 py-0.5 rounded">
                     Round Finished
                   </span>
                 ) : (
@@ -185,7 +185,7 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
             <div className="text-sm font-bold text-slate-100 flex items-center justify-end gap-1.5">
               <span>{resolvedPlayerName}</span>
               <span
-                className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded ${
+                className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
                   resolvedActiveTeam === 'A'
                     ? 'bg-blue-600 text-white'
                     : 'bg-amber-500 text-slate-950'

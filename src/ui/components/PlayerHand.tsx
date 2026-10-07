@@ -127,7 +127,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 <span className="font-bold text-slate-100 text-sm">{playerName}</span>
                 {playerTeam && (
                   <span
-                    className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded uppercase ${
+                    className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase ${
                       playerTeam === 'A'
                         ? 'bg-blue-600/80 text-white'
                         : 'bg-amber-500/80 text-slate-950'
@@ -137,7 +137,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   </span>
                 )}
                 {isCurrentPlayer && (
-                  <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-700/40 px-1.5 py-0.2 rounded">
+                  <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-700/40 px-1.5 py-0.5 rounded">
                     Active Turn
                   </span>
                 )}

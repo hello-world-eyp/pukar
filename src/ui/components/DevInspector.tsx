@@ -86,7 +86,7 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
               >
                 <span>{player.name || `P${index + 1}`}</span>
                 <span
-                  className={`text-[10px] px-1 py-0.2 rounded uppercase ${
+                  className={`text-[10px] px-1 py-0.5 rounded uppercase ${
                     isActive
                       ? isTeamA
                         ? 'bg-blue-800 text-blue-100'
@@ -175,7 +175,7 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
                         {player.name || `Player ${pIdx + 1}`}
                       </span>
                       <span
-                        className={`text-[9px] font-bold px-1 py-0.2 rounded uppercase ${
+                        className={`text-[9px] font-bold px-1 py-0.5 rounded uppercase ${
                           isTeamA ? 'bg-blue-600 text-white' : 'bg-amber-500 text-slate-950'
                         }`}
                       >
