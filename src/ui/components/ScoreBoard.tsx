@@ -98,7 +98,7 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   return (
     <header
       data-testid="scoreboard"
-      className={`w-full bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 px-3 sm:px-6 py-2.5 shadow-md transition-all ${className}`}
+      className={`relative w-full bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/80 text-slate-100 px-3 sm:px-6 py-2.5 sm:py-3 shadow-2xl shadow-black/80 z-30 transition-all ${className}`}
     >
       <div className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-1 sm:px-2 flex flex-wrap items-center justify-between gap-3">
         {/* ===================================================================
@@ -353,6 +353,12 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Luminous Separation Horizon Line between Menu Bar and Game Arena */}
+      <div
+        data-testid="menu-separation-line"
+        className="absolute bottom-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-amber-400/60 to-transparent pointer-events-none"
+      />
     </header>
   );
 };
