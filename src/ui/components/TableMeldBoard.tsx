@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Meld, Team } from '../../engine/types';
+import { Meld, Team, Suit } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
 import { Shield, Sparkles, CheckCircle2, PlusCircle, ArrowDownUp } from 'lucide-react';
@@ -126,6 +126,67 @@ interface TeamMeldColumnProps {
   sortDirection: MeldSortDirection;
 }
 
+export function sortMelds(
+  melds: Meld[],
+  cardSortDirection: MeldSortDirection = 'desc'
+): Meld[] {
+  try {
+    if (!melds || !Array.isArray(melds)) return [];
+
+    return [...melds].sort((a, b) => {
+      // 1. Primary sort: By Suit in order Spades (1), Hearts (2), Clubs (3), Diamonds (4), Sets/None (5)
+      const suitKeyA = a.suit ? (a.suit.toUpperCase() as Suit) : null;
+      const suitKeyB = b.suit ? (b.suit.toUpperCase() as Suit) : null;
+      const suitRankA = suitKeyA && SUIT_SORT_ORDER[suitKeyA] ? SUIT_SORT_ORDER[suitKeyA] : 5;
+      const suitRankB = suitKeyB && SUIT_SORT_ORDER[suitKeyB] ? SUIT_SORT_ORDER[suitKeyB] : 5;
+
+      if (suitRankA !== suitRankB) {
+        return suitRankA - suitRankB;
+      }
+
+      // 2. Secondary sort: If two melds have the SAME suit (or both are Sets)
+      // Sort by the highest represented rank in the meld (descending by default)
+      const getMaxRank = (m: Meld): number => {
+        if (m.slots && m.slots.length > 0) {
+          return Math.max(...m.slots.map((s) => s.representedRank));
+        }
+        if (m.cards && m.cards.length > 0) {
+          return Math.max(...m.cards.map((c) => c.rank));
+        }
+        return m.rank ?? 0;
+      };
+
+      const getMinRank = (m: Meld): number => {
+        if (m.slots && m.slots.length > 0) {
+          return Math.min(...m.slots.map((s) => s.representedRank));
+        }
+        if (m.cards && m.cards.length > 0) {
+          return Math.min(...m.cards.map((c) => c.rank));
+        }
+        return m.rank ?? 0;
+      };
+
+      const maxA = getMaxRank(a);
+      const maxB = getMaxRank(b);
+
+      if (maxA !== maxB) {
+        return cardSortDirection === 'desc' ? maxB - maxA : maxA - maxB;
+      }
+
+      const minA = getMinRank(a);
+      const minB = getMinRank(b);
+      if (minA !== minB) {
+        return cardSortDirection === 'desc' ? minB - minA : minA - minB;
+      }
+
+      return a.id.localeCompare(b.id);
+    });
+  } catch (err) {
+    console.error('Error in sortMelds:', err);
+    return melds || [];
+  }
+}
+
 const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   team,
   teamName,
@@ -143,6 +204,10 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   const headerBg = isBlue ? 'bg-blue-950/40' : 'bg-amber-950/40';
   const headerTextColor = isBlue ? 'text-blue-400' : 'text-amber-400';
   const activeRing = isBlue ? 'ring-2 ring-blue-500/50' : 'ring-2 ring-amber-500/50';
+
+  const sortedMelds = useMemo(() => {
+    return sortMelds(melds, sortDirection);
+  }, [melds, sortDirection]);
 
   return (
     <div
@@ -178,7 +243,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
 
       {/* Melds List */}
       <div className="flex flex-col gap-3 min-h-[160px]">
-        {melds.length === 0 ? (
+        {sortedMelds.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-800 rounded-xl text-slate-500 text-xs text-center">
             <p className="font-medium">No melds placed yet</p>
             <p className="text-[11px] text-slate-600 mt-1">
@@ -186,7 +251,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
             </p>
           </div>
         ) : (
-          melds.map((meld) => {
+          sortedMelds.map((meld) => {
             const isSelected = selectedMeldId === meld.id;
             const evaluation = evaluateMeldScore(meld);
 

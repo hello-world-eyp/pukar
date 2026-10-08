@@ -4,7 +4,7 @@ import { Card, Meld } from '../../src/engine/types';
 import { PlayingCard, getRankLabel, getSuitSymbol, isRedSuit } from '../../src/ui/components/PlayingCard';
 import { DiscardPileModal } from '../../src/ui/components/DiscardPileModal';
 import { CenterTable } from '../../src/ui/components/CenterTable';
-import { TableMeldBoard } from '../../src/ui/components/TableMeldBoard';
+import { TableMeldBoard, sortMelds } from '../../src/ui/components/TableMeldBoard';
 
 describe('UI Components', () => {
   describe('PlayingCard', () => {
@@ -455,6 +455,254 @@ describe('UI Components', () => {
       // Lowest (4) must appear before 5, and 5 must appear before Highest (6)
       expect(idx4).toBeLessThan(idx5);
       expect(idx5).toBeLessThan(idx6);
+    });
+
+    it('sortMelds sorts melds by suit in priority: Spades -> Hearts -> Clubs -> Diamonds -> Sets', () => {
+      const spadeRun: Meld = {
+        id: 'meld-spades',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 's4', suit: 'SPADES', rank: 4 },
+          { id: 's5', suit: 'SPADES', rank: 5 },
+          { id: 's6', suit: 'SPADES', rank: 6 },
+        ],
+        slots: [
+          { card: { id: 's4', suit: 'SPADES', rank: 4 }, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 's5', suit: 'SPADES', rank: 5 }, representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 's6', suit: 'SPADES', rank: 6 }, representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const heartRun: Meld = {
+        id: 'meld-hearts',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          { id: 'h4', suit: 'HEARTS', rank: 4 },
+          { id: 'h5', suit: 'HEARTS', rank: 5 },
+          { id: 'h6', suit: 'HEARTS', rank: 6 },
+        ],
+        slots: [
+          { card: { id: 'h4', suit: 'HEARTS', rank: 4 }, representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: { id: 'h5', suit: 'HEARTS', rank: 5 }, representedRank: 5, representedSuit: 'HEARTS', isWildcard: false },
+          { card: { id: 'h6', suit: 'HEARTS', rank: 6 }, representedRank: 6, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+      };
+
+      const clubRun: Meld = {
+        id: 'meld-clubs',
+        team: 'A',
+        type: 'RUN',
+        suit: 'CLUBS',
+        cards: [
+          { id: 'c4', suit: 'CLUBS', rank: 4 },
+          { id: 'c5', suit: 'CLUBS', rank: 5 },
+          { id: 'c6', suit: 'CLUBS', rank: 6 },
+        ],
+        slots: [
+          { card: { id: 'c4', suit: 'CLUBS', rank: 4 }, representedRank: 4, representedSuit: 'CLUBS', isWildcard: false },
+          { card: { id: 'c5', suit: 'CLUBS', rank: 5 }, representedRank: 5, representedSuit: 'CLUBS', isWildcard: false },
+          { card: { id: 'c6', suit: 'CLUBS', rank: 6 }, representedRank: 6, representedSuit: 'CLUBS', isWildcard: false },
+        ],
+      };
+
+      const diamondRun: Meld = {
+        id: 'meld-diamonds',
+        team: 'A',
+        type: 'RUN',
+        suit: 'DIAMONDS',
+        cards: [
+          { id: 'd4', suit: 'DIAMONDS', rank: 4 },
+          { id: 'd5', suit: 'DIAMONDS', rank: 5 },
+          { id: 'd6', suit: 'DIAMONDS', rank: 6 },
+        ],
+        slots: [
+          { card: { id: 'd4', suit: 'DIAMONDS', rank: 4 }, representedRank: 4, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: { id: 'd5', suit: 'DIAMONDS', rank: 5 }, representedRank: 5, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: { id: 'd6', suit: 'DIAMONDS', rank: 6 }, representedRank: 6, representedSuit: 'DIAMONDS', isWildcard: false },
+        ],
+      };
+
+      const setMeld: Meld = {
+        id: 'meld-set',
+        team: 'A',
+        type: 'SET',
+        suit: undefined,
+        rank: 9,
+        cards: [
+          { id: 's9', suit: 'SPADES', rank: 9 },
+          { id: 'h9', suit: 'HEARTS', rank: 9 },
+          { id: 'd9', suit: 'DIAMONDS', rank: 9 },
+        ],
+        slots: [
+          { card: { id: 's9', suit: 'SPADES', rank: 9 }, representedRank: 9, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'h9', suit: 'HEARTS', rank: 9 }, representedRank: 9, representedSuit: 'HEARTS', isWildcard: false },
+          { card: { id: 'd9', suit: 'DIAMONDS', rank: 9 }, representedRank: 9, representedSuit: 'DIAMONDS', isWildcard: false },
+        ],
+      };
+
+      // Input in mixed order: Diamonds, Sets, Clubs, Hearts, Spades
+      const mixed = [diamondRun, setMeld, clubRun, heartRun, spadeRun];
+      const sorted = sortMelds(mixed);
+
+      expect(sorted.map((m) => m.id)).toEqual([
+        'meld-spades',
+        'meld-hearts',
+        'meld-clubs',
+        'meld-diamonds',
+        'meld-set',
+      ]);
+    });
+
+    it('sortMelds groups same-suit melds together and sorts them by rank', () => {
+      const spadeLowRun: Meld = {
+        id: 'spades-low',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 's3', suit: 'SPADES', rank: 3 },
+          { id: 's4', suit: 'SPADES', rank: 4 },
+          { id: 's5', suit: 'SPADES', rank: 5 },
+        ],
+        slots: [
+          { card: { id: 's3', suit: 'SPADES', rank: 3 }, representedRank: 3, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 's4', suit: 'SPADES', rank: 4 }, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 's5', suit: 'SPADES', rank: 5 }, representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const spadeHighRun: Meld = {
+        id: 'spades-high',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 's10', suit: 'SPADES', rank: 10 },
+          { id: 'sj', suit: 'SPADES', rank: 11 },
+          { id: 'sq', suit: 'SPADES', rank: 12 },
+          { id: 'sk', suit: 'SPADES', rank: 13 },
+          { id: 'sa', suit: 'SPADES', rank: 14 },
+        ],
+        slots: [
+          { card: { id: 's10', suit: 'SPADES', rank: 10 }, representedRank: 10, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'sj', suit: 'SPADES', rank: 11 }, representedRank: 11, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'sq', suit: 'SPADES', rank: 12 }, representedRank: 12, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'sk', suit: 'SPADES', rank: 13 }, representedRank: 13, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'sa', suit: 'SPADES', rank: 14 }, representedRank: 14, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const heartRun: Meld = {
+        id: 'hearts-run',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          { id: 'h7', suit: 'HEARTS', rank: 7 },
+          { id: 'h8', suit: 'HEARTS', rank: 8 },
+          { id: 'h9', suit: 'HEARTS', rank: 9 },
+        ],
+        slots: [
+          { card: { id: 'h7', suit: 'HEARTS', rank: 7 }, representedRank: 7, representedSuit: 'HEARTS', isWildcard: false },
+          { card: { id: 'h8', suit: 'HEARTS', rank: 8 }, representedRank: 8, representedSuit: 'HEARTS', isWildcard: false },
+          { card: { id: 'h9', suit: 'HEARTS', rank: 9 }, representedRank: 9, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+      };
+
+      // Default (desc): higher rank meld appears first within Spades, followed by Hearts
+      const sortedDesc = sortMelds([spadeLowRun, heartRun, spadeHighRun], 'desc');
+      expect(sortedDesc.map((m) => m.id)).toEqual([
+        'spades-high',
+        'spades-low',
+        'hearts-run',
+      ]);
+
+      // Ascending: lower rank meld appears first within Spades, followed by Hearts
+      const sortedAsc = sortMelds([spadeLowRun, heartRun, spadeHighRun], 'asc');
+      expect(sortedAsc.map((m) => m.id)).toEqual([
+        'spades-low',
+        'spades-high',
+        'hearts-run',
+      ]);
+    });
+
+    it('renders melds on TableMeldBoard sorted by suit and same-suit rank', () => {
+      const spadeLow: Meld = {
+        id: 'meld-s-low',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 's3', suit: 'SPADES', rank: 3 },
+          { id: 's4', suit: 'SPADES', rank: 4 },
+          { id: 's5', suit: 'SPADES', rank: 5 },
+        ],
+        slots: [
+          { card: { id: 's3', suit: 'SPADES', rank: 3 }, representedRank: 3, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 's4', suit: 'SPADES', rank: 4 }, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 's5', suit: 'SPADES', rank: 5 }, representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const spadeHigh: Meld = {
+        id: 'meld-s-high',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 's10', suit: 'SPADES', rank: 10 },
+          { id: 'sj', suit: 'SPADES', rank: 11 },
+          { id: 'sq', suit: 'SPADES', rank: 12 },
+        ],
+        slots: [
+          { card: { id: 's10', suit: 'SPADES', rank: 10 }, representedRank: 10, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'sj', suit: 'SPADES', rank: 11 }, representedRank: 11, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'sq', suit: 'SPADES', rank: 12 }, representedRank: 12, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const diamondRun: Meld = {
+        id: 'meld-d',
+        team: 'A',
+        type: 'RUN',
+        suit: 'DIAMONDS',
+        cards: [
+          { id: 'd7', suit: 'DIAMONDS', rank: 7 },
+          { id: 'd8', suit: 'DIAMONDS', rank: 8 },
+          { id: 'd9', suit: 'DIAMONDS', rank: 9 },
+        ],
+        slots: [
+          { card: { id: 'd7', suit: 'DIAMONDS', rank: 7 }, representedRank: 7, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: { id: 'd8', suit: 'DIAMONDS', rank: 8 }, representedRank: 8, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: { id: 'd9', suit: 'DIAMONDS', rank: 9 }, representedRank: 9, representedSuit: 'DIAMONDS', isWildcard: false },
+        ],
+      };
+
+      // Passed to TableMeldBoard in reverse order: Diamonds, Spades Low, Spades High
+      const html = renderToString(
+        <TableMeldBoard
+          melds={{
+            A: [diamondRun, spadeLow, spadeHigh],
+            B: [],
+          }}
+        />
+      );
+
+      // Verify DOM render order: Spades High (10-Q) comes before Spades Low (3-5), which comes before Diamonds
+      const idxSpadeHigh = html.indexOf('aria-label="Q of SPADES"');
+      const idxSpadeLow = html.indexOf('aria-label="5 of SPADES"');
+      const idxDiamond = html.indexOf('aria-label="9 of DIAMONDS"');
+
+      expect(idxSpadeHigh).toBeGreaterThan(-1);
+      expect(idxSpadeLow).toBeGreaterThan(-1);
+      expect(idxDiamond).toBeGreaterThan(-1);
+
+      expect(idxSpadeHigh).toBeLessThan(idxSpadeLow);
+      expect(idxSpadeLow).toBeLessThan(idxDiamond);
     });
   });
 });
