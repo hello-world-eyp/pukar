@@ -302,8 +302,8 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
         </div>
       </div>
 
-      {/* Sequences List: Multi-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-2.5 min-h-[105px]">
+      {/* Sequences List: Strictly 2 columns on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-[105px]">
         {sortedMelds.length === 0 ? (
           <div className="col-span-full flex-1 flex flex-col items-center justify-center p-3 sm:p-4 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-sm text-center bg-white/40 min-h-[100px]">
             <p className="font-bold text-stone-700">No sequences placed yet</p>
@@ -542,28 +542,28 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       )}
 
       {/* Meld Header Bar */}
-      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap sm:flex-nowrap">
           <span
-            className={`text-sm font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${badgeClass}`}
+            className={`text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${badgeClass}`}
           >
-            {isPure13 && <Sparkles className="w-4 h-4 text-amber-900" />}
-            {isComplete7 && !isPure13 && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+            {isPure13 && <Sparkles className="w-3.5 h-3.5 text-amber-900 shrink-0" />}
+            {isComplete7 && !isPure13 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
             <span>{badgeText}</span>
           </span>
 
           {meld.suit && (
-            <span className="text-sm font-semibold text-stone-600">
+            <span className="text-xs sm:text-sm font-extrabold text-stone-700 uppercase tracking-wider whitespace-nowrap shrink-0">
               {meld.suit}
             </span>
           )}
 
-          <span className="text-xs text-stone-500 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded font-mono font-bold">
+          <span className="text-[11px] sm:text-xs text-stone-600 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded font-mono font-bold whitespace-nowrap shrink-0">
             {sortDirection === 'desc' ? 'High → Low' : 'Low → High'}
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {onZoom && (
             <button
               type="button"
@@ -577,7 +577,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
                 }
               }}
               title="Zoom into sequence to inspect cards in detail"
-              className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer hover:scale-105"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer hover:scale-105 shrink-0 whitespace-nowrap shadow-sm"
             >
               <ZoomIn className="w-3.5 h-3.5" />
               <span>Zoom</span>
