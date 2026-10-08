@@ -125,7 +125,7 @@ export function pukarReducer(
       }
 
       case 'RESET_GAME': {
-        return handleResetGame(state, action.playerCount);
+        return handleResetGame(state, action.playerCount, action.playerNames);
       }
 
       default:
@@ -607,7 +607,8 @@ function handleStartNextRound(state: GameState): {
   }
 
   const preservedScores = { ...state.scores };
-  const freshState = dealInitialState(state.playerCount);
+  const existingPlayerNames = state.players?.map((p) => p.name);
+  const freshState = dealInitialState(state.playerCount, undefined, existingPlayerNames);
 
   const nextState: GameState = {
     ...freshState,
@@ -629,7 +630,8 @@ function handleStartNextRound(state: GameState): {
 
 function handleResetGame(
   state: GameState,
-  playerCount?: 4 | 6
+  playerCount?: 4 | 6,
+  playerNames?: string[]
 ): { state: GameState; error?: string } {
   const count = playerCount ?? state?.playerCount ?? 4;
   if (count !== 4 && count !== 6) {
@@ -638,7 +640,7 @@ function handleResetGame(
       error: `Invalid player count: ${count}. Pukar requires 4 or 6 players.`,
     };
   }
-  const freshState = dealInitialState(count);
+  const freshState = dealInitialState(count, undefined, playerNames);
 
   const nextState: GameState = {
     ...freshState,

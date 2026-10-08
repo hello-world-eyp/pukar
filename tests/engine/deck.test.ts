@@ -189,5 +189,22 @@ describe('Deck Management', () => {
       expect(state.scores).toEqual({ A: 0, B: 0 });
       expect(state.melds).toEqual({ A: [], B: [] });
     });
+
+    it('assigns custom player names when provided and falls back to defaults for empty slots', () => {
+      const customNames = ['Harsh', 'Alex', '', '  '];
+      const state = dealInitialState(4, undefined, customNames);
+
+      expect(state.players[0].name).toBe('Harsh');
+      expect(state.players[1].name).toBe('Alex');
+      expect(state.players[2].name).toBe('Player 3'); // Fallback for empty string
+      expect(state.players[3].name).toBe('Player 4'); // Fallback for whitespace
+    });
+
+    it('assigns 6 custom player names when provided in 6-player mode', () => {
+      const customNames = ['P1-Alice', 'P2-Bob', 'P3-Charlie', 'P4-Diana', 'P5-Eve', 'P6-Frank'];
+      const state = dealInitialState(6, undefined, customNames);
+
+      expect(state.players.map((p) => p.name)).toEqual(customNames);
+    });
   });
 });

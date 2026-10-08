@@ -72,7 +72,11 @@ export function shuffleDeck(cards: Card[]): Card[] {
  * - Discard Pile ("The Bottom"): 1 card turned face-up from remaining deck.
  * - Stock Deck: remainder of cards (31 for 4p, 47 for 6p).
  */
-export function dealInitialState(playerCount: 4 | 6, customDeck?: Card[]): GameState {
+export function dealInitialState(
+  playerCount: 4 | 6,
+  customDeck?: Card[],
+  playerNames?: string[]
+): GameState {
   if (playerCount !== 4 && playerCount !== 6) {
     throw new Error(`Invalid player count: ${playerCount}. Pukar requires 4 or 6 players.`);
   }
@@ -83,9 +87,10 @@ export function dealInitialState(playerCount: 4 | 6, customDeck?: Card[]): GameS
   const players: Player[] = [];
   for (let i = 0; i < playerCount; i++) {
     const hand = deck.splice(0, 13);
+    const assignedName = playerNames?.[i]?.trim() || `Player ${i + 1}`;
     players.push({
       id: `p${i + 1}`,
-      name: `Player ${i + 1}`,
+      name: assignedName,
       team: i % 2 === 0 ? 'A' : 'B',
       hand,
     });

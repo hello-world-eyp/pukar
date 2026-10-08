@@ -25,9 +25,9 @@ import { JokerPromptModal } from './ui/components/JokerPromptModal';
 import { TableSeating } from './ui/components/TableSeating';
 import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
+import { GameSetupModal } from './ui/components/GameSetupModal';
 import { playSound, setSoundEnabled } from './ui/sound';
 import {
-  RotateCcw,
   HelpCircle,
   Sparkles,
   Shield,
@@ -54,8 +54,7 @@ export function App() {
   const [isGodModeOpen, setIsGodModeOpen] = useState(false);
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
-  const [resetPlayerCount, setResetPlayerCount] = useState<4 | 6>(4);
+  const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [zoomedMeld, setZoomedMeld] = useState<Meld | null>(null);
 
   // Audio mute
@@ -412,24 +411,27 @@ export function App() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Reset / New Game
   // ---------------------------------------------------------------------------
-  const handleOpenResetModal = (count: 4 | 6 = gameState.playerCount) => {
+  // Game Setup & Reset Handlers
+  // ---------------------------------------------------------------------------
+  const handleOpenResetModal = (_count?: 4 | 6) => {
     try {
-      setResetPlayerCount(count);
-      setIsResetConfirmOpen(true);
+      setIsSetupModalOpen(true);
     } catch (err) {
-      console.error('Error opening reset modal:', err);
+      console.error('Error opening setup modal:', err);
     }
   };
 
-  const handleConfirmReset = () => {
+  const handleStartGame = (playerCount: 4 | 6, playerNames: string[]) => {
     try {
-      handleAction({ type: 'RESET_GAME', playerCount: resetPlayerCount });
-      setIsResetConfirmOpen(false);
+      handleAction({ type: 'RESET_GAME', playerCount, playerNames });
+      setIsSetupModalOpen(false);
+      setViewedPlayerIndex(null);
+      setSelectedCardIds([]);
+      setSelectedMeldId(null);
     } catch (err) {
-      console.error('Error confirming reset:', err);
-      setIsResetConfirmOpen(false);
+      console.error('Error starting game from setup modal:', err);
+      setIsSetupModalOpen(false);
     }
   };
 
@@ -734,81 +736,22 @@ export function App() {
         onClose={() => setZoomedMeld(null)}
       />
 
-      {/* 3. Restart / New Game Confirmation Modal */}
-      {isResetConfirmOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reset-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
-        >
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 text-slate-100">
-            <div className="flex items-center gap-3 text-amber-400">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <RotateCcw className="w-5 h-5 text-amber-400" />
-              </div>
-              <div>
-                <h2 id="reset-modal-title" className="text-lg font-bold text-white">
-                  Start New Game?
-                </h2>
-                <p className="text-xs text-slate-400">Current game state and scores will be reset.</p>
-              </div>
-            </div>
-
-            {/* Select Player Count */}
-            <div className="flex flex-col gap-1.5 pt-2">
-              <label className="text-xs font-semibold text-slate-300">Player Count:</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  data-testid="reset-option-4p"
-                  onClick={() => setResetPlayerCount(4)}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    resetPlayerCount === 4
-                      ? 'bg-amber-500/10 border-amber-400 text-amber-200 ring-1 ring-amber-400'
-                      : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="font-bold text-sm">4 Players</div>
-                  <div className="text-[11px] text-slate-400">2 Teams of 2 (2 Decks)</div>
-                </button>
-                <button
-                  type="button"
-                  data-testid="reset-option-6p"
-                  onClick={() => setResetPlayerCount(6)}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    resetPlayerCount === 6
-                      ? 'bg-amber-500/10 border-amber-400 text-amber-200 ring-1 ring-amber-400'
-                      : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <div className="font-bold text-sm">6 Players</div>
-                  <div className="text-[11px] text-slate-400">2 Teams of 3 (3 Decks)</div>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
-              <button
-                type="button"
-                data-testid="btn-cancel-reset"
-                onClick={() => setIsResetConfirmOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-testid="btn-confirm-reset"
-                onClick={handleConfirmReset}
-                className="px-4 py-2 rounded-xl text-xs font-extrabold text-slate-950 bg-amber-400 hover:bg-amber-300 transition-colors shadow-md shadow-amber-950/40"
-              >
-                Confirm & Start
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 3. Game Setup & New Game Modal */}
+      <GameSetupModal
+        isOpen={isSetupModalOpen}
+        onClose={() => setIsSetupModalOpen(false)}
+        onStartGame={handleStartGame}
+        initialPlayerCount={gameState.playerCount}
+        initialPlayerNames={gameState.players.map((p) => p.name)}
+        isGameInProgress={
+          gameState.round > 1 ||
+          gameState.phase !== 'DRAW' ||
+          (gameState.melds.A?.length ?? 0) > 0 ||
+          (gameState.melds.B?.length ?? 0) > 0 ||
+          (gameState.scores?.A ?? 0) > 0 ||
+          (gameState.scores?.B ?? 0) > 0
+        }
+      />
 
       {/* 4. Joker Designation Prompt Modal */}
       <JokerPromptModal

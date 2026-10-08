@@ -498,19 +498,36 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState).toBe(state);
     });
 
-    it('RESET_GAME resets match scores to 0 and deals fresh game', () => {
+    it('RESET_GAME resets match scores to 0 and deals fresh game with custom playerNames', () => {
       const state = dealInitialState(4);
       state.scores = { A: 500, B: 300 };
       state.round = 3;
 
-      const { state: nextState, error } = pukarReducer(state, { type: 'RESET_GAME' });
+      const { state: nextState, error } = pukarReducer(state, {
+        type: 'RESET_GAME',
+        playerCount: 4,
+        playerNames: ['Harsh', 'Bob', 'Charlie', 'Diana'],
+      });
 
       expect(error).toBeUndefined();
       expect(nextState.round).toBe(1);
       expect(nextState.scores).toEqual({ A: 0, B: 0 });
       expect(nextState.roundStatus).toBe('PLAYING');
       expect(nextState.phase).toBe('DRAW');
+      expect(nextState.players.map((p) => p.name)).toEqual(['Harsh', 'Bob', 'Charlie', 'Diana']);
       expect(nextState.players.every((p) => p.hand.length === 13)).toBe(true);
+    });
+
+    it('START_NEXT_ROUND preserves custom player names across rounds', () => {
+      const state = dealInitialState(4, undefined, ['Alice', 'Bob', 'Carol', 'Dave']);
+      state.isRoundOver = true;
+      state.roundStatus = 'ROUND_OVER';
+
+      const { state: nextState, error } = pukarReducer(state, { type: 'START_NEXT_ROUND' });
+
+      expect(error).toBeUndefined();
+      expect(nextState.round).toBe(2);
+      expect(nextState.players.map((p) => p.name)).toEqual(['Alice', 'Bob', 'Carol', 'Dave']);
     });
 
     it('syncs totalScores (+50) immediately on mid-round Pukar claim during Round 2 and avoids double-counting at round end', () => {
