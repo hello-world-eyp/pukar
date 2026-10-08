@@ -36,10 +36,14 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
   const isGodModeOpen = controlledGodMode !== undefined ? controlledGodMode : internalGodMode;
 
   const handleToggleGodMode = () => {
-    if (controlledGodMode === undefined) {
-      setInternalGodMode(!internalGodMode);
+    try {
+      if (controlledGodMode === undefined) {
+        setInternalGodMode(!internalGodMode);
+      }
+      onToggleGodMode?.();
+    } catch (err) {
+      console.error('Error toggling god mode:', err);
     }
-    onToggleGodMode?.();
   };
 
   const actualPukarCount = pukarPoolCount ?? pukarPool?.length ?? 0;
@@ -81,7 +85,13 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
                   role="tab"
                   aria-selected={isActive}
                   data-testid={`switcher-p${index + 1}`}
-                  onClick={() => onSwitchPlayer(index)}
+                  onClick={() => {
+                    try {
+                      onSwitchPlayer(index);
+                    } catch (err) {
+                      console.error('Error in onSwitchPlayer:', err);
+                    }
+                  }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border shrink-0 ${
                     isActive
                       ? isTeamA
@@ -122,7 +132,13 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
             <button
               type="button"
               data-testid="btn-force-turn"
-              onClick={() => onForceTurn(currentPlayerIndex)}
+              onClick={() => {
+                try {
+                  onForceTurn(currentPlayerIndex);
+                } catch (err) {
+                  console.error('Error in onForceTurn:', err);
+                }
+              }}
               disabled={activeTurnIndex !== undefined && currentPlayerIndex === activeTurnIndex}
               title={
                 activeTurnIndex !== undefined && currentPlayerIndex === activeTurnIndex

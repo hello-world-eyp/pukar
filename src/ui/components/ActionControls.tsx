@@ -51,12 +51,17 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 }) => {
   // Resolve effective selected cards
   const selectedCards: Card[] = useMemo(() => {
-    if (explicitSelectedCards) return explicitSelectedCards;
-    if (selectedCardIds && allHandCards) {
-      const idSet = new Set(selectedCardIds);
-      return allHandCards.filter((c) => idSet.has(c.id));
+    try {
+      if (explicitSelectedCards) return explicitSelectedCards;
+      if (selectedCardIds && allHandCards) {
+        const idSet = new Set(selectedCardIds);
+        return allHandCards.filter((c) => idSet.has(c.id));
+      }
+      return [];
+    } catch (err) {
+      console.error('Error resolving selected cards:', err);
+      return [];
     }
-    return [];
   }, [explicitSelectedCards, selectedCardIds, allHandCards]);
 
   const selectedCardCount = selectedCards.length;
@@ -74,26 +79,36 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
   // 2. Play New Meld Validation Preview
   const meldValidation = useMemo(() => {
-    if (selectedCardCount < 3) {
-      return {
-        valid: false,
-        error: selectedCardCount === 0 ? 'Select cards to meld' : `Need at least 3 cards (${selectedCardCount}/3)`,
-      };
+    try {
+      if (selectedCardCount < 3) {
+        return {
+          valid: false,
+          error: selectedCardCount === 0 ? 'Select cards to meld' : `Need at least 3 cards (${selectedCardCount}/3)`,
+        };
+      }
+      return validateNewMeld(selectedCards);
+    } catch (err) {
+      console.error('Error during meld validation preview:', err);
+      return { valid: false, error: 'Validation preview error' };
     }
-    return validateNewMeld(selectedCards);
   }, [selectedCards, selectedCardCount]);
 
   const canPlayNewMeld = !disabled && isMeldPhase && meldValidation.valid;
 
   // 3. Add to Meld Validation Preview
   const addToMeldValidation = useMemo(() => {
-    if (!selectedMeld) {
-      return { valid: false, error: 'Select a meld on table first' };
+    try {
+      if (!selectedMeld) {
+        return { valid: false, error: 'Select a meld on table first' };
+      }
+      if (selectedCardCount === 0) {
+        return { valid: false, error: 'Select cards to add' };
+      }
+      return canAddCardsToMeld(selectedMeld, selectedCards);
+    } catch (err) {
+      console.error('Error during add to meld preview:', err);
+      return { valid: false, error: 'Add to meld error' };
     }
-    if (selectedCardCount === 0) {
-      return { valid: false, error: 'Select cards to add' };
-    }
-    return canAddCardsToMeld(selectedMeld, selectedCards);
   }, [selectedMeld, selectedCards, selectedCardCount]);
 
   const canAddToMeld = !disabled && isMeldPhase && addToMeldValidation.valid;
@@ -104,17 +119,29 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   // Action handlers
   const handlePlayMeldClick = () => {
     if (!canPlayNewMeld) return;
-    onPlayMeld?.(selectedCards.map((c) => c.id));
+    try {
+      onPlayMeld?.(selectedCards.map((c) => c.id));
+    } catch (err) {
+      console.error('Error in handlePlayMeldClick:', err);
+    }
   };
 
   const handleAddToMeldClick = () => {
     if (!canAddToMeld || !selectedMeld) return;
-    onAddToMeld?.(selectedMeld.id, selectedCards.map((c) => c.id));
+    try {
+      onAddToMeld?.(selectedMeld.id, selectedCards.map((c) => c.id));
+    } catch (err) {
+      console.error('Error in handleAddToMeldClick:', err);
+    }
   };
 
   const handleDiscardClick = () => {
     if (!canDiscard || selectedCards.length !== 1) return;
-    onDiscard?.(selectedCards[0].id);
+    try {
+      onDiscard?.(selectedCards[0].id);
+    } catch (err) {
+      console.error('Error in handleDiscardClick:', err);
+    }
   };
 
   return (

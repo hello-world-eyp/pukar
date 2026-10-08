@@ -21,29 +21,49 @@ function calculateRoundEndScores(state: GameState): {
   roundScores: { A: number; B: number };
   totalScores: { A: number; B: number };
 } {
-  const pukarsA = state.pukarsClaimed?.A ?? 0;
-  const pukarsB = state.pukarsClaimed?.B ?? 0;
+  try {
+    const pukarsA = state.pukarsClaimed?.A ?? 0;
+    const pukarsB = state.pukarsClaimed?.B ?? 0;
 
-  const meldPointsA = state.melds.A.reduce(
-    (sum, m) => sum + (m.points ?? evaluateMeldScore(m).points),
-    0
-  );
-  const meldPointsB = state.melds.B.reduce(
-    (sum, m) => sum + (m.points ?? evaluateMeldScore(m).points),
-    0
-  );
+    const meldPointsA = (state.melds?.A ?? []).reduce(
+      (sum, m) => {
+        try {
+          return sum + (m.points ?? evaluateMeldScore(m).points);
+        } catch {
+          return sum;
+        }
+      },
+      0
+    );
+    const meldPointsB = (state.melds?.B ?? []).reduce(
+      (sum, m) => {
+        try {
+          return sum + (m.points ?? evaluateMeldScore(m).points);
+        } catch {
+          return sum;
+        }
+      },
+      0
+    );
 
-  const roundScoreA = meldPointsA + pukarsA * 50;
-  const roundScoreB = meldPointsB + pukarsB * 50;
+    const roundScoreA = meldPointsA + pukarsA * 50;
+    const roundScoreB = meldPointsB + pukarsB * 50;
 
-  // Base total from prior rounds (subtracting any mid-round Pukars already added to totalScores during this round)
-  const baseTotalA = state.totalScores ? state.totalScores.A - pukarsA * 50 : 0;
-  const baseTotalB = state.totalScores ? state.totalScores.B - pukarsB * 50 : 0;
+    // Base total from prior rounds (subtracting any mid-round Pukars already added to totalScores during this round)
+    const baseTotalA = state.totalScores ? state.totalScores.A - pukarsA * 50 : 0;
+    const baseTotalB = state.totalScores ? state.totalScores.B - pukarsB * 50 : 0;
 
-  return {
-    roundScores: { A: roundScoreA, B: roundScoreB },
-    totalScores: { A: baseTotalA + roundScoreA, B: baseTotalB + roundScoreB },
-  };
+    return {
+      roundScores: { A: roundScoreA, B: roundScoreB },
+      totalScores: { A: baseTotalA + roundScoreA, B: baseTotalB + roundScoreB },
+    };
+  } catch (err) {
+    console.error('Error calculating round end scores:', err);
+    return {
+      roundScores: { A: 0, B: 0 },
+      totalScores: state.totalScores ? { ...state.totalScores } : { A: 0, B: 0 },
+    };
+  }
 }
 
 /**
@@ -54,48 +74,64 @@ export function pukarReducer(
   state: GameState,
   action: GameAction
 ): { state: GameState; error?: string } {
-  switch (action.type) {
-    case 'DRAW_FROM_STOCK':
-    case 'DRAW_CARD': {
-      const source =
-        action.type === 'DRAW_CARD' ? action.source ?? 'DECK' : 'DECK';
+  try {
+    if (!state) {
+      return { state, error: 'Cannot reduce undefined game state' };
+    }
+    if (!action || !action.type) {
+      return { state, error: 'Invalid or missing action' };
+    }
 
-      if (source === 'BOTTOM' || source === 'DISCARD') {
-        return handleTakeDiscard(state);
-      } else {
-        return handleDrawFromStock(state);
+    switch (action.type) {
+      case 'DRAW_FROM_STOCK':
+      case 'DRAW_CARD': {
+        const source =
+          action.type === 'DRAW_CARD' ? action.source ?? 'DECK' : 'DECK';
+
+        if (source === 'BOTTOM' || source === 'DISCARD') {
+          return handleTakeDiscard(state);
+        } else {
+          return handleDrawFromStock(state);
+        }
       }
-    }
 
-    case 'TAKE_DISCARD': {
-      return handleTakeDiscard(state);
-    }
+      case 'TAKE_DISCARD': {
+        return handleTakeDiscard(state);
+      }
 
-    case 'PLAY_NEW_MELD': {
-      return handlePlayNewMeld(state, action.cardIds);
-    }
+      case 'PLAY_NEW_MELD': {
+        return handlePlayNewMeld(state, action.cardIds);
+      }
 
-    case 'ADD_TO_MELD': {
-      return handleAddToMeld(state, action.meldId, action.cardIds);
-    }
+      case 'ADD_TO_MELD': {
+        return handleAddToMeld(state, action.meldId, action.cardIds);
+      }
 
-    case 'DISCARD_CARD': {
-      return handleDiscardCard(state, action.cardId);
-    }
+      case 'DISCARD_CARD': {
+        return handleDiscardCard(state, action.cardId);
+      }
 
-    case 'START_NEXT_ROUND': {
-      return handleStartNextRound(state);
-    }
+      case 'START_NEXT_ROUND': {
+        return handleStartNextRound(state);
+      }
 
-    case 'RESET_GAME': {
-      return handleResetGame(state, action.playerCount);
-    }
+      case 'RESET_GAME': {
+        return handleResetGame(state, action.playerCount);
+      }
 
-    default:
-      return {
-        state,
-        error: `Unknown action type: ${(action as any).type}`,
-      };
+      default:
+        return {
+          state,
+          error: `Unknown action type: ${(action as any).type}`,
+        };
+    }
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error(`Reducer error processing action ${action?.type}:`, err);
+    return {
+      state,
+      error: `Reducer error: ${errorMsg}`,
+    };
   }
 }
 

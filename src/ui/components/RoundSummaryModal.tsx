@@ -60,15 +60,29 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
   const meldsListA = melds.A ?? [];
   const meldsListB = melds.B ?? [];
 
-  const meldDetailsA = meldsListA.map((m) => ({
-    meld: m,
-    evaluation: evaluateMeldScore(m),
-  }));
+  const meldDetailsA = (meldsListA || []).map((m) => {
+    try {
+      return { meld: m, evaluation: evaluateMeldScore(m) };
+    } catch (err) {
+      console.error('Error evaluating meld score for Team A:', err);
+      return {
+        meld: m,
+        evaluation: { points: 0, description: 'Evaluation error', isComplete7: false, isPure13: false },
+      };
+    }
+  });
 
-  const meldDetailsB = meldsListB.map((m) => ({
-    meld: m,
-    evaluation: evaluateMeldScore(m),
-  }));
+  const meldDetailsB = (meldsListB || []).map((m) => {
+    try {
+      return { meld: m, evaluation: evaluateMeldScore(m) };
+    } catch (err) {
+      console.error('Error evaluating meld score for Team B:', err);
+      return {
+        meld: m,
+        evaluation: { points: 0, description: 'Evaluation error', isComplete7: false, isPure13: false },
+      };
+    }
+  });
 
   return (
     <div
@@ -248,7 +262,13 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
           {onClose && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                try {
+                  onClose();
+                } catch (err) {
+                  console.error('Error in RoundSummaryModal onClose:', err);
+                }
+              }}
               className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
             >
               Close
@@ -258,7 +278,13 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
           <button
             type="button"
             data-testid="btn-next-round"
-            onClick={onStartNextRound}
+            onClick={() => {
+              try {
+                onStartNextRound();
+              } catch (err) {
+                console.error('Error in onStartNextRound:', err);
+              }
+            }}
             className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-sm shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             <span>Next Round</span>

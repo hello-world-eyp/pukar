@@ -31,24 +31,38 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   phase,
   className = '',
 }) => {
-  // Resolve values from props or gameState fallback
-  const resolvedRound = round ?? gameState?.round ?? 1;
-  const resolvedStatus: RoundStatus = roundStatus ?? gameState?.roundStatus ?? 'PLAYING';
-  const resolvedPhase: TurnPhase = phase ?? gameState?.phase ?? 'DRAW';
+  // Resolve values from props or gameState fallback safely
+  let resolvedRound = 1;
+  let resolvedStatus: RoundStatus = 'PLAYING';
+  let resolvedPhase: TurnPhase = 'DRAW';
+  let resolvedRoundScores = { A: 0, B: 0 };
+  let resolvedTotalScores = { A: 0, B: 0 };
+  let resolvedPukarsClaimed = { A: 0, B: 0 };
+  let resolvedPlayerIndex = 0;
+  let resolvedPlayerName = 'Player 1';
+  let resolvedActiveTeam: Team = 'A';
 
-  const resolvedRoundScores = roundScores ?? gameState?.roundScores ?? { A: 0, B: 0 };
-  const rawTotalScores = totalScores ?? gameState?.totalScores;
-  const rawScores = scores ?? gameState?.scores;
-  const resolvedTotalScores = {
-    A: Math.max(rawTotalScores?.A ?? 0, rawScores?.A ?? 0),
-    B: Math.max(rawTotalScores?.B ?? 0, rawScores?.B ?? 0),
-  };
-  const resolvedPukarsClaimed = pukarsClaimed ?? gameState?.pukarsClaimed ?? { A: 0, B: 0 };
+  try {
+    resolvedRound = round ?? gameState?.round ?? 1;
+    resolvedStatus = roundStatus ?? gameState?.roundStatus ?? 'PLAYING';
+    resolvedPhase = phase ?? gameState?.phase ?? 'DRAW';
+    resolvedRoundScores = roundScores ?? gameState?.roundScores ?? { A: 0, B: 0 };
 
-  const resolvedPlayerIndex = currentPlayerIndex ?? gameState?.currentPlayerIndex ?? 0;
-  const activePlayer = gameState?.players?.[resolvedPlayerIndex];
-  const resolvedPlayerName = currentPlayerName ?? activePlayer?.name ?? `Player ${resolvedPlayerIndex + 1}`;
-  const resolvedActiveTeam: Team = activeTeam ?? activePlayer?.team ?? (resolvedPlayerIndex % 2 === 0 ? 'A' : 'B');
+    const rawTotalScores = totalScores ?? gameState?.totalScores;
+    const rawScores = scores ?? gameState?.scores;
+    resolvedTotalScores = {
+      A: Math.max(rawTotalScores?.A ?? 0, rawScores?.A ?? 0),
+      B: Math.max(rawTotalScores?.B ?? 0, rawScores?.B ?? 0),
+    };
+    resolvedPukarsClaimed = pukarsClaimed ?? gameState?.pukarsClaimed ?? { A: 0, B: 0 };
+
+    resolvedPlayerIndex = currentPlayerIndex ?? gameState?.currentPlayerIndex ?? 0;
+    const activePlayer = gameState?.players?.[resolvedPlayerIndex];
+    resolvedPlayerName = currentPlayerName ?? activePlayer?.name ?? `Player ${resolvedPlayerIndex + 1}`;
+    resolvedActiveTeam = activeTeam ?? activePlayer?.team ?? (resolvedPlayerIndex % 2 === 0 ? 'A' : 'B');
+  } catch (err) {
+    console.error('Error resolving scoreboard metrics:', err);
+  }
 
   const teamALeading = resolvedTotalScores.A > resolvedTotalScores.B;
   const teamBLeading = resolvedTotalScores.B > resolvedTotalScores.A;

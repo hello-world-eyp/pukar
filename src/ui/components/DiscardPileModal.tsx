@@ -18,18 +18,26 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
 }) => {
   const pileCards = cards ?? discardPile ?? [];
 
+  const handleSafeClose = () => {
+    try {
+      onClose();
+    } catch (err) {
+      console.error('Error closing DiscardPileModal:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        handleSafeClose();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -39,7 +47,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
       aria-modal="true"
       aria-labelledby="discard-pile-modal-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
-      onClick={onClose}
+      onClick={handleSafeClose}
     >
       <div
         className="relative w-full max-w-4xl max-h-[85vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100"
@@ -68,7 +76,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleSafeClose}
             aria-label="Close modal"
             className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >

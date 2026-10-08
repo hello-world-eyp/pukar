@@ -17,19 +17,25 @@ const SUIT_ORDER: Record<Suit, number> = {
  * Natural Jokers (null suit / rank 0) are placed first.
  */
 export function sortCardsBySuit(cards: Card[]): Card[] {
-  return [...cards].sort((a, b) => {
-    // Natural Jokers first
-    const aIsJoker = a.isNaturalJoker || a.rank === 0 || a.suit === null;
-    const bIsJoker = b.isNaturalJoker || b.rank === 0 || b.suit === null;
-    if (aIsJoker && !bIsJoker) return -1;
-    if (!aIsJoker && bIsJoker) return 1;
-    if (aIsJoker && bIsJoker) return 0;
+  try {
+    if (!cards || !Array.isArray(cards)) return [];
+    return [...cards].sort((a, b) => {
+      // Natural Jokers first
+      const aIsJoker = a.isNaturalJoker || a.rank === 0 || a.suit === null;
+      const bIsJoker = b.isNaturalJoker || b.rank === 0 || b.suit === null;
+      if (aIsJoker && !bIsJoker) return -1;
+      if (!aIsJoker && bIsJoker) return 1;
+      if (aIsJoker && bIsJoker) return 0;
 
-    const suitDiff = (SUIT_ORDER[a.suit as Suit] ?? 99) - (SUIT_ORDER[b.suit as Suit] ?? 99);
-    if (suitDiff !== 0) return suitDiff;
+      const suitDiff = (SUIT_ORDER[a.suit as Suit] ?? 99) - (SUIT_ORDER[b.suit as Suit] ?? 99);
+      if (suitDiff !== 0) return suitDiff;
 
-    return a.rank - b.rank;
-  });
+      return a.rank - b.rank;
+    });
+  } catch (err) {
+    console.error('Error in sortCardsBySuit:', err);
+    return cards || [];
+  }
 }
 
 /**
@@ -37,14 +43,20 @@ export function sortCardsBySuit(cards: Card[]): Card[] {
  * Ties are broken by suit order.
  */
 export function sortCardsByRank(cards: Card[]): Card[] {
-  return [...cards].sort((a, b) => {
-    if (a.rank !== b.rank) {
-      return a.rank - b.rank;
-    }
-    const aSuitOrder = a.suit ? SUIT_ORDER[a.suit] : 0;
-    const bSuitOrder = b.suit ? SUIT_ORDER[b.suit] : 0;
-    return aSuitOrder - bSuitOrder;
-  });
+  try {
+    if (!cards || !Array.isArray(cards)) return [];
+    return [...cards].sort((a, b) => {
+      if (a.rank !== b.rank) {
+        return a.rank - b.rank;
+      }
+      const aSuitOrder = a.suit ? SUIT_ORDER[a.suit] : 0;
+      const bSuitOrder = b.suit ? SUIT_ORDER[b.suit] : 0;
+      return aSuitOrder - bSuitOrder;
+    });
+  } catch (err) {
+    console.error('Error in sortCardsByRank:', err);
+    return cards || [];
+  }
 }
 
 export interface PlayerHandProps {
@@ -84,29 +96,42 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const activeSortMode = controlledSortMode !== undefined ? controlledSortMode : internalSortMode;
 
   const handleSetSort = (mode: SortMode) => {
-    if (controlledSortMode === undefined) {
-      setInternalSortMode(mode);
+    try {
+      if (controlledSortMode === undefined) {
+        setInternalSortMode(mode);
+      }
+      onSortChange?.(mode);
+    } catch (err) {
+      console.error('Error in handleSetSort:', err);
     }
-    onSortChange?.(mode);
   };
 
   // Sort cards based on activeSortMode
   const displayCards = useMemo(() => {
-    if (activeSortMode === 'suit') {
-      return sortCardsBySuit(cards);
+    try {
+      if (activeSortMode === 'suit') {
+        return sortCardsBySuit(cards);
+      }
+      if (activeSortMode === 'rank') {
+        return sortCardsByRank(cards);
+      }
+      return cards;
+    } catch (err) {
+      console.error('Error calculating displayCards in PlayerHand:', err);
+      return cards;
     }
-    if (activeSortMode === 'rank') {
-      return sortCardsByRank(cards);
-    }
-    return cards;
   }, [cards, activeSortMode]);
 
   const selectedSet = useMemo(() => new Set(selectedCardIds), [selectedCardIds]);
 
   const handleCardClick = (card: Card) => {
     if (disabled) return;
-    onToggleCardSelection?.(card.id);
-    onSelectCard?.(card);
+    try {
+      onToggleCardSelection?.(card.id);
+      onSelectCard?.(card);
+    } catch (err) {
+      console.error('Error in handleCardClick:', err);
+    }
   };
 
   return (

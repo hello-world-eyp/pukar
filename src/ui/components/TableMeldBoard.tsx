@@ -30,7 +30,18 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   const listB = melds?.B ?? teamBMelds ?? [];
 
   const calculateTeamPoints = (teamMelds: Meld[]) => {
-    return teamMelds.reduce((sum, m) => sum + evaluateMeldScore(m).points, 0);
+    try {
+      return (teamMelds || []).reduce((sum, m) => {
+        try {
+          return sum + evaluateMeldScore(m).points;
+        } catch {
+          return sum;
+        }
+      }, 0);
+    } catch (err) {
+      console.error('Error calculating team meld points:', err);
+      return 0;
+    }
   };
 
   const scoreA = calculateTeamPoints(listA);
@@ -147,7 +158,13 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 meld={meld}
                 evaluation={evaluation}
                 isSelected={isSelected}
-                onSelect={() => onSelectMeld?.(meld)}
+                onSelect={() => {
+                  try {
+                    onSelectMeld?.(meld);
+                  } catch (err) {
+                    console.error('Error in onSelectMeld:', err);
+                  }
+                }}
                 canSelect={Boolean(onSelectMeld)}
               />
             );

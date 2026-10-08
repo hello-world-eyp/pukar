@@ -92,9 +92,14 @@ export function App() {
 
   // Selected meld object
   const selectedMeld: Meld | null = useMemo(() => {
-    if (!selectedMeldId) return null;
-    const allMelds = [...gameState.melds.A, ...gameState.melds.B];
-    return allMelds.find((m) => m.id === selectedMeldId) ?? null;
+    try {
+      if (!selectedMeldId) return null;
+      const allMelds = [...(gameState.melds?.A ?? []), ...(gameState.melds?.B ?? [])];
+      return allMelds.find((m) => m.id === selectedMeldId) ?? null;
+    } catch (err) {
+      console.error('Error resolving selected meld:', err);
+      return null;
+    }
   }, [selectedMeldId, gameState.melds]);
 
   // ---------------------------------------------------------------------------
@@ -102,87 +107,115 @@ export function App() {
   // ---------------------------------------------------------------------------
   const handleAction = useCallback(
     (action: GameAction): boolean => {
-      const prevPukarsA = gameState.pukarsClaimed?.A ?? 0;
-      const prevPukarsB = gameState.pukarsClaimed?.B ?? 0;
-      const prevStockCount = gameState.stockDeck.length;
-      const prevPukarPoolCount = gameState.pukarPool.length;
+      try {
+        const prevPukarsA = gameState.pukarsClaimed?.A ?? 0;
+        const prevPukarsB = gameState.pukarsClaimed?.B ?? 0;
+        const prevStockCount = gameState.stockDeck?.length ?? 0;
+        const prevPukarPoolCount = gameState.pukarPool?.length ?? 0;
 
-      const result = pukarReducer(gameState, action);
+        const result = pukarReducer(gameState, action);
 
-      if (result.error) {
-        setErrorMessage(result.error);
-        playSound('error');
+        if (result.error) {
+          setErrorMessage(result.error);
+          try {
+            playSound('error');
+          } catch {}
+          return false;
+        }
+
+        const next = result.state;
+
+        // Detect Pukar claim (+50 pts)
+        const nextPukarsA = next.pukarsClaimed?.A ?? 0;
+        const nextPukarsB = next.pukarsClaimed?.B ?? 0;
+        if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
+          const claimingTeam = nextPukarsA > prevPukarsA ? 'A' : 'B';
+          const actor = gameState.players[gameState.currentPlayerIndex];
+          setPukarBanner({
+            team: claimingTeam,
+            playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
+            points: 50,
+          });
+          try {
+            playSound('pukar');
+          } catch {}
+        }
+        // Detect Stock Deck replenishment from Pukar pool
+        else if (prevStockCount === 1 && prevPukarPoolCount > (next.pukarPool?.length ?? 0)) {
+          setExhaustNotification(
+            'Stock deck was empty! 1 Pukar deck (13 cards) was placed into the Stock deck.'
+          );
+          try {
+            playSound('draw');
+          } catch {}
+        }
+        // Detect Final Turn triggered by stock exhaustion
+        else if (!gameState.lastTurnTriggeredByDeckExhaust && next.lastTurnTriggeredByDeckExhaust) {
+          setExhaustNotification(
+            'Stock deck and Pukar pool are both exhausted! Final turn initiated.'
+          );
+          try {
+            playSound('draw');
+          } catch {}
+        }
+        // Normal action sound cues
+        else if (
+          action.type === 'DRAW_FROM_STOCK' ||
+          action.type === 'TAKE_DISCARD' ||
+          action.type === 'DRAW_CARD'
+        ) {
+          try {
+            playSound('draw');
+          } catch {}
+        } else if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
+          try {
+            playSound('meld');
+          } catch {}
+        } else if (action.type === 'DISCARD_CARD') {
+          try {
+            playSound('discard');
+          } catch {}
+        } else if (action.type === 'START_NEXT_ROUND') {
+          try {
+            playSound('draw');
+          } catch {}
+        }
+
+        // Detect Round Over
+        if (next.roundStatus === 'ROUND_OVER' && gameState.roundStatus !== 'ROUND_OVER') {
+          try {
+            playSound('roundOver');
+          } catch {}
+        }
+
+        // Clean up selection state
+        if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
+          setSelectedCardIds([]);
+        } else if (action.type === 'DISCARD_CARD') {
+          setSelectedCardIds([]);
+          setSelectedMeldId(null);
+          // On turn advance, reset viewed perspective so active turn stays in view
+          setViewedPlayerIndex(null);
+        } else if (action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME') {
+          setSelectedCardIds([]);
+          setSelectedMeldId(null);
+          setViewedPlayerIndex(null);
+          setPukarBanner(null);
+          setExhaustNotification(null);
+        }
+
+        setGameState(next);
+        setErrorMessage(null);
+        return true;
+      } catch (err) {
+        console.error('Unexpected error in handleAction:', err);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        setErrorMessage(`Game action error: ${errorMsg}`);
+        try {
+          playSound('error');
+        } catch {}
         return false;
       }
-
-      const next = result.state;
-
-      // Detect Pukar claim (+50 pts)
-      const nextPukarsA = next.pukarsClaimed?.A ?? 0;
-      const nextPukarsB = next.pukarsClaimed?.B ?? 0;
-      if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
-        const claimingTeam = nextPukarsA > prevPukarsA ? 'A' : 'B';
-        const actor = gameState.players[gameState.currentPlayerIndex];
-        setPukarBanner({
-          team: claimingTeam,
-          playerName: actor.name,
-          points: 50,
-        });
-        playSound('pukar');
-      }
-      // Detect Stock Deck replenishment from Pukar pool
-      else if (prevStockCount === 1 && prevPukarPoolCount > next.pukarPool.length) {
-        setExhaustNotification(
-          'Stock deck was empty! 1 Pukar deck (13 cards) was placed into the Stock deck.'
-        );
-        playSound('draw');
-      }
-      // Detect Final Turn triggered by stock exhaustion
-      else if (!gameState.lastTurnTriggeredByDeckExhaust && next.lastTurnTriggeredByDeckExhaust) {
-        setExhaustNotification(
-          'Stock deck and Pukar pool are both exhausted! Final turn initiated.'
-        );
-        playSound('draw');
-      }
-      // Normal action sound cues
-      else if (
-        action.type === 'DRAW_FROM_STOCK' ||
-        action.type === 'TAKE_DISCARD' ||
-        action.type === 'DRAW_CARD'
-      ) {
-        playSound('draw');
-      } else if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-        playSound('meld');
-      } else if (action.type === 'DISCARD_CARD') {
-        playSound('discard');
-      } else if (action.type === 'START_NEXT_ROUND') {
-        playSound('draw');
-      }
-
-      // Detect Round Over
-      if (next.roundStatus === 'ROUND_OVER' && gameState.roundStatus !== 'ROUND_OVER') {
-        playSound('roundOver');
-      }
-
-      // Clean up selection state
-      if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-        setSelectedCardIds([]);
-      } else if (action.type === 'DISCARD_CARD') {
-        setSelectedCardIds([]);
-        setSelectedMeldId(null);
-        // On turn advance, reset viewed perspective so active turn stays in view
-        setViewedPlayerIndex(null);
-      } else if (action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME') {
-        setSelectedCardIds([]);
-        setSelectedMeldId(null);
-        setViewedPlayerIndex(null);
-        setPukarBanner(null);
-        setExhaustNotification(null);
-      }
-
-      setGameState(next);
-      setErrorMessage(null);
-      return true;
     },
     [gameState]
   );
@@ -191,48 +224,73 @@ export function App() {
   // Card Selection Handlers
   // ---------------------------------------------------------------------------
   const handleToggleCardSelection = useCallback((cardId: string) => {
-    setSelectedCardIds((prev) =>
-      prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
-    );
+    try {
+      setSelectedCardIds((prev) =>
+        prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
+      );
+    } catch (err) {
+      console.error('Error in handleToggleCardSelection:', err);
+    }
   }, []);
 
   const handleClearSelection = useCallback(() => {
-    setSelectedCardIds([]);
+    try {
+      setSelectedCardIds([]);
+    } catch (err) {
+      console.error('Error in handleClearSelection:', err);
+    }
   }, []);
 
   // ---------------------------------------------------------------------------
   // Hot-Seat Perspective Switcher
   // ---------------------------------------------------------------------------
   const handleSwitchPlayer = useCallback((targetIndex: number) => {
-    // When switching player in hot-seat mode, update viewed player
-    // without mutating gameState.currentPlayerIndex
-    setViewedPlayerIndex(targetIndex);
-    setSelectedCardIds([]);
-    setSelectedMeldId(null);
+    try {
+      // When switching player in hot-seat mode, update viewed player
+      // without mutating gameState.currentPlayerIndex
+      setViewedPlayerIndex(targetIndex);
+      setSelectedCardIds([]);
+      setSelectedMeldId(null);
+    } catch (err) {
+      console.error('Error in handleSwitchPlayer:', err);
+    }
   }, []);
 
   const handleForceTurn = useCallback((targetIndex: number) => {
-    // Explicit dev override: force game turn to the target player
-    setViewedPlayerIndex(targetIndex);
-    setGameState((prev) => ({
-      ...prev,
-      currentPlayerIndex: targetIndex,
-    }));
-    setSelectedCardIds([]);
-    setSelectedMeldId(null);
+    try {
+      // Explicit dev override: force game turn to the target player
+      setViewedPlayerIndex(targetIndex);
+      setGameState((prev) => ({
+        ...prev,
+        currentPlayerIndex: targetIndex,
+      }));
+      setSelectedCardIds([]);
+      setSelectedMeldId(null);
+    } catch (err) {
+      console.error('Error in handleForceTurn:', err);
+    }
   }, []);
 
   // ---------------------------------------------------------------------------
   // Reset / New Game
   // ---------------------------------------------------------------------------
   const handleOpenResetModal = (count: 4 | 6 = gameState.playerCount) => {
-    setResetPlayerCount(count);
-    setIsResetConfirmOpen(true);
+    try {
+      setResetPlayerCount(count);
+      setIsResetConfirmOpen(true);
+    } catch (err) {
+      console.error('Error opening reset modal:', err);
+    }
   };
 
   const handleConfirmReset = () => {
-    handleAction({ type: 'RESET_GAME', playerCount: resetPlayerCount });
-    setIsResetConfirmOpen(false);
+    try {
+      handleAction({ type: 'RESET_GAME', playerCount: resetPlayerCount });
+      setIsResetConfirmOpen(false);
+    } catch (err) {
+      console.error('Error confirming reset:', err);
+      setIsResetConfirmOpen(false);
+    }
   };
 
   return (

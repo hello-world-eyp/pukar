@@ -109,15 +109,23 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const currentSrc = candidateSources[srcIndex] ?? null;
 
   const handleImageError = () => {
-    if (srcIndex + 1 < candidateSources.length) {
-      setSrcIndex((prev) => prev + 1);
-    } else {
+    try {
+      if (srcIndex + 1 < candidateSources.length) {
+        setSrcIndex((prev) => prev + 1);
+      } else {
+        setImgError(true);
+      }
+    } catch {
       setImgError(true);
     }
   };
 
   const handleImageLoad = () => {
-    setImgLoaded(true);
+    try {
+      setImgLoaded(true);
+    } catch {
+      // ignore
+    }
   };
 
   // Size specific styles with precise 2:3 aspect ratio
@@ -160,7 +168,20 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isClickable && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault();
+      try {
+        onClick?.();
+      } catch (err) {
+        console.error('Error invoking PlayingCard onClick via keyboard:', err);
+      }
+    }
+  };
+
+  const handleCardClick = () => {
+    if (!isClickable) return;
+    try {
       onClick?.();
+    } catch (err) {
+      console.error('Error invoking PlayingCard onClick:', err);
     }
   };
 
@@ -175,7 +196,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       <div
         role={isClickable ? 'button' : undefined}
         tabIndex={isClickable ? 0 : undefined}
-        onClick={isClickable ? onClick : undefined}
+        onClick={isClickable ? handleCardClick : undefined}
         onKeyDown={isClickable ? handleKeyDown : undefined}
         aria-label={ariaLabel}
         className={`relative select-none flex-shrink-0 transition-transform duration-150 ${sizeStyles.card} ${
@@ -208,7 +229,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     <div
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
-      onClick={isClickable ? onClick : undefined}
+      onClick={isClickable ? handleCardClick : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-label={ariaLabel}
       className={`relative select-none flex-shrink-0 bg-[#FAF7F0] border border-stone-300/80 transition-all duration-150 flex flex-col justify-between ${

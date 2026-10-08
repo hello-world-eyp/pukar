@@ -45,15 +45,39 @@ export const CenterTable: React.FC<CenterTableProps> = ({
     discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
 
   const handleOpenPeek = () => {
-    if (onPeekDiscard) {
-      onPeekDiscard();
-    } else {
-      setInternalPeekOpen(true);
+    try {
+      if (onPeekDiscard) {
+        onPeekDiscard();
+      } else {
+        setInternalPeekOpen(true);
+      }
+    } catch (err) {
+      console.error('Error opening peek modal:', err);
     }
   };
 
   const handleClosePeek = () => {
-    setInternalPeekOpen(false);
+    try {
+      setInternalPeekOpen(false);
+    } catch (err) {
+      console.error('Error closing peek modal:', err);
+    }
+  };
+
+  const handleDrawStock = () => {
+    try {
+      onDrawStock?.();
+    } catch (err) {
+      console.error('Error drawing stock:', err);
+    }
+  };
+
+  const handleDrawDiscard = () => {
+    try {
+      onDrawDiscard?.();
+    } catch (err) {
+      console.error('Error drawing discard:', err);
+    }
   };
 
   // Dummy card representation for faceDown stock deck card
@@ -87,7 +111,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
 
               {actualStockCount > 0 ? (
                 <div
-                  onClick={drawStockAllowed ? onDrawStock : undefined}
+                  onClick={drawStockAllowed ? handleDrawStock : undefined}
                   className={`relative z-10 transition-all ${
                     drawStockAllowed
                       ? 'cursor-pointer hover:scale-105 active:scale-95 ring-2 ring-sky-400/80 ring-offset-2 ring-offset-slate-900 rounded-lg shadow-lg shadow-sky-500/20'
@@ -111,7 +135,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
               </span>
               <button
                 type="button"
-                onClick={onDrawStock}
+                onClick={handleDrawStock}
                 disabled={!drawStockAllowed || actualStockCount === 0}
                 className={`w-full max-w-[160px] py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   drawStockAllowed && actualStockCount > 0
@@ -150,7 +174,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
               )}
               {topDiscardCard ? (
                 <div
-                  onClick={drawDiscardAllowed ? onDrawDiscard : undefined}
+                  onClick={drawDiscardAllowed ? handleDrawDiscard : undefined}
                   className={`relative z-10 transition-all ${
                     drawDiscardAllowed
                       ? 'cursor-pointer hover:scale-105 active:scale-95 ring-2 ring-amber-400/80 ring-offset-2 ring-offset-slate-900 rounded-lg shadow-lg shadow-amber-500/20'
@@ -173,7 +197,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
               </span>
               <button
                 type="button"
-                onClick={onDrawDiscard}
+                onClick={handleDrawDiscard}
                 disabled={!drawDiscardAllowed || discardPile.length === 0}
                 className={`w-full max-w-[170px] py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                   drawDiscardAllowed && discardPile.length > 0
