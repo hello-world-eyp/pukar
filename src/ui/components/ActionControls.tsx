@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { Card, Meld, TurnPhase } from '../../engine/types';
-import { validateNewMeld, canAddCardsToMeld } from '../../engine/meld-validator';
+import { validateNewMeld } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
 import {
-  PlusCircle,
   Trash2,
   ArrowDownCircle,
   Sparkles,
@@ -44,7 +43,6 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   onDrawStock,
   onTakeDiscard,
   onPlayMeld,
-  onAddToMeld,
   onDiscard,
   disabled = false,
   className = '',
@@ -95,25 +93,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
   const canPlayNewMeld = !disabled && isMeldPhase && meldValidation.valid;
 
-  // 3. Add to Meld Validation Preview
-  const addToMeldValidation = useMemo(() => {
-    try {
-      if (!selectedMeld) {
-        return { valid: false, error: 'Select a sequence on table first' };
-      }
-      if (selectedCardCount === 0) {
-        return { valid: false, error: 'Select cards to add' };
-      }
-      return canAddCardsToMeld(selectedMeld, selectedCards);
-    } catch (err) {
-      console.error('Error during add to meld preview:', err);
-      return { valid: false, error: 'Add to meld error' };
-    }
-  }, [selectedMeld, selectedCards, selectedCardCount]);
-
-  const canAddToMeld = !disabled && isMeldPhase && addToMeldValidation.valid;
-
-  // 4. Discard Card Eligibility
+  // Discard Card Eligibility
   const canDiscard = !disabled && isDiscardAllowed && selectedCardCount === 1;
 
   // Action handlers
@@ -123,15 +103,6 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
       onPlayMeld?.(selectedCards.map((c) => c.id));
     } catch (err) {
       console.error('Error in handlePlayMeldClick:', err);
-    }
-  };
-
-  const handleAddToMeldClick = () => {
-    if (!canAddToMeld || !selectedMeld) return;
-    try {
-      onAddToMeld?.(selectedMeld.id, selectedCards.map((c) => c.id));
-    } catch (err) {
-      console.error('Error in handleAddToMeldClick:', err);
     }
   };
 
@@ -184,6 +155,15 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
               </div>
             </div>
           )}
+          {selectedCardCount > 0 && isMeldPhase && (
+            <div
+              data-testid="add-to-sequence-tip"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-950/60 border border-yellow-500/40 text-yellow-300 text-xs font-semibold"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+              <span>Click any yellow-highlighted sequence on the table to add cards</span>
+            </div>
+          )}
           {selectedMeld && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-950/60 border border-teal-600/40 text-teal-300 text-xs font-semibold">
               <span className="text-slate-400 font-normal">Target:</span>
@@ -194,7 +174,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
       </div>
 
       {/* ACTION BUTTONS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* ACTION 1: DRAW FROM STOCK */}
         <div className="flex flex-col gap-1.5">
           <button
@@ -280,46 +260,6 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
                 <span className="inline-flex items-center gap-1 text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2 py-0.5 rounded">
                   <AlertCircle className="w-3 h-3 shrink-0 text-amber-400" />
                   {meldValidation.error}
-                </span>
-              )
-            ) : (
-              <span className="text-slate-500">Only in SEQUENCE phase</span>
-            )}
-          </div>
-        </div>
-
-        {/* ACTION 4: ADD TO SELECTED SEQUENCE */}
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            data-testid="btn-add-meld"
-            disabled={!canAddToMeld}
-            onClick={handleAddToMeldClick}
-            className={`w-full h-12 px-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
-              canAddToMeld
-                ? 'bg-teal-600 hover:bg-teal-500 text-white shadow-teal-700/30 ring-2 ring-teal-400/40 active:scale-95'
-                : 'bg-slate-800/60 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
-            }`}
-          >
-            <PlusCircle className="w-4 h-4 shrink-0" />
-            <span className="truncate">Add to Sequence</span>
-          </button>
-
-          {/* Add to Sequence Preview Badge */}
-          <div data-testid="add-meld-badge" className="text-[11px] text-center min-h-[18px]">
-            {isMeldPhase ? (
-              addToMeldValidation.valid ? (
-                <span className="inline-flex items-center gap-1 text-teal-400 font-semibold bg-teal-950/60 border border-teal-700/40 px-2 py-0.5 rounded truncate max-w-full">
-                  <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  {`Add to ${selectedMeld?.type} Sequence`}
-                  {addToMeldValidation.pickedUpCard && (
-                    <span className="text-amber-300 font-bold ml-1">🃏 Picks up Joker!</span>
-                  )}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1 text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2 py-0.5 rounded truncate max-w-full">
-                  <AlertCircle className="w-3 h-3 shrink-0 text-amber-400" />
-                  {addToMeldValidation.error}
                 </span>
               )
             ) : (

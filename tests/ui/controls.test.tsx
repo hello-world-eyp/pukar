@@ -306,7 +306,7 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
       expect(html).toMatch(/meld-validation-badge/);
     });
 
-    it('shows preview badge and enables Add to Meld when cards can be added to selected meld', () => {
+    it('shows tip directing user to click table sequence when cards are selected in MELD phase and does not render btn-add-meld', () => {
       const existingMeld: Meld = {
         id: 'meld-A-1',
         team: 'A',
@@ -330,11 +330,13 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         />
       );
 
-      expect(html).toContain('Add to RUN');
-      expect(html).not.toMatch(/btn-add-meld[^>]*disabled=""/);
+      // Verify tip is shown and btn-add-meld is removed
+      expect(html).toContain('data-testid="add-to-sequence-tip"');
+      expect(html).toContain('Click any yellow-highlighted sequence on the table to add cards');
+      expect(html).not.toContain('btn-add-meld');
     });
 
-    it('disables Add to Meld when no meld is selected', () => {
+    it('does not render btn-add-meld button since sequences are clicked directly to auto-add', () => {
       const html = renderToString(
         <ActionControls
           phase="MELD"
@@ -343,8 +345,8 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         />
       );
 
-      expect(html).toContain('Select a sequence on table first');
-      expect(html).toMatch(/btn-add-meld[^>]*disabled=""/);
+      expect(html).not.toContain('btn-add-meld');
+      expect(html).toContain('data-testid="add-to-sequence-tip"');
     });
 
     it('enables discard button when 1 card is selected in MELD phase', () => {

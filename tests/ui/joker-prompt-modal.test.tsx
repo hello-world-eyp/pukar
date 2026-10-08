@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { JokerPromptModal } from '../../src/ui/components/JokerPromptModal';
-import { ActionControls } from '../../src/ui/components/ActionControls';
+import { TableMeldBoard } from '../../src/ui/components/TableMeldBoard';
 import { App } from '../../src/App';
 import { Card, Meld } from '../../src/engine/types';
 
@@ -66,7 +66,7 @@ describe('JokerPromptModal & UI Integration for Normal Joker', () => {
     expect(html).toContain('Cancel');
   });
 
-  it('displays "🃏 Picks up Joker!" badge in ActionControls preview when adding natural replacement', () => {
+  it('displays "🃏 Picks up Joker!" badge on sequence item when adding natural replacement', () => {
     const card4 = makeCard('c4s', 'SPADES', 4);
     const joker = makeCard('joker', null, 0, true);
     const card6 = makeCard('c6s', 'SPADES', 6);
@@ -87,17 +87,20 @@ describe('JokerPromptModal & UI Integration for Normal Joker', () => {
     const card5 = makeCard('c5s', 'SPADES', 5);
 
     const html = renderToString(
-      <ActionControls
-        phase="MELD"
-        selectedMeld={meld}
+      <TableMeldBoard
+        melds={{
+          A: [meld],
+          B: [],
+        }}
+        activeTeam="A"
+        canAdd={true}
         selectedCards={[card5]}
-        allHandCards={[card5]}
       />
     );
 
-    expect(html).toContain('data-testid="add-meld-badge"');
-    expect(html).toContain('Add to RUN');
+    expect(html).toContain('data-highlight-yellow="true"');
     expect(html).toContain('Picks up Joker!');
+    expect(html).toContain('Click to Auto-Add');
   });
 
   it('does NOT display "Picks up Joker!" badge when adding a regular card that does not replace Joker', () => {
@@ -122,16 +125,18 @@ describe('JokerPromptModal & UI Integration for Normal Joker', () => {
     const card7 = makeCard('c7s', 'SPADES', 7);
 
     const html = renderToString(
-      <ActionControls
-        phase="MELD"
-        selectedMeld={meld}
+      <TableMeldBoard
+        melds={{
+          A: [meld],
+          B: [],
+        }}
+        activeTeam="A"
+        canAdd={true}
         selectedCards={[card7]}
-        allHandCards={[card7]}
       />
     );
 
-    expect(html).toContain('data-testid="add-meld-badge"');
-    expect(html).toContain('Add to RUN');
+    expect(html).toContain('data-highlight-yellow="true"');
     expect(html).not.toContain('Picks up Joker!');
   });
 

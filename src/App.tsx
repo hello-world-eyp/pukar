@@ -106,6 +106,17 @@ export function App() {
   const viewingPlayer = gameState.players[currentViewIndex] ?? activePlayer;
   const isViewingActivePlayer = currentViewIndex === activeTurnIndex;
 
+  // Selected cards in current hand
+  const selectedCards: Card[] = useMemo(() => {
+    try {
+      if (!selectedCardIds || selectedCardIds.length === 0) return [];
+      const idSet = new Set(selectedCardIds);
+      return (viewingPlayer.hand ?? []).filter((c) => idSet.has(c.id));
+    } catch {
+      return [];
+    }
+  }, [selectedCardIds, viewingPlayer.hand]);
+
   // Selected meld object
   const selectedMeld: Meld | null = useMemo(() => {
     try {
@@ -648,6 +659,11 @@ export function App() {
                     setSelectedMeldId((prev) => (prev === meld.id ? null : meld.id));
                   }}
                   onZoomMeld={(meld) => setZoomedMeld(meld)}
+                  selectedCards={selectedCards}
+                  canAdd={gameState.phase === 'MELD' && isViewingActivePlayer}
+                  onAddToMeld={(meldId, cardIds) =>
+                    handleAction({ type: 'ADD_TO_MELD', meldId, cardIds })
+                  }
                 />
               </div>
             </div>
@@ -658,6 +674,7 @@ export function App() {
         <section aria-label="Turn Actions">
           <ActionControls
             phase={gameState.phase}
+            selectedCards={selectedCards}
             selectedCardIds={selectedCardIds}
             allHandCards={viewingPlayer.hand}
             selectedMeld={selectedMeld}

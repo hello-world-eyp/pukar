@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Meld, Team, Suit } from '../../engine/types';
-import { evaluateMeldScore } from '../../engine/meld-validator';
+import { Meld, Team, Suit, Card } from '../../engine/types';
+import { evaluateMeldScore, canAddCardsToMeld } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
 import { Shield, Sparkles, CheckCircle2, PlusCircle, ArrowDownUp, ZoomIn } from 'lucide-react';
 
@@ -24,6 +24,11 @@ export interface TableMeldBoardProps {
   selectedMeldId?: string | null;
   onSelectMeld?: (meld: Meld) => void;
   onZoomMeld?: (meld: Meld) => void;
+  selectedCards?: Card[];
+  selectedCardIds?: string[];
+  allHandCards?: Card[];
+  canAdd?: boolean;
+  onAddToMeld?: (meldId: string, cardIds: string[]) => void;
   className?: string;
   defaultSortDirection?: MeldSortDirection;
   cardSize?: 'sm' | 'md';
@@ -37,11 +42,31 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   selectedMeldId,
   onSelectMeld,
   onZoomMeld,
+  selectedCards,
+  selectedCardIds,
+  allHandCards,
+  canAdd = true,
+  onAddToMeld,
   className = '',
   defaultSortDirection = 'desc',
   cardSize = 'md',
 }) => {
   const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
+
+  const effectiveSelectedCards = useMemo(() => {
+    try {
+      if (selectedCards && Array.isArray(selectedCards)) {
+        return selectedCards;
+      }
+      if (selectedCardIds && allHandCards) {
+        const idSet = new Set(selectedCardIds);
+        return allHandCards.filter((c) => idSet.has(c.id));
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }, [selectedCards, selectedCardIds, allHandCards]);
 
   const listA = melds?.A ?? teamAMelds ?? [];
   const listB = melds?.B ?? teamBMelds ?? [];
@@ -101,6 +126,9 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           onZoomMeld={onZoomMeld}
           sortDirection={sortDirection}
           cardSize={cardSize}
+          selectedCards={effectiveSelectedCards}
+          canAdd={canAdd}
+          onAddToMeld={onAddToMeld}
         />
 
         {/* TEAM B MELDS COLUMN */}
@@ -116,6 +144,9 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           onZoomMeld={onZoomMeld}
           sortDirection={sortDirection}
           cardSize={cardSize}
+          selectedCards={effectiveSelectedCards}
+          canAdd={canAdd}
+          onAddToMeld={onAddToMeld}
         />
       </div>
     </div>
@@ -134,6 +165,9 @@ interface TeamMeldColumnProps {
   onZoomMeld?: (meld: Meld) => void;
   sortDirection: MeldSortDirection;
   cardSize?: 'sm' | 'md';
+  selectedCards?: Card[];
+  canAdd?: boolean;
+  onAddToMeld?: (meldId: string, cardIds: string[]) => void;
 }
 
 export function sortMelds(
@@ -209,6 +243,9 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   onZoomMeld,
   sortDirection,
   cardSize = 'md',
+  selectedCards,
+  canAdd = true,
+  onAddToMeld,
 }) => {
   const isBlue = teamColor === 'blue';
 
@@ -267,12 +304,33 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
             const isSelected = selectedMeldId === meld.id;
             const evaluation = evaluateMeldScore(meld);
 
+            // Check if all selected cards can be added to this sequence
+            const isOwnTeam = isActive;
+            const canAttemptAdd = Boolean(
+              canAdd &&
+                isOwnTeam &&
+                selectedCards &&
+                selectedCards.length > 0
+            );
+            const addValidation = canAttemptAdd
+              ? canAddCardsToMeld(meld, selectedCards!)
+              : { valid: false };
+            const isEligibleToAutoAdd = Boolean(canAttemptAdd && addValidation.valid);
+
             return (
               <MeldCardItem
                 key={meld.id}
                 meld={meld}
                 evaluation={evaluation}
                 isSelected={isSelected}
+                isEligibleToAutoAdd={isEligibleToAutoAdd}
+                autoAddValidation={addValidation}
+                selectedCardsCount={selectedCards?.length ?? 0}
+                onAutoAdd={() => {
+                  if (onAddToMeld && selectedCards && selectedCards.length > 0) {
+                    onAddToMeld(meld.id, selectedCards.map((c) => c.id));
+                  }
+                }}
                 onSelect={() => {
                   try {
                     onSelectMeld?.(meld);
@@ -302,6 +360,10 @@ interface MeldCardItemProps {
   onZoom?: (meld: Meld) => void;
   sortDirection: MeldSortDirection;
   cardSize?: 'sm' | 'md';
+  isEligibleToAutoAdd?: boolean;
+  autoAddValidation?: ReturnType<typeof canAddCardsToMeld>;
+  selectedCardsCount?: number;
+  onAutoAdd?: () => void;
 }
 
 const MeldCardItem: React.FC<MeldCardItemProps> = ({
@@ -313,6 +375,10 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   onZoom,
   sortDirection,
   cardSize = 'md',
+  isEligibleToAutoAdd = false,
+  autoAddValidation,
+  selectedCardsCount = 0,
+  onAutoAdd,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
 
@@ -392,17 +458,61 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     });
   }, [meld.slots, meld.cards, sortDirection]);
 
+  const handleItemClick = () => {
+    if (isEligibleToAutoAdd && onAutoAdd) {
+      try {
+        onAutoAdd();
+      } catch (err) {
+        console.error('Error auto-adding to sequence:', err);
+      }
+      return;
+    }
+    if (canSelect) {
+      onSelect();
+    }
+  };
+
+  const containerClasses = isEligibleToAutoAdd
+    ? 'border-2 border-yellow-400 ring-4 ring-yellow-400/70 shadow-2xl shadow-yellow-500/30 bg-gradient-to-br from-yellow-950/40 via-slate-900/90 to-yellow-950/30 cursor-pointer hover:scale-[1.015] hover:border-yellow-300 hover:ring-yellow-300 transition-all'
+    : isSelected
+    ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-400/50 shadow-lg'
+    : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-950/80';
+
   return (
     <div
-      onClick={canSelect ? onSelect : undefined}
+      data-testid={`meld-item-${meld.id}`}
+      data-can-add={isEligibleToAutoAdd ? 'true' : undefined}
+      data-highlight-yellow={isEligibleToAutoAdd ? 'true' : undefined}
+      onClick={handleItemClick}
       className={`relative group rounded-xl p-3 border transition-all ${
-        canSelect ? 'cursor-pointer' : ''
-      } ${
-        isSelected
-          ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-400/50 shadow-lg'
-          : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-950/80'
-      }`}
+        canSelect || isEligibleToAutoAdd ? 'cursor-pointer' : ''
+      } ${containerClasses}`}
     >
+      {/* Yellow Auto-Add Banner */}
+      {isEligibleToAutoAdd && (
+        <div
+          data-testid={`auto-add-prompt-${meld.id}`}
+          className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-yellow-400/20 border border-yellow-400/60 text-yellow-300 text-xs font-bold mb-2 animate-pulse flex-wrap"
+        >
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-400 shrink-0" />
+            <span>
+              {`Click sequence to add (${selectedCardsCount} ${selectedCardsCount === 1 ? 'card' : 'cards'})`}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {autoAddValidation?.pickedUpCard && (
+              <span className="text-[10px] font-extrabold bg-slate-950 text-yellow-300 border border-yellow-400/40 px-1.5 py-0.5 rounded">
+                🃏 Picks up Joker!
+              </span>
+            )}
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-yellow-400 text-slate-950 shadow-sm shrink-0">
+              Click to Auto-Add
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Meld Header Bar */}
       <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
         <div className="flex items-center gap-2">
@@ -446,7 +556,14 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
             </button>
           )}
 
-          {canSelect && (
+          {isEligibleToAutoAdd ? (
+            <div className="flex items-center gap-1 text-[11px]">
+              <span className="px-2 py-0.5 rounded bg-yellow-400 text-slate-950 font-extrabold flex items-center gap-1 shadow-sm">
+                <PlusCircle className="w-3 h-3" />
+                <span>Auto-Add</span>
+              </span>
+            </div>
+          ) : canSelect ? (
             <div className="flex items-center gap-1 text-[11px]">
               {isSelected ? (
                 <span className="text-amber-400 font-bold flex items-center gap-1">
@@ -459,7 +576,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
                 </span>
               )}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
