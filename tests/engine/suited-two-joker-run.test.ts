@@ -1,0 +1,364 @@
+import { describe, it, expect } from 'vitest';
+import { Card, Meld, Suit, Rank } from '../../src/engine/types';
+import {
+  validateNewRun,
+  validateNewMeld,
+  canAddCardsToMeld,
+} from '../../src/engine/meld-validator';
+import { pukarReducer } from '../../src/engine/reducer';
+import { dealInitialState } from '../../src/engine/deck';
+
+function makeCard(id: string, suit: Suit | null, rank: number, isNaturalJoker = false): Card {
+  return {
+    id,
+    suit,
+    rank: rank as Rank,
+    isNaturalJoker,
+    isJoker: isNaturalJoker || rank === 2,
+  };
+}
+
+describe('Suited Rank 2 + Joker Run Validation & Dynamics', () => {
+  describe('Suited 2 with Natural Cards and Joker (Valid Runs)', () => {
+    it('validates [2♥, 3♥, Joker] where 2♥ retains natural value and Joker is wild', () => {
+      const cards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      expect(result.slots).toBeDefined();
+
+      const slots = result.slots!;
+      expect(slots).toHaveLength(3);
+
+      // 2♥ is natural rank 2
+      const slot2 = slots.find((s) => s.card.id === 'twoHearts');
+      expect(slot2).toBeDefined();
+      expect(slot2?.representedRank).toBe(2);
+      expect(slot2?.isWildcard).toBe(false);
+
+      // 3♥ is natural rank 3
+      const slot3 = slots.find((s) => s.card.id === 'threeHearts');
+      expect(slot3).toBeDefined();
+      expect(slot3?.representedRank).toBe(3);
+      expect(slot3?.isWildcard).toBe(false);
+
+      // Joker is wildcard at rank 4
+      const slotJoker = slots.find((s) => s.card.id === 'joker');
+      expect(slotJoker).toBeDefined();
+      expect(slotJoker?.representedRank).toBe(4);
+      expect(slotJoker?.isWildcard).toBe(true);
+    });
+
+    it('validates [2♠, 3♠, Joker] as valid Spades run', () => {
+      const cards = [
+        makeCard('twoSpades', 'SPADES', 2),
+        makeCard('threeSpades', 'SPADES', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      const slot2 = result.slots?.find((s) => s.card.id === 'twoSpades');
+      expect(slot2?.isWildcard).toBe(false);
+      expect(slot2?.representedRank).toBe(2);
+    });
+
+    it('validates [2♦, 3♦, Joker] as valid Diamonds run', () => {
+      const cards = [
+        makeCard('twoDiamonds', 'DIAMONDS', 2),
+        makeCard('threeDiamonds', 'DIAMONDS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      const slot2 = result.slots?.find((s) => s.card.id === 'twoDiamonds');
+      expect(slot2?.isWildcard).toBe(false);
+    });
+
+    it('validates [2♣, 3♣, Joker] as valid Clubs run', () => {
+      const cards = [
+        makeCard('twoClubs', 'CLUBS', 2),
+        makeCard('threeClubs', 'CLUBS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      const slot2 = result.slots?.find((s) => s.card.id === 'twoClubs');
+      expect(slot2?.isWildcard).toBe(false);
+    });
+
+    it('validates order variation [Joker, 2♥, 3♥] as Ace-low run (A-2-3)', () => {
+      const cards = [
+        makeCard('joker', null, 0, true),
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      const jokerSlot = result.slots?.find((s) => s.card.id === 'joker');
+      expect(jokerSlot?.representedRank).toBe(1);
+      expect(jokerSlot?.isWildcard).toBe(true);
+
+      const slot2 = result.slots?.find((s) => s.card.id === 'twoHearts');
+      expect(slot2?.representedRank).toBe(2);
+      expect(slot2?.isWildcard).toBe(false);
+    });
+
+    it('validates [2♥, Joker, 4♥] where Joker substitutes for 3♥', () => {
+      const cards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('joker', null, 0, true),
+        makeCard('fourHearts', 'HEARTS', 4),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      expect(result.slots?.map((s) => s.representedRank)).toEqual([2, 3, 4]);
+      expect(result.slots?.[0].isWildcard).toBe(false);
+      expect(result.slots?.[1].isWildcard).toBe(true);
+      expect(result.slots?.[2].isWildcard).toBe(false);
+    });
+
+    it('validates 4-card run [2♥, 3♥, 4♥, Joker] with 2♥ natural and Joker at 5♥', () => {
+      const cards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('fourHearts', 'HEARTS', 4),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      expect(result.slots?.map((s) => s.representedRank)).toEqual([2, 3, 4, 5]);
+      expect(result.slots?.[0].isWildcard).toBe(false);
+      expect(result.slots?.[3].isWildcard).toBe(true);
+    });
+
+    it('validates [A♥, 2♥, 3♥, Joker] as 4-card Ace-low run', () => {
+      const cards = [
+        makeCard('aceHearts', 'HEARTS', 14),
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      expect(result.slots?.map((s) => s.representedRank)).toEqual([1, 2, 3, 4]);
+      expect(result.slots?.[0].isWildcard).toBe(false);
+      expect(result.slots?.[1].isWildcard).toBe(false);
+      expect(result.slots?.[3].isWildcard).toBe(true);
+    });
+
+    it('validates [2♥, 3♥, 2♠] where suited 2♥ is natural and mismatched 2♠ is wildcard', () => {
+      const cards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('twoSpades', 'SPADES', 2),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(true);
+      const slot2H = result.slots?.find((s) => s.card.id === 'twoHearts');
+      expect(slot2H?.representedRank).toBe(2);
+      expect(slot2H?.isWildcard).toBe(false);
+
+      const slot2S = result.slots?.find((s) => s.card.id === 'twoSpades');
+      expect(slot2S?.isWildcard).toBe(true);
+    });
+  });
+
+  describe('Cross-Suit Combinations (Strictly Invalid Runs)', () => {
+    it('rejects [2♠, 3♣, Joker] because 2 and 3 have different suits (2 wilds)', () => {
+      const cards = [
+        makeCard('twoSpades', 'SPADES', 2),
+        makeCard('threeClubs', 'CLUBS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/wildcard/i);
+    });
+
+    it('rejects [2♠, 3♥, Joker] because 2 and 3 have different suits', () => {
+      const cards = [
+        makeCard('twoSpades', 'SPADES', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/wildcard/i);
+    });
+
+    it('rejects [2♦, 3♠, Joker] because 2 and 3 have different suits', () => {
+      const cards = [
+        makeCard('twoDiamonds', 'DIAMONDS', 2),
+        makeCard('threeSpades', 'SPADES', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/wildcard/i);
+    });
+
+    it('rejects [2♣, 3♦, Joker] because 2 and 3 have different suits', () => {
+      const cards = [
+        makeCard('twoClubs', 'CLUBS', 2),
+        makeCard('threeDiamonds', 'DIAMONDS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/wildcard/i);
+    });
+
+    it('rejects [2♥, 3♥, 2♠, Joker] because it contains 2 wildcards (2♠ and Joker)', () => {
+      const cards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('twoSpades', 'SPADES', 2),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/more than 1 wildcard/i);
+    });
+
+    it('rejects [2♠, 2♥, 3♣] because it contains 2 wildcards in a clubs run', () => {
+      const cards = [
+        makeCard('twoSpades', 'SPADES', 2),
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeClubs', 'CLUBS', 3),
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/more than 1 wildcard/i);
+    });
+  });
+
+  describe('validateNewMeld Auto-Classification & Joker Identification', () => {
+    it('classifies [2♥, 3♥, Joker] as RUN of HEARTS and accurately points jokerCardId to Joker', () => {
+      const jokerCard = makeCard('joker-abc', null, 0, true);
+      const cards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        jokerCard,
+      ];
+      const result = validateNewMeld(cards);
+      expect(result.valid).toBe(true);
+      expect(result.type).toBe('RUN');
+      expect(result.suit).toBe('HEARTS');
+      // Must point to the actual Joker, NOT the natural 2♥
+      expect(result.jokerCardId).toBe('joker-abc');
+    });
+
+    it('rejects cross-suit [2♠, 3♣, Joker] via validateNewMeld', () => {
+      const cards = [
+        makeCard('twoSpades', 'SPADES', 2),
+        makeCard('threeClubs', 'CLUBS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const result = validateNewMeld(cards);
+      expect(result.valid).toBe(false);
+    });
+  });
+
+  describe('canAddCardsToMeld with Suited 2 and Wildcards', () => {
+    it('allows adding 4♥ to existing meld [2♥, 3♥, Joker(4♥)], shifting Joker to 5♥', () => {
+      const initialCards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const validation = validateNewRun(initialCards);
+      expect(validation.valid).toBe(true);
+
+      const meld: Meld = {
+        id: 'meld-1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: initialCards,
+        slots: validation.slots!,
+      };
+
+      const cardToAdd = makeCard('fourHearts', 'HEARTS', 4);
+      const addResult = canAddCardsToMeld(meld, [cardToAdd]);
+      expect(addResult.valid).toBe(true);
+      expect(addResult.updatedSlots).toHaveLength(4);
+
+      // 2♥ retains rank 2
+      const slot2 = addResult.updatedSlots?.find((s) => s.card.id === 'twoHearts');
+      expect(slot2?.representedRank).toBe(2);
+      expect(slot2?.isWildcard).toBe(false);
+
+      // 4♥ is natural at rank 4
+      const slot4 = addResult.updatedSlots?.find((s) => s.card.id === 'fourHearts');
+      expect(slot4?.representedRank).toBe(4);
+      expect(slot4?.isWildcard).toBe(false);
+
+      // Joker shifts up to rank 5
+      const slotJoker = addResult.updatedSlots?.find((s) => s.card.id === 'joker');
+      expect(slotJoker?.representedRank).toBe(5);
+      expect(slotJoker?.isWildcard).toBe(true);
+    });
+
+    it('rejects adding a second wildcard to [2♥, 3♥, Joker(4♥)]', () => {
+      const initialCards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const validation = validateNewRun(initialCards);
+      const meld: Meld = {
+        id: 'meld-1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: initialCards,
+        slots: validation.slots!,
+      };
+
+      // Adding 2♣ (mismatched suit = second wildcard)
+      const secondWild = makeCard('twoClubs', 'CLUBS', 2);
+      const addResult = canAddCardsToMeld(meld, [secondWild]);
+      expect(addResult.valid).toBe(false);
+      expect(addResult.error).toMatch(/more than 1 wildcard/i);
+    });
+  });
+
+  describe('Game Reducer Full Turn Integration', () => {
+    it('executes PLAY_NEW_MELD action with [2♥, 3♥, Joker] successfully', () => {
+      const initialState = dealInitialState(4);
+
+      const twoH = makeCard('card-2h', 'HEARTS', 2);
+      const threeH = makeCard('card-3h', 'HEARTS', 3);
+      const joker = makeCard('card-joker', null, 0, true);
+
+      // Place cards in active player's hand and set phase to MELD
+      const stateWithCards = {
+        ...initialState,
+        phase: 'MELD' as const,
+        turnPhase: 'MELD' as const,
+        players: initialState.players.map((p, idx) =>
+          idx === 0 ? { ...p, hand: [twoH, threeH, joker, ...p.hand] } : p
+        ),
+      };
+
+      const result = pukarReducer(stateWithCards, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['card-2h', 'card-3h', 'card-joker'],
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.state.melds.A).toHaveLength(1);
+      const meld = result.state.melds.A[0];
+      expect(meld.type).toBe('RUN');
+      expect(meld.suit).toBe('HEARTS');
+      expect(meld.slots).toHaveLength(3);
+      expect(meld.slots[0].card.id).toBe('card-2h');
+      expect(meld.slots[0].isWildcard).toBe(false);
+      expect(meld.slots[2].card.id).toBe('card-joker');
+      expect(meld.slots[2].isWildcard).toBe(true);
+    });
+  });
+});
