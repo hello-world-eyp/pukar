@@ -92,23 +92,23 @@ export const CenterTable: React.FC<CenterTableProps> = ({
   return (
     <>
       <div
-        className={`relative w-full rounded-2xl bg-gradient-to-b from-slate-900/95 via-slate-900 to-slate-950 border border-slate-800/80 p-3 sm:p-4 shadow-xl text-slate-100 ${className}`}
+        className={`relative w-full rounded-2xl sm:rounded-3xl p-3 sm:p-4 text-stone-900 ${className}`}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-center">
-          {/* 1. STOCK DECK */}
-          <div className="flex flex-col items-center justify-between p-3 sm:p-4 rounded-2xl bg-slate-950/80 border-2 border-slate-800 shadow-xl min-h-[175px]">
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-sky-300 mb-1">
-              <Layers className="w-4 h-4 text-sky-400" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-stretch">
+          {/* 1. STOCK DECK (LEFT) */}
+          <div className="flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl table-well-light min-h-[200px]">
+            <div className="flex items-center gap-1.5 text-sm sm:text-base font-black uppercase tracking-wider text-stone-800 mb-1">
+              <Layers className="w-4 h-4 text-sky-600" />
               <span>Stock Deck</span>
             </div>
 
             {/* Visual Card Stack with 3D Depth */}
             <div className="relative my-2 flex items-center justify-center">
               {actualStockCount > 1 && (
-                <div className="absolute -top-1.5 -left-1.5 w-20 h-28 rounded-lg bg-blue-950/90 border border-blue-700/60 -rotate-3 shadow-md" />
+                <div className="absolute -top-1.5 -left-1.5 w-22 h-32 rounded-xl bg-blue-900 border border-blue-700/80 -rotate-3 shadow-md" />
               )}
               {actualStockCount > 2 && (
-                <div className="absolute -top-0.5 -right-1.5 w-20 h-28 rounded-lg bg-blue-950/90 border border-blue-700/60 rotate-2 shadow-md" />
+                <div className="absolute -top-0.5 -right-1.5 w-22 h-32 rounded-xl bg-blue-900 border border-blue-700/80 rotate-2 shadow-md" />
               )}
 
               {actualStockCount > 0 ? (
@@ -118,7 +118,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                     isRippling ? 'animate-card-ripple' : ''
                   } ${
                     drawStockAllowed
-                      ? 'cursor-pointer hover:scale-105 active:scale-95 ring-4 ring-sky-400/90 ring-offset-2 ring-offset-slate-950 rounded-lg shadow-xl shadow-sky-500/30'
+                      ? 'cursor-pointer hover:scale-105 active:scale-95 ring-4 ring-sky-500 ring-offset-2 ring-offset-amber-50 rounded-xl shadow-xl'
                       : ''
                   }`}
                   style={isRippling ? { animationDelay: '60ms' } : undefined}
@@ -126,7 +126,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                   <PlayingCard card={dummyStockCard} faceDown size="md" />
                 </div>
               ) : (
-                <div className="w-20 h-28 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center p-2 text-center text-slate-400 text-xs bg-slate-900/40">
+                <div className="w-22 h-32 rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-sm bg-stone-100/60">
                   <AlertTriangle className="w-6 h-6 text-amber-500 mb-1" />
                   <span className="font-bold">Exhausted</span>
                 </div>
@@ -135,30 +135,30 @@ export const CenterTable: React.FC<CenterTableProps> = ({
 
             {/* Stock Count & Tactile Button */}
             <div className="flex flex-col items-center gap-2 mt-2 w-full">
-              <span className="text-sm font-bold text-slate-200">
+              <span className="text-sm sm:text-base font-extrabold text-stone-700">
                 {`${actualStockCount} ${actualStockCount === 1 ? 'card' : 'cards'} remaining`}
               </span>
               <button
                 type="button"
                 onClick={handleDrawStock}
                 disabled={!drawStockAllowed || actualStockCount === 0}
-                className={`w-full max-w-[170px] h-10 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
+                className={`w-full max-w-[190px] h-11 px-3 rounded-xl text-sm sm:text-base font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                   drawStockAllowed && actualStockCount > 0
                     ? 'btn-game-primary'
-                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                    : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
                 }`}
               >
-                <ArrowDownCircle className="w-4 h-4 shrink-0" />
+                <ArrowDownCircle className="w-5 h-5 shrink-0" />
                 <span>Draw 1 Card</span>
               </button>
             </div>
           </div>
 
-          {/* 2. DISCARD PILE ("THE BOTTOM") */}
-          <div className="flex flex-col items-center justify-between p-3 sm:p-4 rounded-2xl bg-slate-950/80 border-2 border-slate-800 shadow-xl min-h-[175px]">
+          {/* 2. DISCARD PILE ("THE BOTTOM") (MIDDLE) */}
+          <div className="flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl table-well-light min-h-[200px]">
             <div className="flex items-center justify-between w-full mb-1">
-              <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-amber-300">
-                <Layers className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-1.5 text-sm sm:text-base font-black uppercase tracking-wider text-amber-900">
+                <Layers className="w-4 h-4 text-amber-600" />
                 <span>Discard Pile (&ldquo;The Bottom&rdquo;)</span>
               </div>
               <button
@@ -166,10 +166,10 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 onClick={handleOpenPeek}
                 aria-label="Peek Pile"
                 data-testid="btn-zoom-discard-pile"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer shadow-sm hover:scale-105"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer shadow-sm hover:scale-105"
                 title="Click to peek into pile and see all buried cards"
               >
-                <ZoomIn className="w-3.5 h-3.5" />
+                <ZoomIn className="w-4 h-4" />
                 <span>{`Zoom (${discardPile.length})`}</span>
               </button>
             </div>
@@ -189,28 +189,28 @@ export const CenterTable: React.FC<CenterTableProps> = ({
               }}
             >
               {discardPile.length > 1 && (
-                <div className="absolute -top-1 -right-1 w-20 h-28 rounded-lg bg-slate-800/80 border border-slate-600 rotate-2 pointer-events-none shadow-md" />
+                <div className="absolute -top-1 -right-1 w-22 h-32 rounded-xl bg-stone-300 border border-stone-400 rotate-2 pointer-events-none shadow-md" />
               )}
               {topDiscardCard ? (
                 <div
                   key={topDiscardCard.id}
-                  className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-lg shadow-xl ${
+                  className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-xl shadow-xl ${
                     isRippling ? 'animate-card-ripple' : 'animate-discard-landing'
                   } ${
                     drawDiscardAllowed
-                      ? 'ring-4 ring-amber-400/90 ring-offset-2 ring-offset-slate-950'
+                      ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-amber-50'
                       : ''
                   }`}
                   style={isRippling ? { animationDelay: '80ms' } : undefined}
                 >
                   <PlayingCard card={topDiscardCard} size="md" />
-                  <div className="absolute inset-0 bg-slate-950/60 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-300 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
+                  <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-sm gap-1.5 backdrop-blur-[1px]">
                     <ZoomIn className="w-4 h-4" />
                     <span>Zoom Pile</span>
                   </div>
                 </div>
               ) : (
-                <div className="w-20 h-28 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center p-2 text-center text-slate-400 text-xs bg-slate-900/40">
+                <div className="w-22 h-32 rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-sm bg-stone-100/60">
                   <span className="font-bold">Empty Pile</span>
                 </div>
               )}
@@ -218,55 +218,57 @@ export const CenterTable: React.FC<CenterTableProps> = ({
 
             {/* Discard Count & Draw Button */}
             <div className="flex flex-col items-center gap-2 mt-2 w-full">
-              <span className="text-sm font-bold text-slate-200">
+              <span className="text-sm sm:text-base font-extrabold text-stone-700">
                 {`${discardPile.length} ${discardPile.length === 1 ? 'card' : 'cards'} in pile`}
               </span>
               <button
                 type="button"
                 onClick={handleDrawDiscard}
                 disabled={!drawDiscardAllowed || discardPile.length === 0}
-                className={`w-full max-w-[190px] h-10 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
+                className={`w-full max-w-[210px] h-11 px-3 rounded-xl text-sm sm:text-base font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                   drawDiscardAllowed && discardPile.length > 0
                     ? 'btn-game-amber'
-                    : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-60'
+                    : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
                 }`}
               >
-                <ArrowDownCircle className="w-4 h-4 shrink-0" />
+                <ArrowDownCircle className="w-5 h-5 shrink-0" />
                 <span>Take The Bottom (All)</span>
               </button>
             </div>
           </div>
 
-          {/* 3. PUKAR POOL */}
-          <div className="flex flex-col items-center justify-between p-3 sm:p-4 rounded-2xl bg-slate-950/80 border-2 border-slate-800 shadow-xl min-h-[175px]">
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-300 mb-1">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+          {/* 3. PUKAR POOL (RIGHT) */}
+          <div className="flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl table-well-light min-h-[200px]">
+            <div className="flex items-center gap-1.5 text-sm sm:text-base font-black uppercase tracking-wider text-emerald-900 mb-1">
+              <Sparkles className="w-4 h-4 text-emerald-600" />
               <span>Pukar Pool (Reserve)</span>
             </div>
 
             {/* Pukar Stack Visual Graphic */}
             <div className="my-2 flex flex-col items-center justify-center">
               {actualPukarCount > 0 ? (
-                <div className="relative flex items-center justify-center w-28 h-28">
+                <div className="relative flex items-center justify-center w-32 h-32">
+                  {/* Subtle pedestal platter */}
+                  <div className="absolute inset-x-0 bottom-0 h-10 rounded-full bg-stone-300/60 border border-stone-400/40 shadow-inner" />
                   {Array.from({ length: Math.min(actualPukarCount, 4) }).map((_, i) => (
                     <div
                       key={i}
                       style={{
-                        transform: `translate(${i * 4 - 6}px, ${-i * 4 + 4}px)`,
+                        transform: `translate(${i * 6 - 8}px, ${-i * 5 + 4}px)`,
                       }}
-                      className="absolute w-20 h-24 rounded-lg bg-gradient-to-br from-emerald-900 to-teal-950 border-2 border-emerald-400/60 shadow-lg flex items-center justify-center text-center p-1.5"
+                      className="absolute w-22 h-28 rounded-xl bg-gradient-to-br from-emerald-800 to-teal-900 border-2 border-emerald-400 shadow-lg flex items-center justify-center text-center p-2"
                     >
-                      <div className="w-full h-full border border-emerald-400/30 rounded border-dashed flex flex-col items-center justify-center text-[10px] text-emerald-200">
-                        <span className="font-black uppercase tracking-wider text-amber-300">Pukar</span>
-                        <span className="text-[9px] font-bold opacity-90">13 Cards</span>
+                      <div className="w-full h-full border border-emerald-300/40 rounded-lg border-dashed flex flex-col items-center justify-center text-xs text-emerald-100">
+                        <span className="font-black uppercase tracking-wider text-amber-300 text-sm">Pukar</span>
+                        <span className="text-xs font-bold opacity-95">13 Cards</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="w-24 h-24 rounded-xl border-2 border-dashed border-red-500/50 bg-red-950/30 flex flex-col items-center justify-center p-2 text-center text-red-300 text-xs">
+                <div className="w-24 h-28 rounded-xl border-2 border-dashed border-red-400 bg-red-50 flex flex-col items-center justify-center p-2 text-center text-red-600 text-sm">
                   <span className="font-black text-sm">0 Pukars</span>
-                  <span className="text-[11px] font-medium text-slate-300 mt-1">
+                  <span className="text-xs font-semibold text-stone-500 mt-1">
                     Exhaust rule active
                   </span>
                 </div>
@@ -275,10 +277,10 @@ export const CenterTable: React.FC<CenterTableProps> = ({
 
             {/* Pukar Count Status */}
             <div className="flex flex-col items-center gap-1 mt-2 text-center w-full">
-              <span className="text-sm font-black text-emerald-300">
+              <span className="text-sm sm:text-base font-black text-emerald-800">
                 {`${actualPukarCount} ${actualPukarCount === 1 ? 'Pukar' : 'Pukars'} Available`}
               </span>
-              <span className="text-xs font-semibold text-slate-300">
+              <span className="text-sm font-bold text-stone-600">
                 13 cards each • Claim awards +50 pts bonus
               </span>
             </div>

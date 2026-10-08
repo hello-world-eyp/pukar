@@ -141,12 +141,12 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       : 0;
 
   const teamBorder = isTeamA
-    ? 'border-blue-500/60 bg-gradient-to-b from-blue-950/80 to-slate-900/90'
-    : 'border-amber-500/60 bg-gradient-to-b from-amber-950/80 to-slate-900/90';
+    ? 'border-sky-300 bg-white/90 shadow-md'
+    : 'border-amber-300 bg-white/90 shadow-md';
 
   const avatarBg = isTeamA
-    ? 'bg-blue-600 text-white shadow-blue-900/50'
-    : 'bg-amber-500 text-slate-950 shadow-amber-900/50';
+    ? 'bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md'
+    : 'bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 shadow-md';
 
   const rippleClass = isRippling ? 'animate-card-ripple' : '';
 
@@ -157,25 +157,25 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       onClick={() => onSelectPlayer?.(playerIndex)}
       role={onSelectPlayer ? 'button' : undefined}
       tabIndex={onSelectPlayer ? 0 : undefined}
-      className={`relative rounded-2xl border p-2.5 sm:p-3 shadow-xl backdrop-blur-md transition-all ${teamBorder} ${rippleClass} ${
+      className={`relative rounded-2xl border-2 p-3 shadow-md backdrop-blur-md transition-all ${teamBorder} ${rippleClass} ${
         isTurn
-          ? 'ring-2 ring-emerald-400 shadow-emerald-500/20 scale-[1.03]'
-          : 'hover:border-slate-500'
+          ? 'ring-4 ring-emerald-500 shadow-emerald-500/20 scale-[1.03]'
+          : 'hover:border-stone-400'
       } ${onSelectPlayer ? 'cursor-pointer' : ''} ${className}`}
     >
       {/* Top Tag: Turn / Role */}
-      <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-1.5">
           <span
-            className={`text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wider flex items-center gap-1 ${
+            className={`text-sm font-bold uppercase px-2 py-0.5 rounded-md tracking-wider flex items-center gap-1 ${
               isTeammate
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'bg-slate-800 text-slate-400 border border-slate-700'
+                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                : 'bg-stone-100 text-stone-700 border border-stone-300'
             }`}
           >
             {isTeammate ? (
               <>
-                <Shield className="w-3 h-3" />
+                <Shield className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Teammate</span>
               </>
             ) : (
@@ -184,10 +184,10 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           </span>
 
           <span
-            className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+            className={`text-sm font-bold px-2 py-0.5 rounded-md border ${
               isTeamA
-                ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                ? 'bg-blue-100 text-blue-900 border-blue-300'
+                : 'bg-amber-100 text-amber-900 border-amber-300'
             }`}
           >
             {`Team ${player.team}`}
@@ -195,37 +195,37 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         </div>
 
         {isTurn && (
-          <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+          <span className="text-sm font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 flex items-center gap-1.5 shadow-sm animate-pulse">
+            <span className="w-2 h-2 rounded-full bg-slate-950" />
             <span>Current Turn</span>
           </span>
         )}
       </div>
 
       {/* Main Seat Info */}
-      <div className="flex items-center gap-2.5">
-        {/* Avatar badge */}
+      <div className="flex items-center gap-3">
+        {/* Avatar circle */}
         <div
-          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-md shrink-0 ${avatarBg}`}
+          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-base shadow-md shrink-0 border-2 border-white ring-2 ring-stone-200 ${avatarBg}`}
         >
           {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
         </div>
 
         {/* Name and Card count */}
         <div className="min-w-0 flex-1">
-          <div className="text-xs sm:text-sm font-extrabold text-white truncate flex items-center gap-1">
+          <div className="text-sm sm:text-base font-extrabold text-stone-900 truncate flex items-center gap-1.5">
             <span className="truncate">{player.name || `Player ${playerIndex + 1}`}</span>
             {isViewed && (
-              <span className="text-[9px] font-bold text-amber-400 px-1 bg-amber-950/60 rounded">
+              <span className="text-xs font-black text-amber-900 px-1.5 py-0.2 bg-amber-100 border border-amber-300 rounded">
                 (You)
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-300">
-            <div className="flex items-center gap-1 text-slate-400">
-              <Layers className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-semibold text-slate-200">{`${cardCount} cards`}</span>
+          <div className="flex items-center gap-2 mt-0.5 text-sm text-stone-600">
+            <div className="flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-emerald-600" />
+              <span className="font-extrabold text-stone-800 text-sm sm:text-base">{`${cardCount} cards`}</span>
             </div>
           </div>
         </div>

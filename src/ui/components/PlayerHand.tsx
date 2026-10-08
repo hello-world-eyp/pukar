@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
-import { ArrowDownUp, Sparkles, X, User, ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDownUp, Sparkles, X, ArrowDown, ArrowUp } from 'lucide-react';
 
 export type SortMode = 'suit' | 'rank' | 'none';
 export type SortDirection = 'desc' | 'asc';
@@ -182,44 +182,44 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   return (
     <div
       data-testid="player-hand"
-      className={`w-full bg-slate-950/95 backdrop-blur-md border-2 border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col gap-3 ${className}`}
+      className={`w-full wood-hand-tray rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5 text-stone-900 ${className}`}
     >
       {/* HAND TOOLBAR & STATUS */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#a47b4e]/40 pb-2">
         {/* PLAYER IDENTITY & CARD COUNTS */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 flex items-center justify-center font-bold text-sm shrink-0 shadow-inner">
-              <User className="w-5 h-5 text-emerald-300" />
+            <div className="w-10 h-10 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-base shrink-0 shadow-md">
+              {playerName ? playerName.charAt(0).toUpperCase() : 'P'}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-black text-slate-100 text-sm sm:text-base tracking-tight">{playerName}</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-black text-stone-950 text-base sm:text-lg tracking-tight">{playerName}</span>
                 {playerTeam && (
                   <span
-                    className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider shadow-sm ${
+                    className={`text-xs font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow-sm ${
                       playerTeam === 'A'
                         ? 'bg-blue-600 text-white'
-                        : 'bg-amber-500 text-slate-950'
+                        : 'bg-amber-600 text-white'
                     }`}
                   >
                     {`Team ${playerTeam}`}
                   </span>
                 )}
                 {isCurrentPlayer && (
-                  <span className="text-[10px] font-black text-emerald-300 bg-emerald-950/80 border border-emerald-600/50 px-2 py-0.5 rounded shadow-sm">
+                  <span className="text-xs font-black text-emerald-950 bg-emerald-300 border border-emerald-500 px-2 py-0.5 rounded-md shadow-sm">
                     Active Turn
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-300 mt-0.5">
-                <span data-testid="card-count" className="font-bold text-slate-200">
+              <div className="flex items-center gap-2 text-sm text-stone-700 mt-0.5 font-bold">
+                <span data-testid="card-count" className="font-extrabold text-stone-900">
                   {`${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
                 </span>
                 {selectedCardIds.length > 0 && (
                   <>
-                    <span className="text-slate-500">•</span>
-                    <span data-testid="selected-count" className="text-amber-300 font-black bg-amber-950/60 border border-amber-600/40 px-1.5 py-0.2 rounded">
+                    <span className="text-stone-500">•</span>
+                    <span data-testid="selected-count" className="text-amber-950 font-black bg-amber-200 border border-amber-400 px-2 py-0.5 rounded-md">
                       {`${selectedCardIds.length} selected`}
                     </span>
                   </>
@@ -231,41 +231,41 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {/* CONTEXTUAL ACTION CONTROLS SLOT */}
         {actionsSlot && (
-          <div className="flex items-center justify-center my-1 sm:my-0">
+          <div className="flex items-center justify-center my-1 sm:my-0 flex-1 max-w-xl mx-auto">
             {actionsSlot}
           </div>
         )}
 
         {/* SORT CONTROLS & SELECTION ACTIONS */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* PRIMARY SORT BUTTONS (Suit vs Rank) */}
-          <div className="flex items-center rounded-xl bg-slate-900/90 p-1 border border-slate-700 shadow-sm">
+          <div className="flex items-center rounded-xl bg-stone-100 p-1 border border-stone-300 shadow-sm">
             <button
               type="button"
               aria-label="Sort by Suit"
               onClick={() => handleSetSort(activeSortMode === 'suit' ? 'none' : 'suit')}
-              className={`h-9 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`h-9 px-3 text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeSortMode === 'suit'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-stone-900 text-white shadow-md'
+                  : 'text-stone-700 hover:text-stone-950 hover:bg-stone-200'
               }`}
               title="Primary: Group by Suit (♠ ♥ ♣ ♦), Secondary: Rank"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-4 h-4 text-amber-500" />
               <span>Sort by Suit</span>
             </button>
             <button
               type="button"
               aria-label="Sort by Rank"
               onClick={() => handleSetSort(activeSortMode === 'rank' ? 'none' : 'rank')}
-              className={`h-9 px-3 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`h-9 px-3 text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeSortMode === 'rank'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  ? 'bg-stone-900 text-white shadow-md'
+                  : 'text-stone-700 hover:text-stone-950 hover:bg-stone-200'
               }`}
               title="Primary: Group by Rank, Secondary: Suit"
             >
-              <ArrowDownUp className="w-3.5 h-3.5" />
+              <ArrowDownUp className="w-4 h-4 text-amber-500" />
               <span>Sort by Rank</span>
             </button>
           </div>
@@ -273,17 +273,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           {/* SECONDARY ORDER TOGGLE (Dual Filter: High → Low vs Low → High) */}
           <div
             data-testid="sort-direction-controls"
-            className="flex items-center rounded-xl bg-slate-900/90 p-1 border border-slate-700 shadow-sm"
+            className="flex items-center rounded-xl bg-stone-100 p-1 border border-stone-300 shadow-sm"
           >
             <button
               type="button"
               aria-label="Sort High to Low"
               data-testid="btn-sort-desc"
               onClick={() => handleSetDirection('desc')}
-              className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-9 px-2.5 text-sm font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                 activeSortDirection === 'desc'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-emerald-700 text-white shadow-md'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
               }`}
               title={
                 activeSortMode === 'suit'
@@ -291,7 +291,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   : 'Primary filter: High to low (A → 2), secondary by suit'
               }
             >
-              <ArrowDown className="w-3.5 h-3.5" />
+              <ArrowDown className="w-4 h-4" />
               <span>High → Low</span>
             </button>
             <button
@@ -299,10 +299,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               aria-label="Sort Low to High"
               data-testid="btn-sort-asc"
               onClick={() => handleSetDirection('asc')}
-              className={`h-9 px-2.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+              className={`h-9 px-2.5 text-sm font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
                 activeSortDirection === 'asc'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                  ? 'bg-emerald-700 text-white shadow-md'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
               }`}
               title={
                 activeSortMode === 'suit'
@@ -310,7 +310,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   : 'Primary filter: Low to high (2 → A), secondary by suit'
               }
             >
-              <ArrowUp className="w-3.5 h-3.5" />
+              <ArrowUp className="w-4 h-4" />
               <span>Low → High</span>
             </button>
           </div>
@@ -321,27 +321,27 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               type="button"
               aria-label="Clear Selection"
               onClick={onClearSelection}
-              className="h-9 px-3 text-xs font-bold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+              className="h-9 px-3 text-sm font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
               <span>Clear</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* CARDS DISPLAY CONTAINER */}
+      {/* CARDS DISPLAY CONTAINER (RECESSED WOODEN TRAY SLOT) */}
       <div
-        className="w-full overflow-x-auto pb-2 pt-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent"
+        className="w-full wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto pb-3 pt-3 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner"
         tabIndex={0}
         aria-label="Hand Cards"
       >
         {displayCards.length === 0 ? (
-          <div className="py-8 text-center text-slate-500 text-sm">
+          <div className="py-8 text-center text-amber-200/80 text-base font-bold">
             Hand is empty
           </div>
         ) : (
-          <div className="flex items-end gap-1.5 sm:gap-2 min-w-max px-1">
+          <div className="flex items-end gap-1 sm:gap-1.5 min-w-max px-2 py-1">
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);
@@ -363,10 +363,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   style={animStyle}
                   className={`transition-all duration-150 transform ${animationClasses} ${
                     isSelected
-                      ? '-translate-y-2.5'
+                      ? '-translate-y-4'
                       : isNew
-                      ? '-translate-y-1 hover:-translate-y-2'
-                      : 'hover:-translate-y-1'
+                      ? '-translate-y-2 hover:-translate-y-3'
+                      : 'hover:-translate-y-2'
                   }`}
                 >
                   <PlayingCard

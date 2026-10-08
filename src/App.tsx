@@ -503,13 +503,13 @@ export function App() {
                 <Sparkles className="w-4 h-4 animate-spin" />
               </div>
               <div>
-                <div className="font-extrabold text-xs sm:text-sm text-amber-100 flex items-center gap-2">
+                <div className="font-extrabold text-sm sm:text-base text-amber-100 flex items-center gap-2">
                   <span>🎉 ROYAL PUKAR CLAIMED!</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black">
+                  <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500 text-slate-950">
                     +50 PTS
                   </span>
                 </div>
-                <div className="text-[11px] text-amber-300/90">
+                <div className="text-sm font-semibold text-amber-200 mt-0.5">
                   {`${pukarBanner.playerName} (Team ${pukarBanner.team}) emptied their hand and claimed a 13-card Pukar deck! Turn continues — play sequences or drop a card to end your turn.`}
                 </div>
               </div>
@@ -534,17 +534,17 @@ export function App() {
             className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-950/90 via-indigo-950/90 to-purple-950/90 border-2 border-purple-500/80 text-purple-200 shadow-xl shadow-purple-950/60 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-xl bg-purple-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
                 <Sparkles className="w-4 h-4 animate-pulse" />
               </div>
               <div>
-                <div className="font-extrabold text-xs sm:text-sm text-purple-100 flex items-center gap-2">
+                <div className="font-extrabold text-sm sm:text-base text-purple-100 flex items-center gap-2">
                   <span>🃏 NORMAL JOKER PICKED UP!</span>
-                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-500 text-white font-bold">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-500 text-white">
                     Added to Hand
                   </span>
                 </div>
-                <div className="text-[11px] text-purple-300/90">
+                <div className="text-sm font-semibold text-purple-200 mt-0.5">
                   {`${jokerPickupBanner.playerName} contributed the natural card replacing the Joker! The Joker has returned to your hand to be played in another meld.`}
                 </div>
               </div>
@@ -566,7 +566,7 @@ export function App() {
           <div
             data-testid="exhaust-notification"
             role="status"
-            className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs sm:text-sm animate-in fade-in"
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-indigo-950/90 border border-indigo-700/80 text-indigo-100 text-sm font-semibold animate-in fade-in"
           >
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -578,7 +578,7 @@ export function App() {
               className="p-1 rounded-lg hover:bg-indigo-900/50 text-indigo-300 hover:text-white"
               aria-label="Dismiss Alert"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -597,9 +597,9 @@ export function App() {
             onSelectPlayer={handleSwitchPlayer}
             isRippling={isTableRippling}
           >
-            {/* The Casino Felt Surface */}
+            {/* The Modern Wood & Cream Table Arena Mat */}
             <div
-              className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 poker-table-felt poker-table-rail flex flex-col gap-3 sm:gap-4 shadow-2xl transition-transform ${
+              className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 table-cream-mat wood-table-rail flex flex-col gap-3 sm:gap-4 shadow-2xl transition-transform ${
                 isTableRippling ? 'animate-table-quake' : ''
               }`}
             >

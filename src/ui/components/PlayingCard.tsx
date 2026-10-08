@@ -135,38 +135,38 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     }
   };
 
-  // Size specific styles with precise 2:3 aspect ratio and high-legibility fonts for older players
+  // Size specific styles with precise 2:3 aspect ratio and enlarged high-legibility fonts (min 10pt / 14px)
   const sizeStyles = {
     sm: {
-      card: 'w-12 h-[72px] text-xs font-black rounded-md card-elevation-shadow',
-      cornerRank: 'text-xs font-black tracking-tight',
-      cornerSuit: 'text-[11px] font-bold leading-none',
-      centerSuit: 'text-xl font-bold',
-      badge: 'text-[9px] font-black px-1.5 py-0.2',
+      card: 'w-12 h-[72px] sm:w-16 sm:h-[96px] text-sm font-black rounded-lg card-elevation-shadow',
+      cornerRank: 'text-sm font-black tracking-tight',
+      cornerSuit: 'text-sm font-bold leading-none',
+      centerSuit: 'text-2xl font-bold',
+      badge: 'text-sm font-black px-2 py-0.5',
       paddings: 'p-1',
     },
     md: {
-      card: 'w-20 h-[120px] text-sm font-black rounded-lg card-elevation-shadow',
-      cornerRank: 'text-base font-black tracking-tight',
-      cornerSuit: 'text-xs font-bold leading-none',
-      centerSuit: 'text-3xl font-bold',
-      badge: 'text-[10px] font-black px-2 py-0.5',
+      card: 'w-20 h-[120px] sm:w-24 sm:h-[144px] text-sm font-black rounded-xl card-elevation-shadow',
+      cornerRank: 'text-base sm:text-lg font-black tracking-tight',
+      cornerSuit: 'text-sm sm:text-base font-bold leading-none',
+      centerSuit: 'text-4xl font-bold',
+      badge: 'text-sm font-black px-2 py-0.5',
       paddings: 'p-1.5',
     },
     lg: {
-      card: 'w-28 h-[168px] text-base font-black rounded-xl card-elevation-shadow',
-      cornerRank: 'text-xl font-black tracking-tight',
-      cornerSuit: 'text-sm font-bold leading-none',
-      centerSuit: 'text-5xl font-bold',
-      badge: 'text-xs font-black px-2.5 py-0.5',
+      card: 'w-28 h-[168px] sm:w-32 sm:h-[192px] text-base font-black rounded-xl card-elevation-shadow',
+      cornerRank: 'text-xl sm:text-2xl font-black tracking-tight',
+      cornerSuit: 'text-base sm:text-lg font-bold leading-none',
+      centerSuit: 'text-5xl sm:text-6xl font-bold',
+      badge: 'text-sm font-black px-2.5 py-0.5',
       paddings: 'p-2',
     },
     xl: {
-      card: 'w-36 h-[216px] text-lg font-black rounded-2xl card-elevation-shadow',
-      cornerRank: 'text-2xl font-black tracking-tight',
-      cornerSuit: 'text-base font-bold leading-none',
-      centerSuit: 'text-6xl font-bold',
-      badge: 'text-xs font-black px-3 py-1',
+      card: 'w-36 h-[216px] sm:w-40 sm:h-[240px] text-lg font-black rounded-2xl card-elevation-shadow',
+      cornerRank: 'text-2xl sm:text-3xl font-black tracking-tight',
+      cornerSuit: 'text-lg sm:text-xl font-bold leading-none',
+      centerSuit: 'text-6xl sm:text-7xl font-bold',
+      badge: 'text-sm font-black px-3 py-1',
       paddings: 'p-2.5',
     },
   }[size];
@@ -231,7 +231,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         />
         <div className="w-full h-full rounded-[inherit] bg-gradient-to-br from-blue-900 via-indigo-950 to-blue-950 p-1 border-2 border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner">
           <div className="w-full h-full rounded-[inherit] border border-blue-400/40 border-dashed flex items-center justify-center bg-blue-900/40">
-            <span className="text-amber-200/90 font-serif text-xs font-black tracking-widest select-none drop-shadow">
+            <span className="text-amber-200/90 font-serif text-sm font-black tracking-widest select-none drop-shadow">
               PUKAR
             </span>
           </div>
@@ -322,7 +322,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           <div className="flex flex-col items-center">
             <span className={sizeStyles.centerSuit}>★</span>
             {size !== 'sm' && (
-              <span className="text-[9px] tracking-tight font-extrabold uppercase text-amber-700">
+              <span className="text-sm tracking-tight font-extrabold uppercase text-amber-700">
                 Joker
               </span>
             )}
