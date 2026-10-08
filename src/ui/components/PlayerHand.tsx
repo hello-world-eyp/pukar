@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
-import { ArrowDownUp, Sparkles, X, ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDownUp, Sparkles, X, ArrowDown, ArrowUp, Pin } from 'lucide-react';
 
 export type SortMode = 'suit' | 'rank' | 'none';
 export type SortDirection = 'desc' | 'asc';
@@ -96,6 +96,7 @@ export interface PlayerHandProps {
   isRippling?: boolean;
   actionsSlot?: React.ReactNode;
   onReorderCards?: (cards: Card[]) => void;
+  isHovering?: boolean;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -120,6 +121,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isRippling = false,
   actionsSlot,
   onReorderCards,
+  isHovering = false,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(initialSortDirection);
@@ -382,6 +384,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 {isCurrentPlayer && (
                   <span className="text-xs font-black text-emerald-950 bg-emerald-300 border border-emerald-500 px-2 py-0.5 rounded-md shadow-sm">
                     Active Turn
+                  </span>
+                )}
+                {isHovering && (
+                  <span
+                    data-testid="badge-hovering-dock"
+                    className="text-xs font-black text-amber-950 bg-amber-300 border border-amber-500 px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1"
+                    title="Hand is hovering docked at the bottom because sequences have expanded to a second row. Scroll the board up/down to see all sequences."
+                  >
+                    <Pin className="w-3.5 h-3.5 text-amber-900" />
+                    <span>Docked at Bottom</span>
                   </span>
                 )}
               </div>

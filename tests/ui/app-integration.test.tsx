@@ -526,4 +526,69 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(result.error).toContain("opponent team's meld");
     });
   });
+
+  /* ========================================================================
+   * 7. Hovering Bottom Hand Dock on Second Row
+   * ======================================================================== */
+  describe('Hovering Bottom Hand Dock on Second Row', () => {
+    it('keeps hand in standard in-flow position when neither team has a second row (<= 2 melds)', () => {
+      const state = dealInitialState(4);
+      // Team A has 2 melds, Team B has 1 meld -> both are row 1 on 2-col desktop grid
+      state.melds.A = [
+        { id: 'mA1', team: 'A', type: 'RUN', suit: 'SPADES', cards: [], slots: [] },
+        { id: 'mA2', team: 'A', type: 'RUN', suit: 'HEARTS', cards: [], slots: [] },
+      ];
+      state.melds.B = [
+        { id: 'mB1', team: 'B', type: 'RUN', suit: 'CLUBS', cards: [], slots: [] },
+      ];
+
+      const html = renderToString(<App initialState={state} />);
+
+      // Section is not in hover mode
+      expect(html).not.toContain('data-has-second-row="true"');
+      expect(html).not.toContain('data-is-hovering="true"');
+      expect(html).not.toContain('data-testid="hand-dock-spacer"');
+      expect(html).not.toContain('data-testid="badge-hovering-dock"');
+    });
+
+    it('activates hovering bottom dock and spacer when Team A has 3+ melds (second row)', () => {
+      const state = dealInitialState(4);
+      // Team A has 3 melds -> causes second row
+      state.melds.A = [
+        { id: 'mA1', team: 'A', type: 'RUN', suit: 'SPADES', cards: [], slots: [] },
+        { id: 'mA2', team: 'A', type: 'RUN', suit: 'HEARTS', cards: [], slots: [] },
+        { id: 'mA3', team: 'A', type: 'RUN', suit: 'DIAMONDS', cards: [], slots: [] },
+      ];
+      state.melds.B = [];
+
+      const html = renderToString(<App initialState={state} />);
+
+      // Section is in hover mode
+      expect(html).toContain('data-has-second-row="true"');
+      expect(html).toContain('data-is-hovering="true"');
+      expect(html).toContain('fixed bottom-0 inset-x-0 z-40');
+      expect(html).toContain('data-testid="hand-dock-spacer"');
+      expect(html).toContain('data-testid="badge-hovering-dock"');
+      expect(html).toContain('Docked at Bottom');
+    });
+
+    it('activates hovering bottom dock and spacer when Team B has 3+ melds (second row)', () => {
+      const state = dealInitialState(4);
+      state.melds.A = [];
+      // Team B has 3 melds -> causes second row
+      state.melds.B = [
+        { id: 'mB1', team: 'B', type: 'RUN', suit: 'SPADES', cards: [], slots: [] },
+        { id: 'mB2', team: 'B', type: 'RUN', suit: 'HEARTS', cards: [], slots: [] },
+        { id: 'mB3', team: 'B', type: 'RUN', suit: 'DIAMONDS', cards: [], slots: [] },
+      ];
+
+      const html = renderToString(<App initialState={state} />);
+
+      // Section is in hover mode
+      expect(html).toContain('data-has-second-row="true"');
+      expect(html).toContain('data-is-hovering="true"');
+      expect(html).toContain('data-testid="hand-dock-spacer"');
+      expect(html).toContain('data-testid="badge-hovering-dock"');
+    });
+  });
 });

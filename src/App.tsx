@@ -37,11 +37,15 @@ import {
   Info,
 } from 'lucide-react';
 
-export function App() {
+export interface AppProps {
+  initialState?: GameState;
+}
+
+export function App({ initialState }: AppProps = {}) {
   // ---------------------------------------------------------------------------
   // Core Game State
   // ---------------------------------------------------------------------------
-  const [gameState, setGameState] = useState<GameState>(() => dealInitialState(4));
+  const [gameState, setGameState] = useState<GameState>(() => initialState ?? dealInitialState(4));
 
   // Selection state
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -137,6 +141,26 @@ export function App() {
       return null;
     }
   }, [selectedMeldId, gameState.melds]);
+
+  // Track screen width for responsive 2nd-row threshold (<768px uses 1 column per team, >=768px uses 2 columns)
+  const [isCompactScreen, setIsCompactScreen] = useState(false);
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsCompactScreen(typeof window !== 'undefined' && window.innerWidth < 768);
+    };
+    checkScreen();
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
+
+  // Determine if either team has a second row of sequences
+  // In TableMeldBoard, desktop displays 2 columns per team (>= 3 melds = 2nd row); compact displays 1 column (>= 2 melds = 2nd row)
+  const teamAMeldCount = gameState.melds?.A?.length ?? 0;
+  const teamBMeldCount = gameState.melds?.B?.length ?? 0;
+  const hasSecondRow =
+    teamAMeldCount >= 3 ||
+    teamBMeldCount >= 3 ||
+    (isCompactScreen && (teamAMeldCount >= 2 || teamBMeldCount >= 2));
 
   // ---------------------------------------------------------------------------
   // Action Dispatcher with Feedback & Audio Cues
@@ -461,7 +485,7 @@ export function App() {
   return (
     <div
       data-testid="pukar-app"
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white overflow-x-hidden"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white overflow-x-clip"
     >
       {/* =====================================================================
           1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
@@ -665,54 +689,72 @@ export function App() {
         {/* ===================================================================
             3. DOCKED UNIFIED PLAYER CONSOLE (HAND + CONTEXTUAL ACTIONS)
         ==================================================================== */}
-        <section aria-label="Player Hand and Actions" className="w-full shrink-0">
-          <PlayerHand
-            cards={viewingPlayer.hand}
-            cardSize="lg"
-            selectedCardIds={selectedCardIds}
-            newCardIds={
-              isViewingActivePlayer
-                ? (gameState.newlyPickedUpCardIds ?? [])
-                : []
+        <section
+          aria-label="Player Hand and Actions"
+          data-has-second-row={hasSecondRow ? 'true' : undefined}
+          data-is-hovering={hasSecondRow ? 'true' : undefined}
+          className={`w-full shrink-0 transition-all duration-300 ${
+            hasSecondRow
+              ? 'fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/80 backdrop-blur-md pt-2 sm:pt-2.5 pb-2 sm:pb-3 border-t border-amber-500/30 drop-shadow-[0_-12px_28px_rgba(0,0,0,0.85)]'
+              : ''
+          }`}
+        >
+          <div
+            className={
+              hasSecondRow
+                ? 'w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12'
+                : 'w-full'
             }
-            onToggleCardSelection={handleToggleCardSelection}
-            onClearSelection={handleClearSelection}
-            playerName={viewingPlayer.name}
-            playerTeam={viewingPlayer.team}
-            isCurrentPlayer={isViewingActivePlayer}
-            disabled={gameState.roundStatus === 'ROUND_OVER'}
-            isRippling={isTableRippling}
-            onReorderCards={handleReorderHand}
-            actionsSlot={
-              <ActionControls
-                phase={gameState.phase}
-                selectedCards={selectedCards}
-                selectedCardIds={selectedCardIds}
-                allHandCards={viewingPlayer.hand}
-                selectedMeld={selectedMeld}
-                canDrawStock={
-                  gameState.phase === 'DRAW' &&
-                  isViewingActivePlayer &&
-                  gameState.stockDeck.length > 0
-                }
-                canTakeDiscard={
-                  gameState.phase === 'DRAW' &&
-                  isViewingActivePlayer &&
-                  gameState.discardPile.length > 0
-                }
-                stockCount={gameState.stockDeck.length}
-                discardCount={gameState.discardPile.length}
-                onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
-                onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
-                onPlayMeld={handlePlayMeld}
-                onAddToMeld={handleAddToMeld}
-                onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
-                disabled={!isViewingActivePlayer || gameState.roundStatus === 'ROUND_OVER'}
-                unifiedMode={true}
-                showDrawButtons={false}
-              />
-            }
-          />
+          >
+            <PlayerHand
+              cards={viewingPlayer.hand}
+              cardSize="lg"
+              selectedCardIds={selectedCardIds}
+              newCardIds={
+                isViewingActivePlayer
+                  ? (gameState.newlyPickedUpCardIds ?? [])
+                  : []
+              }
+              onToggleCardSelection={handleToggleCardSelection}
+              onClearSelection={handleClearSelection}
+              playerName={viewingPlayer.name}
+              playerTeam={viewingPlayer.team}
+              isCurrentPlayer={isViewingActivePlayer}
+              disabled={gameState.roundStatus === 'ROUND_OVER'}
+              isRippling={isTableRippling}
+              onReorderCards={handleReorderHand}
+              isHovering={hasSecondRow}
+              actionsSlot={
+                <ActionControls
+                  phase={gameState.phase}
+                  selectedCards={selectedCards}
+                  selectedCardIds={selectedCardIds}
+                  allHandCards={viewingPlayer.hand}
+                  selectedMeld={selectedMeld}
+                  canDrawStock={
+                    gameState.phase === 'DRAW' &&
+                    isViewingActivePlayer &&
+                    gameState.stockDeck.length > 0
+                  }
+                  canTakeDiscard={
+                    gameState.phase === 'DRAW' &&
+                    isViewingActivePlayer &&
+                    gameState.discardPile.length > 0
+                  }
+                  stockCount={gameState.stockDeck.length}
+                  discardCount={gameState.discardPile.length}
+                  onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
+                  onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
+                  onPlayMeld={handlePlayMeld}
+                  onAddToMeld={handleAddToMeld}
+                  onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
+                  disabled={!isViewingActivePlayer || gameState.roundStatus === 'ROUND_OVER'}
+                  unifiedMode={true}
+                  showDrawButtons={false}
+                />
+              }
+            />
+          </div>
         </section>
 
         {/* 4. Dev Inspector & Hot-Seat Switcher */}
@@ -731,6 +773,15 @@ export function App() {
             newlyPickedUpCardIds={gameState.newlyPickedUpCardIds}
           />
         </section>
+
+        {/* Spacer for bottom hover mode when either team has a second row */}
+        {hasSecondRow && (
+          <div
+            aria-hidden="true"
+            data-testid="hand-dock-spacer"
+            className="w-full shrink-0 h-[280px] sm:h-[320px] pointer-events-none"
+          />
+        )}
       </main>
 
       {/* =====================================================================
