@@ -73,7 +73,7 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
       onClick={handleSafeClose}
     >
       <div
-        className={`relative w-full max-w-6xl max-h-[92vh] game-modal-frame rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 ${className}`}
+        className={`relative w-full max-w-4xl max-h-[92vh] game-modal-frame rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}
@@ -148,7 +148,7 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
                   key={`zoom-slot-${card.id}-${slot.representedRank}-${index}`}
                   className="flex flex-col items-center gap-1.5 p-2 rounded-2xl bg-slate-900/60 border border-slate-800/80 shadow-lg hover:border-slate-600 transition-all hover:scale-105"
                 >
-                  <span className="text-[10px] font-bold text-slate-400">
+                  <span className="text-xs font-bold text-slate-400">
                     {`#${index + 1}`}
                   </span>
                   <PlayingCard
@@ -160,7 +160,7 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
                     wildcardLabel={wildLabel}
                   />
                   {isSlotWild && (
-                    <span className="text-[10px] font-extrabold text-amber-300 px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-600/40">
+                    <span className="text-xs font-extrabold text-amber-300 px-2 py-0.5 rounded bg-amber-950/60 border border-amber-600/40">
                       Substituting
                     </span>
                   )}

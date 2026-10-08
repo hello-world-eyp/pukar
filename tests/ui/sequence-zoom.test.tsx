@@ -76,4 +76,17 @@ describe('SequenceZoomModal Component', () => {
     expect(html).toContain('HEARTS');
     expect(html).toContain('Wild (5♥)');
   });
+
+  it('renders a compact max-w-4xl container with large cards and legible text', () => {
+    const html = renderToString(
+      <SequenceZoomModal isOpen={true} meld={sampleRun} onClose={() => {}} />
+    );
+
+    // Modal is constrained to max-w-4xl to prevent sprawling on wide screens
+    expect(html).toContain('max-w-4xl');
+    // Cards use large size (w-28 h-[168px])
+    expect(html).toContain('w-28');
+    // Slot numbers use text-xs (>= 12px)
+    expect(html).toContain('text-xs font-bold text-slate-400');
+  });
 });
