@@ -78,13 +78,49 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const suitSymbol = getSuitSymbol(card.suit);
   const isRed = isRedSuit(card.suit);
 
-  const imageSrc = isJoker
-    ? '/cards/joker.svg'
-    : card.suit
-    ? `/cards/${card.suit.toLowerCase()}_${rankStr}.svg`
-    : null;
+  const [imgLoaded, setImgLoaded] = React.useState(false);
+  const [imgError, setImgError] = React.useState(false);
+  const [srcIndex, setSrcIndex] = React.useState(0);
 
-  // Size specific styles
+  const suitCapitalized = card.suit
+    ? card.suit.charAt(0).toUpperCase() + card.suit.slice(1).toLowerCase()
+    : '';
+  const suitLower = card.suit ? card.suit.toLowerCase() : '';
+
+  const candidateSources = React.useMemo(() => {
+    if (isJoker) {
+      return ['/cards/joker.png', '/cards/natural_joker.png', '/cards/joker.svg'];
+    }
+    if (!card.suit) return [];
+    return [
+      `/cards/${suitCapitalized}/${rankStr}.png`,
+      `/cards/${suitCapitalized}/${suitLower}_${rankStr}.png`,
+      `/cards/${suitLower}_${rankStr}.png`,
+      `/cards/${suitLower}_${rankStr}.svg`,
+    ];
+  }, [isJoker, card.suit, suitCapitalized, suitLower, rankStr]);
+
+  React.useEffect(() => {
+    setSrcIndex(0);
+    setImgLoaded(false);
+    setImgError(false);
+  }, [card.id, card.suit, card.rank]);
+
+  const currentSrc = candidateSources[srcIndex] ?? null;
+
+  const handleImageError = () => {
+    if (srcIndex + 1 < candidateSources.length) {
+      setSrcIndex((prev) => prev + 1);
+    } else {
+      setImgError(true);
+    }
+  };
+
+  const handleImageLoad = () => {
+    setImgLoaded(true);
+  };
+
+  // Size specific styles with precise 2:3 aspect ratio
   const sizeStyles = {
     sm: {
       card: 'w-12 h-[72px] text-[11px] rounded-md shadow-sm',
@@ -95,7 +131,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       paddings: 'p-1',
     },
     md: {
-      card: 'w-20 h-28 text-sm rounded-lg shadow-sm',
+      card: 'w-20 h-[120px] text-sm rounded-lg shadow-sm',
       cornerRank: 'text-sm font-bold',
       cornerSuit: 'text-xs',
       centerSuit: 'text-2xl',
@@ -103,7 +139,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       paddings: 'p-1.5',
     },
     lg: {
-      card: 'w-28 h-40 text-base rounded-xl shadow-md',
+      card: 'w-28 h-[168px] text-base rounded-xl shadow-md',
       cornerRank: 'text-lg font-bold',
       cornerSuit: 'text-sm',
       centerSuit: 'text-4xl',
@@ -146,6 +182,15 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           isClickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''
         } ${isSelected ? 'ring-4 ring-amber-400 -translate-y-2' : ''} ${className}`}
       >
+        <img
+          src="/cards/card_back.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover rounded-[inherit] pointer-events-none select-none z-10"
+          onError={(e) => {
+            (e.currentTarget as HTMLElement).style.display = 'none';
+          }}
+        />
         <div className="w-full h-full rounded-[inherit] bg-gradient-to-br from-blue-900 via-indigo-950 to-blue-950 p-1 border border-blue-800 flex items-center justify-center overflow-hidden">
           <div className="w-full h-full rounded-[inherit] border border-blue-400/40 border-dashed flex items-center justify-center bg-blue-900/30">
             <span className="text-blue-300/60 font-serif text-xs font-semibold select-none">
@@ -157,6 +202,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     );
   }
 
+  const isImageActive = imgLoaded && !imgError;
+
   return (
     <div
       role={isClickable ? 'button' : undefined}
@@ -164,7 +211,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       onClick={isClickable ? onClick : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-label={ariaLabel}
-      className={`relative select-none flex-shrink-0 bg-white border border-slate-300 transition-all duration-150 flex flex-col justify-between ${
+      className={`relative select-none flex-shrink-0 bg-[#FAF7F0] border border-stone-300/80 transition-all duration-150 flex flex-col justify-between ${
         sizeStyles.card
       } ${sizeStyles.paddings} ${
         isClickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''
@@ -179,35 +226,44 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       } ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
     >
       {/* Card Illustration Asset */}
-      {imageSrc && (
+      {currentSrc && !imgError && (
         <img
-          src={imageSrc}
+          src={currentSrc}
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover rounded-[inherit] pointer-events-none select-none z-0"
-          onError={(e) => {
-            (e.currentTarget as HTMLElement).style.display = 'none';
-          }}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          className={`absolute inset-0 w-full h-full object-cover rounded-[inherit] pointer-events-none select-none z-0 transition-opacity duration-200 ${
+            imgLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
         />
       )}
 
       {/* Wildcard Badge */}
       {wildBadgeText && (
         <span
-          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-xs whitespace-nowrap z-20 ${sizeStyles.badge}`}
+          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-md whitespace-nowrap z-20 ${sizeStyles.badge}`}
         >
           {wildBadgeText}
         </span>
       )}
 
       {/* Top-Left Corner Index */}
-      <div className={`relative z-10 flex flex-col items-center leading-none ${colorClass}`}>
+      <div
+        className={`relative z-10 flex flex-col items-center leading-none ${colorClass} ${
+          isImageActive ? 'opacity-0 pointer-events-none select-none' : ''
+        }`}
+      >
         <span className={sizeStyles.cornerRank}>{rankStr}</span>
         <span className={sizeStyles.cornerSuit}>{suitSymbol}</span>
       </div>
 
       {/* Center Symbol */}
-      <div className={`self-center leading-none ${colorClass}`}>
+      <div
+        className={`self-center leading-none ${colorClass} ${
+          isImageActive ? 'opacity-0 pointer-events-none select-none' : ''
+        }`}
+      >
         {isJoker ? (
           <div className="flex flex-col items-center">
             <span className={sizeStyles.centerSuit}>★</span>
@@ -223,7 +279,11 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       </div>
 
       {/* Bottom-Right Corner Index (Inverted) */}
-      <div className={`flex flex-col items-center leading-none rotate-180 ${colorClass}`}>
+      <div
+        className={`flex flex-col items-center leading-none rotate-180 ${colorClass} ${
+          isImageActive ? 'opacity-0 pointer-events-none select-none' : ''
+        }`}
+      >
         <span className={sizeStyles.cornerRank}>{rankStr}</span>
         <span className={sizeStyles.cornerSuit}>{suitSymbol}</span>
       </div>

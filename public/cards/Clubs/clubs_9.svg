@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FAF6EE"/>
+      <stop offset="100%" stop-color="#F5EFE2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Card Body with rounded corners (No outer drop-shadow box so background is transparent) -->
+  <rect x="0" y="0" width="600" height="900" rx="36" fill="url(#bgGrad)" stroke="#DDD4C0" stroke-width="3"/>
+
+  <!-- Ornate Double-Line Corner Frames -->
+  <!-- Top-Right Frame -->
+  <path d="M 440,70 L 524,70 C 530,70 534,74 534,80 L 534,164" fill="none" stroke="#1A2438" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 470,84 L 520,84 C 522,84 524,86 524,88 L 524,138" fill="none" stroke="#D6A449" stroke-width="2" stroke-linecap="round"/>
+  
+    <g transform="translate(534, 70) scale(0.22) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+  <!-- Bottom-Left Frame -->
+  <path d="M 160,830 L 76,830 C 70,830 66,826 66,820 L 66,736" fill="none" stroke="#1A2438" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 130,816 L 80,816 C 78,816 76,814 76,812 L 76,762" fill="none" stroke="#D6A449" stroke-width="2" stroke-linecap="round"/>
+  
+    <g transform="translate(66, 830) scale(0.22) rotate(180)">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+  <!-- Top-Left Corner Index -->
+  <g transform="translate(68, 62)">
+    <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#1A2438" text-anchor="middle">9</text>
+    
+    <g transform="translate(0, 96) scale(0.38) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+  </g>
+
+  <!-- Bottom-Right Corner Index (Inverted) -->
+  <g transform="translate(532, 838) rotate(180)">
+    <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#1A2438" text-anchor="middle">9</text>
+    
+    <g transform="translate(0, 96) scale(0.38) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+  </g>
+
+  <!-- Center Botanical Artwork -->
+  
+    <g transform="translate(220, 250) scale(0.95) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(380, 250) scale(0.95) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(220, 380) scale(0.95) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(380, 380) scale(0.95) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(300, 450) scale(1.05) ">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(220, 520) scale(0.95) rotate(180)">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(380, 520) scale(0.95) rotate(180)">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(220, 650) scale(0.95) rotate(180)">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+    <g transform="translate(380, 650) scale(0.95) rotate(180)">
+      <!-- Outer Trefoil Lobes with heavy ink outline -->
+      <circle cx="0" cy="-28" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="-28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="28" cy="10" r="26" fill="#1A2438" stroke="#1C1414" stroke-width="4.5"/>
+      <circle cx="0" cy="-2" r="20" fill="#1A2438"/>
+      <!-- Flared Stem -->
+      <path d="M -10,14 Q -10,54 -24,62 L 24,62 Q 10,54 10,14 Z" fill="#1A2438" stroke="#1C1414" stroke-width="3.5" stroke-linejoin="round"/>
+      <!-- Botanical Foliage Inset -->
+      <path d="M 0,-44 Q -10,-28 0,-16 Q 10,-28 0,-44 Z" fill="#2E7E7A" stroke="#1C1414" stroke-width="2"/>
+      <path d="M -36,8 Q -22,0 -14,14 Q -26,22 -36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <path d="M 36,8 Q 22,0 14,14 Q 26,22 36,8 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="-2" r="4.5" fill="#F4C458"/>
+    </g>
+  
+
+</svg>

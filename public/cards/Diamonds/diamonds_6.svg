@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FAF6EE"/>
+      <stop offset="100%" stop-color="#F5EFE2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Card Body with rounded corners (No outer drop-shadow box so background is transparent) -->
+  <rect x="0" y="0" width="600" height="900" rx="36" fill="url(#bgGrad)" stroke="#DDD4C0" stroke-width="3"/>
+
+  <!-- Ornate Double-Line Corner Frames -->
+  <!-- Top-Right Frame -->
+  <path d="M 440,70 L 524,70 C 530,70 534,74 534,80 L 534,164" fill="none" stroke="#D03D32" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 470,84 L 520,84 C 522,84 524,86 524,88 L 524,138" fill="none" stroke="#479B98" stroke-width="2" stroke-linecap="round"/>
+  
+    <g transform="translate(534, 70) scale(0.22) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+  <!-- Bottom-Left Frame -->
+  <path d="M 160,830 L 76,830 C 70,830 66,826 66,820 L 66,736" fill="none" stroke="#D03D32" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 130,816 L 80,816 C 78,816 76,814 76,812 L 76,762" fill="none" stroke="#479B98" stroke-width="2" stroke-linecap="round"/>
+  
+    <g transform="translate(66, 830) scale(0.22) rotate(180)">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+  <!-- Top-Left Corner Index -->
+  <g transform="translate(68, 62)">
+    <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#D03D32" text-anchor="middle">6</text>
+    
+    <g transform="translate(0, 96) scale(0.38) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+  </g>
+
+  <!-- Bottom-Right Corner Index (Inverted) -->
+  <g transform="translate(532, 838) rotate(180)">
+    <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#D03D32" text-anchor="middle">6</text>
+    
+    <g transform="translate(0, 96) scale(0.38) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+  </g>
+
+  <!-- Center Botanical Artwork -->
+  
+    <g transform="translate(220, 270) scale(1.05) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+    <g transform="translate(380, 270) scale(1.05) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+    <g transform="translate(220, 450) scale(1.05) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+    <g transform="translate(380, 450) scale(1.05) ">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+    <g transform="translate(220, 630) scale(1.05) rotate(180)">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+    <g transform="translate(380, 630) scale(1.05) rotate(180)">
+      <!-- Outer Diamond Body -->
+      <path d="M 0,-56 L 46,0 L 0,56 L -46,0 Z" 
+            fill="#D03D32" stroke="#1C1414" stroke-width="4.5" stroke-linejoin="round"/>
+      <!-- Inner faceted gem -->
+      <path d="M 0,-40 L 30,0 L 0,40 L -30,0 Z" fill="#EE7D68" stroke="#1C1414" stroke-width="2.5"/>
+      <path d="M 0,-24 L 18,0 L 0,24 L -18,0 Z" fill="#D6A449" stroke="#1C1414" stroke-width="2"/>
+      <circle cx="0" cy="0" r="4.5" fill="#F4C458"/>
+      <circle cx="0" cy="-40" r="3" fill="#479B98"/>
+      <circle cx="0" cy="40" r="3" fill="#479B98"/>
+    </g>
+  
+
+    <g transform="translate(300, 360) scale(0.9) ">
+      <path d="M -40,-8 C -20,-24 -5,-12 0,0 C 5,-12 20,-24 40,-8" fill="none" stroke="#479B98" stroke-width="3" stroke-linecap="round"/>
+      <path d="M -30,6 C -15,16 0,10 0,0 C 0,10 15,16 30,6" fill="none" stroke="#EE7D68" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 0,-12 L 0,-22 M -6,-17 L 6,-17" stroke="#D6A449" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="-42" cy="-6" r="3" fill="#479B98"/>
+      <circle cx="42" cy="-6" r="3" fill="#479B98"/>
+      <circle cx="0" cy="18" r="3.5" fill="#D03D32"/>
+    </g>
+  
+
+    <g transform="translate(300, 540) scale(0.9) rotate(180)">
+      <path d="M -40,-8 C -20,-24 -5,-12 0,0 C 5,-12 20,-24 40,-8" fill="none" stroke="#479B98" stroke-width="3" stroke-linecap="round"/>
+      <path d="M -30,6 C -15,16 0,10 0,0 C 0,10 15,16 30,6" fill="none" stroke="#EE7D68" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M 0,-12 L 0,-22 M -6,-17 L 6,-17" stroke="#D6A449" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="-42" cy="-6" r="3" fill="#479B98"/>
+      <circle cx="42" cy="-6" r="3" fill="#479B98"/>
+      <circle cx="0" cy="18" r="3.5" fill="#D03D32"/>
+    </g>
+  
+</svg>
