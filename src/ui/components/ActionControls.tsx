@@ -157,21 +157,21 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
         {/* MELD / DISCARD PHASE ACTIONS */}
         {!isDrawPhase && (
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-nowrap">
             {/* Play New Sequence Button (enabled when valid sequence selected) */}
             <button
               type="button"
               data-testid="btn-play-meld"
               disabled={!canPlayNewMeld}
               onClick={handlePlayMeldClick}
-              className={`h-11 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
+              className={`h-10 px-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
                 canPlayNewMeld
                   ? 'btn-game-primary'
                   : 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed opacity-60'
               }`}
             >
               <Sparkles className="w-4 h-4 text-emerald-200" />
-              <span>
+              <span className="truncate">
                 {canPlayNewMeld
                   ? `Play ${meldValidation.type || ''} Sequence`
                   : 'Play Sequence'}
@@ -179,15 +179,15 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             </button>
 
             {/* Validation Preview / Tip Badge */}
-            <div data-testid="meld-validation-badge" className="text-sm">
+            <div data-testid="meld-validation-badge" className="text-sm shrink-0">
               {isMeldPhase && (
                 canPlayNewMeld ? (
-                  <span className="inline-flex items-center gap-1.5 text-emerald-950 font-bold bg-emerald-100 border border-emerald-400 px-3 py-1.5 rounded-lg shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 text-emerald-950 font-bold bg-emerald-100 border border-emerald-400 px-2.5 py-1 rounded-lg shadow-sm">
                     <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                     <span>{`Valid ${meldValidation.type} (+pts)`}</span>
                   </span>
                 ) : selectedCardCount >= 3 ? (
-                  <span className="inline-flex items-center gap-1.5 text-amber-950 font-bold bg-amber-100 border border-amber-400 px-3 py-1.5 rounded-lg shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 text-amber-950 font-bold bg-amber-100 border border-amber-400 px-2.5 py-1 rounded-lg shadow-sm">
                     <AlertCircle className="w-4 h-4 text-amber-700" />
                     <span>{meldValidation.error}</span>
                   </span>
@@ -196,13 +196,13 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             </div>
 
             {/* Add to Sequence Tip / Merge Guidance */}
-            {selectedCardCount > 0 && isMeldPhase && (
+            {selectedCardCount > 0 && isMeldPhase && !canPlayNewMeld && (
               <div
                 data-testid="add-to-sequence-tip"
-                className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-sm font-bold shadow-sm"
+                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-xs font-bold shadow-sm shrink-0"
               >
-                <Sparkles className="w-4 h-4 text-yellow-600 shrink-0" />
-                <span>Click highlighted sequence on table to add</span>
+                <Sparkles className="w-3.5 h-3.5 text-yellow-600 shrink-0" />
+                <span>Click sequence on table to add</span>
               </div>
             )}
 
@@ -212,7 +212,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
               data-testid="btn-discard"
               disabled={!canDiscard}
               onClick={handleDiscardClick}
-              className={`h-11 px-4 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer ${
+              className={`h-10 px-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
                 canDiscard
                   ? 'btn-game-danger'
                   : 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed opacity-60'

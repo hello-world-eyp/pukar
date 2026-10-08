@@ -185,7 +185,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       className={`w-full wood-hand-tray rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5 text-stone-900 ${className}`}
     >
       {/* HAND TOOLBAR & STATUS */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#a47b4e]/40 pb-2">
+      <div className="flex items-center justify-between gap-2 sm:gap-3 border-b border-[#a47b4e]/40 pb-2 min-h-[48px] overflow-x-auto flex-nowrap">
         {/* PLAYER IDENTITY & CARD COUNTS */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2.5">
@@ -332,7 +332,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
       {/* CARDS DISPLAY CONTAINER (RECESSED WOODEN TRAY SLOT) */}
       <div
-        className="w-full wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto pb-3 pt-3 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner"
+        className="w-full wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto pb-3 pt-5 sm:pt-6 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner"
         tabIndex={0}
         aria-label="Hand Cards"
       >
@@ -362,11 +362,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   key={card.id || `card-${index}`}
                   style={animStyle}
                   className={`transition-all duration-150 transform ${animationClasses} ${
-                    isSelected
-                      ? '-translate-y-4'
-                      : isNew
-                      ? '-translate-y-2 hover:-translate-y-3'
-                      : 'hover:-translate-y-2'
+                    isNew
+                      ? '-translate-y-1 hover:-translate-y-2'
+                      : 'hover:-translate-y-1'
                   }`}
                 >
                   <PlayingCard
