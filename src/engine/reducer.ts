@@ -149,6 +149,11 @@ function handleDrawFromStock(state: GameState): {
     return { state, error: 'Stock deck is empty' };
   }
 
+  const activePlayer = state.players[state.currentPlayerIndex];
+  if (!activePlayer || !Array.isArray(activePlayer.hand)) {
+    return { state, error: 'Active player not found' };
+  }
+
   const drawnCard = state.stockDeck[0];
   let remainingStock = state.stockDeck.slice(1);
   let pukarPool = [...state.pukarPool];
@@ -202,6 +207,11 @@ function handleTakeDiscard(state: GameState): {
     return { state, error: 'Discard pile is empty' };
   }
 
+  const activePlayer = state.players[state.currentPlayerIndex];
+  if (!activePlayer || !Array.isArray(activePlayer.hand)) {
+    return { state, error: 'Active player not found' };
+  }
+
   const cardsFromDiscard = [...state.discardPile];
   const updatedPlayers = state.players.map((p, idx) => {
     if (idx !== state.currentPlayerIndex) return p;
@@ -232,11 +242,18 @@ function handlePlayNewMeld(
   if (state.phase !== 'MELD') {
     return { state, error: `Cannot meld: current phase is ${state.phase}` };
   }
-  if (!cardIds || cardIds.length < 3) {
+  if (!Array.isArray(cardIds) || cardIds.length < 3) {
     return { state, error: 'A meld requires at least 3 cards' };
+  }
+  if (new Set(cardIds).size !== cardIds.length) {
+    return { state, error: 'Duplicate card IDs are not allowed' };
   }
 
   const activePlayer = state.players[state.currentPlayerIndex];
+  if (!activePlayer || !Array.isArray(activePlayer.hand)) {
+    return { state, error: 'Active player not found' };
+  }
+
   const handCardMap = new Map<string, Card>(activePlayer.hand.map((c) => [c.id, c]));
   const cardsToMeld: Card[] = [];
 
@@ -296,11 +313,18 @@ function handleAddToMeld(
   if (state.phase !== 'MELD') {
     return { state, error: `Cannot add to meld: current phase is ${state.phase}` };
   }
-  if (!cardIds || cardIds.length === 0) {
+  if (!Array.isArray(cardIds) || cardIds.length === 0) {
     return { state, error: 'Must select at least 1 card to add to meld' };
+  }
+  if (new Set(cardIds).size !== cardIds.length) {
+    return { state, error: 'Duplicate card IDs are not allowed' };
   }
 
   const activePlayer = state.players[state.currentPlayerIndex];
+  if (!activePlayer || !Array.isArray(activePlayer.hand)) {
+    return { state, error: 'Active player not found' };
+  }
+
   const team = activePlayer.team;
   const opponentTeam = team === 'A' ? 'B' : 'A';
 
@@ -439,14 +463,25 @@ function handleDiscardCard(
   if (state.phase === 'DRAW') {
     return { state, error: 'Cannot discard during DRAW phase' };
   }
+  if (typeof cardId !== 'string' || !cardId.trim()) {
+    return { state, error: 'Invalid or missing cardId to discard' };
+  }
 
   const activePlayer = state.players[state.currentPlayerIndex];
-  const discardedCard = activePlayer.hand.find((c) => c.id === cardId);
-  if (!discardedCard) {
+  if (!activePlayer || !Array.isArray(activePlayer.hand)) {
+    return { state, error: 'Active player not found' };
+  }
+
+  const cardIndex = activePlayer.hand.findIndex((c) => c.id === cardId);
+  if (cardIndex === -1) {
     return { state, error: `Card ${cardId} is not in active player hand` };
   }
 
-  let remainingHand = activePlayer.hand.filter((c) => c.id !== cardId);
+  const discardedCard = activePlayer.hand[cardIndex];
+  let remainingHand = [
+    ...activePlayer.hand.slice(0, cardIndex),
+    ...activePlayer.hand.slice(cardIndex + 1),
+  ];
   const updatedDiscardPile = [...state.discardPile, discardedCard];
   const team = activePlayer.team;
   let pukarPool = [...state.pukarPool];
@@ -578,7 +613,13 @@ function handleResetGame(
   state: GameState,
   playerCount?: 4 | 6
 ): { state: GameState; error?: string } {
-  const count = playerCount ?? state.playerCount;
+  const count = playerCount ?? state?.playerCount ?? 4;
+  if (count !== 4 && count !== 6) {
+    return {
+      state,
+      error: `Invalid player count: ${count}. Pukar requires 4 or 6 players.`,
+    };
+  }
   const freshState = dealInitialState(count);
 
   const nextState: GameState = {

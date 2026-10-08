@@ -8,10 +8,19 @@ let audioCtx: AudioContext | null = null;
 let soundEnabled = true;
 
 function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
+  const win =
+    typeof window !== 'undefined'
+      ? window
+      : typeof globalThis !== 'undefined' && (globalThis as unknown as { window?: Window }).window
+      ? (globalThis as unknown as { window: Window }).window
+      : null;
+  if (!win) return null;
+
   if (!audioCtx) {
     const AudioContextClass =
-      window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      (win as unknown as { AudioContext?: typeof AudioContext }).AudioContext ||
+      (win as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext ||
+      (typeof globalThis !== 'undefined' && (globalThis as unknown as { AudioContext?: typeof AudioContext }).AudioContext);
     if (AudioContextClass) {
       try {
         audioCtx = new AudioContextClass();
@@ -24,6 +33,10 @@ function getAudioContext(): AudioContext | null {
     audioCtx.resume().catch(() => {});
   }
   return audioCtx;
+}
+
+export function resetAudioContext(): void {
+  audioCtx = null;
 }
 
 export function setSoundEnabled(enabled: boolean): void {

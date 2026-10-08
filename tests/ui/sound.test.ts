@@ -4,6 +4,7 @@ import {
   setSoundEnabled,
   isSoundEnabled,
   toggleSound,
+  resetAudioContext,
   type SoundEffect,
 } from '../../src/ui/sound';
 
@@ -37,17 +38,34 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
   };
 
   beforeEach(() => {
+    resetAudioContext();
     setSoundEnabled(true);
     mockAudioContext.state = 'running';
-    vi.clearAllMocks();
+    mockOscillator.type = 'sine';
 
-    vi.stubGlobal('AudioContext', vi.fn(() => mockAudioContext));
+    mockAudioContext.createOscillator = vi.fn(() => mockOscillator);
+    mockAudioContext.createGain = vi.fn(() => mockGain);
+    mockAudioContext.resume = vi.fn().mockResolvedValue(undefined);
+    mockOscillator.start = vi.fn();
+    mockOscillator.stop = vi.fn();
+    mockOscillator.connect = vi.fn();
+    mockGain.connect = vi.fn();
+    mockOscillator.frequency.setValueAtTime = vi.fn();
+    mockOscillator.frequency.exponentialRampToValueAtTime = vi.fn();
+    mockGain.gain.setValueAtTime = vi.fn();
+    mockGain.gain.exponentialRampToValueAtTime = vi.fn();
+
+    const MockAudioContext = vi.fn(function () {
+      return mockAudioContext;
+    });
+    vi.stubGlobal('AudioContext', MockAudioContext);
     vi.stubGlobal('window', {
-      AudioContext: vi.fn(() => mockAudioContext),
+      AudioContext: MockAudioContext,
     });
   });
 
   afterEach(() => {
+    resetAudioContext();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -175,13 +193,12 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
     });
 
     it('gracefully handles AudioContext construction failure', () => {
-      vi.stubGlobal('AudioContext', vi.fn(() => {
+      const FailingConstructor = vi.fn(function () {
         throw new Error('Web Audio not allowed');
-      }));
+      });
+      vi.stubGlobal('AudioContext', FailingConstructor);
       vi.stubGlobal('window', {
-        AudioContext: vi.fn(() => {
-          throw new Error('Web Audio not allowed');
-        }),
+        AudioContext: FailingConstructor,
       });
 
       expect(() => {

@@ -17,7 +17,7 @@ export function sanitizeStateForPlayer(
         name: p.name,
         team: p.team,
         cardCount: p.hand ? p.hand.length : 0,
-        hand: isViewer && p.hand ? [...p.hand] : undefined,
+        hand: isViewer && p.hand ? p.hand.map((c) => ({ ...c })) : undefined,
       };
     });
 
@@ -28,11 +28,23 @@ export function sanitizeStateForPlayer(
       phase: state?.phase ?? 'DRAW',
       turnPhase: state?.phase ?? 'DRAW',
       stockDeckCount: state?.stockDeck ? state.stockDeck.length : 0,
-      discardPile: state?.discardPile ? [...state.discardPile] : [],
+      discardPile: state?.discardPile ? state.discardPile.map((c) => ({ ...c })) : [],
       pukarPoolCount: state?.pukarPool ? state.pukarPool.length : 0,
       melds: {
-        A: state?.melds?.A ? [...state.melds.A] : [],
-        B: state?.melds?.B ? [...state.melds.B] : [],
+        A: state?.melds?.A
+          ? state.melds.A.map((m) => ({
+              ...m,
+              cards: m.cards ? m.cards.map((c) => ({ ...c })) : [],
+              slots: m.slots ? m.slots.map((s) => ({ ...s, card: { ...s.card } })) : [],
+            }))
+          : [],
+        B: state?.melds?.B
+          ? state.melds.B.map((m) => ({
+              ...m,
+              cards: m.cards ? m.cards.map((c) => ({ ...c })) : [],
+              slots: m.slots ? m.slots.map((s) => ({ ...s, card: { ...s.card } })) : [],
+            }))
+          : [],
       },
       scores: state?.scores ? { ...state.scores } : { A: 0, B: 0 },
       roundScores: state?.roundScores ? { ...state.roundScores } : undefined,
