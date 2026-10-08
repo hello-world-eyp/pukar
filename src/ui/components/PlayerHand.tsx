@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
 import { ArrowDownUp, Sparkles, X, ArrowDown, ArrowUp } from 'lucide-react';
@@ -95,6 +95,7 @@ export interface PlayerHandProps {
   initialSortDirection?: SortDirection;
   isRippling?: boolean;
   actionsSlot?: React.ReactNode;
+  onReorderCards?: (cards: Card[]) => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -118,9 +119,29 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   initialSortDirection = 'desc',
   isRippling = false,
   actionsSlot,
+  onReorderCards,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(initialSortDirection);
+
+  // Manual custom arrangement order (list of card IDs)
+  const [customOrder, setCustomOrder] = useState<string[]>([]);
+
+  // Drag and Drop interaction state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Ref to suppress accidental click/selection right after dropping a card
+  const dragJustEndedRef = useRef(false);
+
+  // Touch drag state ref for tablet / mobile touchscreens
+  const touchStateRef = useRef<{
+    startIndex: number;
+    startX: number;
+    startY: number;
+    hasMoved: boolean;
+  } | null>(null);
 
   const activeSortMode = controlledSortMode !== undefined ? controlledSortMode : internalSortMode;
   const activeSortDirection = controlledSortDirection !== undefined ? controlledSortDirection : internalSortDirection;
@@ -150,7 +171,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
   };
 
-  // Sort cards based on activeSortMode and activeSortDirection (Dual Filter)
+  // Derive cards to display: respects suit / rank sort or custom manual drag order
   const displayCards = useMemo(() => {
     try {
       if (activeSortMode === 'suit') {
@@ -159,18 +180,170 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       if (activeSortMode === 'rank') {
         return sortCardsByRank(cards, activeSortDirection);
       }
+      // When in manual custom order ('none')
+      if (customOrder.length > 0) {
+        const cardMap = new Map(cards.map((c) => [c.id, c]));
+        const ordered: Card[] = [];
+        // Place known cards in customOrder sequence
+        for (const id of customOrder) {
+          const card = cardMap.get(id);
+          if (card) {
+            ordered.push(card);
+            cardMap.delete(id);
+          }
+        }
+        // Append any newly drawn / unarranged cards to the end
+        for (const remainingCard of cardMap.values()) {
+          ordered.push(remainingCard);
+        }
+        return ordered;
+      }
       return cards;
     } catch (err) {
       console.error('Error calculating displayCards in PlayerHand:', err);
       return cards;
     }
-  }, [cards, activeSortMode, activeSortDirection]);
+  }, [cards, activeSortMode, activeSortDirection, customOrder]);
 
   const selectedSet = useMemo(() => new Set(selectedCardIds), [selectedCardIds]);
   const newCardSet = useMemo(() => new Set(newCardIds), [newCardIds]);
 
-  const handleCardClick = (card: Card) => {
+  // Card reordering logic
+  const handleMoveCard = useCallback(
+    (sourceIndex: number, targetIndex: number) => {
+      if (sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0) return;
+      if (sourceIndex >= displayCards.length || targetIndex >= displayCards.length) return;
+
+      try {
+        const newCards = [...displayCards];
+        const [movedCard] = newCards.splice(sourceIndex, 1);
+        newCards.splice(targetIndex, 0, movedCard);
+
+        setCustomOrder(newCards.map((c) => c.id));
+        if (activeSortMode !== 'none') {
+          handleSetSort('none');
+        }
+        onReorderCards?.(newCards);
+      } catch (err) {
+        console.error('Error in handleMoveCard:', err);
+      }
+    },
+    [displayCards, activeSortMode, onReorderCards]
+  );
+
+  // Desktop HTML5 Drag & Drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number, card: Card) => {
     if (disabled) return;
+    try {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+      e.dataTransfer.setData('application/json', JSON.stringify({ index, id: card.id }));
+      setIsDragging(true);
+      setDraggedIndex(index);
+    } catch (err) {
+      console.error('Error in handleDragStart:', err);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    try {
+      e.dataTransfer.dropEffect = 'move';
+      if (dragOverIndex !== index) {
+        setDragOverIndex(index);
+      }
+    } catch (err) {
+      console.error('Error in handleDragOver:', err);
+    }
+  };
+
+  const handleDragLeave = (_e: React.DragEvent, index: number) => {
+    if (dragOverIndex === index) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    try {
+      const sourceIndexStr = e.dataTransfer.getData('text/plain');
+      const sourceIndex = draggedIndex !== null ? draggedIndex : parseInt(sourceIndexStr, 10);
+      if (!isNaN(sourceIndex) && sourceIndex >= 0) {
+        handleMoveCard(sourceIndex, targetIndex);
+      }
+    } catch (err) {
+      console.error('Error in handleDrop:', err);
+    } finally {
+      handleDragEnd();
+    }
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    dragJustEndedRef.current = true;
+    setTimeout(() => {
+      dragJustEndedRef.current = false;
+    }, 150);
+  };
+
+  // Mobile / Tablet Touch Drag handlers
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    if (disabled || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    touchStateRef.current = {
+      startIndex: index,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      hasMoved: false,
+    };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStateRef.current || disabled) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStateRef.current.startX;
+    const dy = touch.clientY - touchStateRef.current.startY;
+
+    if (!touchStateRef.current.hasMoved && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+      touchStateRef.current.hasMoved = true;
+      setIsDragging(true);
+      setDraggedIndex(touchStateRef.current.startIndex);
+    }
+
+    if (touchStateRef.current.hasMoved) {
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const cardSlot = el?.closest('[data-card-index]');
+      if (cardSlot) {
+        const targetIdx = parseInt(cardSlot.getAttribute('data-card-index') || '-1', 10);
+        if (targetIdx >= 0 && targetIdx !== dragOverIndex) {
+          setDragOverIndex(targetIdx);
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStateRef.current) return;
+    const { startIndex, hasMoved } = touchStateRef.current;
+    touchStateRef.current = null;
+
+    if (hasMoved && dragOverIndex !== null && dragOverIndex !== startIndex) {
+      handleMoveCard(startIndex, dragOverIndex);
+      dragJustEndedRef.current = true;
+      setTimeout(() => {
+        dragJustEndedRef.current = false;
+      }, 150);
+    }
+
+    setIsDragging(false);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleCardClick = (card: Card) => {
+    if (disabled || dragJustEndedRef.current) return;
     try {
       onToggleCardSelection?.(card.id);
       onSelectCard?.(card);
@@ -224,6 +397,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     </span>
                   </>
                 )}
+                <span className="text-stone-400 hidden sm:inline">•</span>
+                <span className="text-xs font-semibold text-stone-600 hidden sm:inline" title="Drag cards to rearrange them in any custom order">
+                  Drag cards to reorder
+                </span>
               </div>
             </div>
           </div>
@@ -345,6 +522,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);
+              const isBeingDragged = isDragging && draggedIndex === index;
+              const isDropTarget = isDragging && dragOverIndex === index && draggedIndex !== index;
+
               const animationClasses = isRippling
                 ? 'animate-card-ripple'
                 : isNew
@@ -360,13 +540,39 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               return (
                 <div
                   key={card.id || `card-${index}`}
+                  data-card-index={index}
+                  data-testid={`hand-card-slot-${index}`}
+                  draggable={!disabled}
+                  onDragStart={(e) => handleDragStart(e, index, card)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={(e) => handleDragLeave(e, index)}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => handleTouchStart(e, index)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                   style={animStyle}
-                  className={`transition-all duration-150 transform ${animationClasses} ${
-                    isNew
-                      ? '-translate-y-1 hover:-translate-y-2'
-                      : 'hover:-translate-y-1'
+                  className={`relative transition-all duration-150 transform ${animationClasses} ${
+                    isBeingDragged
+                      ? 'opacity-40 scale-95 cursor-grabbing z-30'
+                      : isDropTarget
+                      ? 'scale-105 z-20 cursor-grabbing'
+                      : isNew
+                      ? '-translate-y-1 hover:-translate-y-2 cursor-grab'
+                      : 'hover:-translate-y-1 cursor-grab'
                   }`}
+                  title="Click to select • Drag to reorder"
                 >
+                  {/* Drop Target Insertion Indicator Line */}
+                  {isDropTarget && (
+                    <div
+                      data-testid="drag-drop-indicator"
+                      className={`absolute top-0 bottom-0 w-1.5 bg-amber-400 rounded-full shadow-lg shadow-amber-400/80 animate-pulse z-30 pointer-events-none ${
+                        draggedIndex !== null && draggedIndex < index ? '-right-1' : '-left-1'
+                      }`}
+                    />
+                  )}
+
                   <PlayingCard
                     card={card}
                     size={cardSize}
@@ -374,7 +580,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     isNew={isNew}
                     disabled={disabled}
                     onClick={() => handleCardClick(card)}
-                    className="cursor-pointer select-none"
+                    className="select-none"
                   />
                 </div>
               );

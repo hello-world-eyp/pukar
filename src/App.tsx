@@ -297,6 +297,29 @@ export function App() {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // Custom Card Drag Reordering Handler
+  // ---------------------------------------------------------------------------
+  const handleReorderHand = useCallback(
+    (newHand: Card[]) => {
+      setGameState((prev) => {
+        const pIdx = currentViewIndex;
+        if (pIdx < 0 || pIdx >= prev.players.length) return prev;
+        const updatedPlayers = prev.players.map((p, idx) => {
+          if (idx === pIdx) {
+            return { ...p, hand: newHand };
+          }
+          return p;
+        });
+        return {
+          ...prev,
+          players: updatedPlayers,
+        };
+      });
+    },
+    [currentViewIndex]
+  );
+
+  // ---------------------------------------------------------------------------
   // Play New Meld Handler with Joker Designation Prompt
   // ---------------------------------------------------------------------------
   const handlePlayMeld = useCallback(
@@ -657,6 +680,7 @@ export function App() {
             isCurrentPlayer={isViewingActivePlayer}
             disabled={gameState.roundStatus === 'ROUND_OVER'}
             isRippling={isTableRippling}
+            onReorderCards={handleReorderHand}
             actionsSlot={
               <ActionControls
                 phase={gameState.phase}

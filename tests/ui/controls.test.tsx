@@ -278,6 +278,19 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         const rank9IdxAsc = htmlRankAsc.indexOf('9 of HEARTS');
         expect(rank7IdxAsc).toBeLessThan(rank9IdxAsc);
       });
+
+      it('renders draggable card slots and drag-to-reorder hint', () => {
+        const html = renderToString(
+          <PlayerHand cards={[spade7, spade8, spade9]} />
+        );
+        expect(html).toContain('Drag cards to reorder');
+        expect(html).toContain('data-card-index="0"');
+        expect(html).toContain('data-card-index="1"');
+        expect(html).toContain('data-card-index="2"');
+        expect(html).toContain('draggable="true"');
+        expect(html).toContain('data-testid="hand-card-slot-0"');
+        expect(html).toContain('Click to select • Drag to reorder');
+      });
     });
   });
 
