@@ -367,5 +367,94 @@ describe('UI Components', () => {
       expect(html).toContain('Selected to add');
       expect(html).toContain('ring-amber-400/50');
     });
+
+    it('default sorts cards in a meld highest to lowest (descending)', () => {
+      // Meld with cards provided in mixed order: 4♠, 6♠, 5♠
+      const meld: Meld = {
+        id: 'meld-sort-desc',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 'c4', suit: 'SPADES', rank: 4 },
+          { id: 'c6', suit: 'SPADES', rank: 6 },
+          { id: 'c5', suit: 'SPADES', rank: 5 },
+        ],
+        slots: [
+          { card: { id: 'c4', suit: 'SPADES', rank: 4 }, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'c5', suit: 'SPADES', rank: 5 }, representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'c6', suit: 'SPADES', rank: 6 }, representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const html = renderToString(
+        <TableMeldBoard
+          melds={{
+            A: [meld],
+            B: [],
+          }}
+        />
+      );
+
+      // Verify toggle button and sort indicator are rendered
+      expect(html).toContain('data-testid="btn-toggle-meld-sort"');
+      expect(html).toContain('Sort: High → Low');
+      expect(html).toContain('High → Low');
+
+      // Verify cards are rendered in order: 6♠ then 5♠ then 4♠
+      const idx6 = html.indexOf('aria-label="6 of SPADES"');
+      const idx5 = html.indexOf('aria-label="5 of SPADES"');
+      const idx4 = html.indexOf('aria-label="4 of SPADES"');
+
+      expect(idx6).toBeGreaterThan(-1);
+      expect(idx5).toBeGreaterThan(-1);
+      expect(idx4).toBeGreaterThan(-1);
+      // Highest (6) must appear before 5, and 5 must appear before Lowest (4)
+      expect(idx6).toBeLessThan(idx5);
+      expect(idx5).toBeLessThan(idx4);
+    });
+
+    it('supports lowest to highest sorting when defaultSortDirection is asc', () => {
+      const meld: Meld = {
+        id: 'meld-sort-asc',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 'c6', suit: 'SPADES', rank: 6 },
+          { id: 'c4', suit: 'SPADES', rank: 4 },
+          { id: 'c5', suit: 'SPADES', rank: 5 },
+        ],
+        slots: [
+          { card: { id: 'c4', suit: 'SPADES', rank: 4 }, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'c5', suit: 'SPADES', rank: 5 }, representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+          { card: { id: 'c6', suit: 'SPADES', rank: 6 }, representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      const html = renderToString(
+        <TableMeldBoard
+          melds={{
+            A: [meld],
+            B: [],
+          }}
+          defaultSortDirection="asc"
+        />
+      );
+
+      expect(html).toContain('Sort: Low → High');
+      expect(html).toContain('Low → High');
+
+      const idx4 = html.indexOf('aria-label="4 of SPADES"');
+      const idx5 = html.indexOf('aria-label="5 of SPADES"');
+      const idx6 = html.indexOf('aria-label="6 of SPADES"');
+
+      expect(idx4).toBeGreaterThan(-1);
+      expect(idx5).toBeGreaterThan(-1);
+      expect(idx6).toBeGreaterThan(-1);
+      // Lowest (4) must appear before 5, and 5 must appear before Highest (6)
+      expect(idx4).toBeLessThan(idx5);
+      expect(idx5).toBeLessThan(idx6);
+    });
   });
 });

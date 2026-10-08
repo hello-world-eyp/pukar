@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Meld, Team } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
-import { Shield, Sparkles, CheckCircle2, PlusCircle } from 'lucide-react';
+import { Shield, Sparkles, CheckCircle2, PlusCircle, ArrowDownUp } from 'lucide-react';
+
+export type MeldSortDirection = 'desc' | 'asc';
+
+const SUIT_SORT_ORDER: Record<string, number> = {
+  SPADES: 1,
+  HEARTS: 2,
+  CLUBS: 3,
+  DIAMONDS: 4,
+};
 
 export interface TableMeldBoardProps {
   melds?: {
@@ -15,6 +24,7 @@ export interface TableMeldBoardProps {
   selectedMeldId?: string | null;
   onSelectMeld?: (meld: Meld) => void;
   className?: string;
+  defaultSortDirection?: MeldSortDirection;
 }
 
 export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
@@ -25,7 +35,10 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   selectedMeldId,
   onSelectMeld,
   className = '',
+  defaultSortDirection = 'desc',
 }) => {
+  const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
+
   const listA = melds?.A ?? teamAMelds ?? [];
   const listB = melds?.B ?? teamBMelds ?? [];
 
@@ -48,7 +61,28 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   const scoreB = calculateTeamPoints(listB);
 
   return (
-    <div className={`w-full flex flex-col gap-5 ${className}`}>
+    <div className={`w-full flex flex-col gap-3 ${className}`}>
+      {/* Board Controls Bar */}
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-300">Table Melds</span>
+          <span className="text-[11px] text-slate-500">•</span>
+          <span className="text-[11px] text-slate-400">
+            {sortDirection === 'desc' ? 'Sorted Highest to Lowest' : 'Sorted Lowest to Highest'}
+          </span>
+        </div>
+        <button
+          type="button"
+          data-testid="btn-toggle-meld-sort"
+          onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
+          title="Toggle meld card order between Highest to Lowest and Lowest to Highest"
+        >
+          <ArrowDownUp className="w-3.5 h-3.5 text-amber-400" />
+          <span>{sortDirection === 'desc' ? 'Sort: High → Low' : 'Sort: Low → High'}</span>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* TEAM A MELDS COLUMN */}
         <TeamMeldColumn
@@ -60,6 +94,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           isActive={activeTeam === 'A'}
           selectedMeldId={selectedMeldId}
           onSelectMeld={onSelectMeld}
+          sortDirection={sortDirection}
         />
 
         {/* TEAM B MELDS COLUMN */}
@@ -72,6 +107,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           isActive={activeTeam === 'B'}
           selectedMeldId={selectedMeldId}
           onSelectMeld={onSelectMeld}
+          sortDirection={sortDirection}
         />
       </div>
     </div>
@@ -87,6 +123,7 @@ interface TeamMeldColumnProps {
   isActive: boolean;
   selectedMeldId?: string | null;
   onSelectMeld?: (meld: Meld) => void;
+  sortDirection: MeldSortDirection;
 }
 
 const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
@@ -98,6 +135,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   isActive,
   selectedMeldId,
   onSelectMeld,
+  sortDirection,
 }) => {
   const isBlue = teamColor === 'blue';
 
@@ -166,6 +204,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                   }
                 }}
                 canSelect={Boolean(onSelectMeld)}
+                sortDirection={sortDirection}
               />
             );
           })
@@ -181,6 +220,7 @@ interface MeldCardItemProps {
   isSelected: boolean;
   onSelect: () => void;
   canSelect: boolean;
+  sortDirection: MeldSortDirection;
 }
 
 const MeldCardItem: React.FC<MeldCardItemProps> = ({
@@ -189,6 +229,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   isSelected,
   onSelect,
   canSelect,
+  sortDirection,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
 
@@ -230,8 +271,43 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     badgeClass = 'bg-slate-800 text-slate-400 border-slate-700';
   }
 
-  // Map slots for represented ranks and wildcard metadata
-  const slotMap = new Map(meld.slots.map((s) => [s.card.id, s]));
+  // Sort slots: Default highest to lowest (descending by representedRank)
+  const sortedSlots = useMemo(() => {
+    if (!meld.slots || meld.slots.length === 0) {
+      const cards = [...(meld.cards || [])];
+      return cards
+        .sort((a, b) => (sortDirection === 'desc' ? b.rank - a.rank : a.rank - b.rank))
+        .map((c) => ({
+          card: c,
+          representedRank: c.rank,
+          representedSuit: c.suit ?? undefined,
+          isWildcard: false,
+        }));
+    }
+
+    const slotsCopy = [...meld.slots];
+    return slotsCopy.sort((a, b) => {
+      if (sortDirection === 'desc') {
+        if (b.representedRank !== a.representedRank) {
+          return b.representedRank - a.representedRank;
+        }
+        if (!a.isWildcard && b.isWildcard) return -1;
+        if (a.isWildcard && !b.isWildcard) return 1;
+        const suitA = a.card.suit ? SUIT_SORT_ORDER[a.card.suit] ?? 99 : 99;
+        const suitB = b.card.suit ? SUIT_SORT_ORDER[b.card.suit] ?? 99 : 99;
+        return suitA - suitB;
+      } else {
+        if (a.representedRank !== b.representedRank) {
+          return a.representedRank - b.representedRank;
+        }
+        if (!a.isWildcard && b.isWildcard) return -1;
+        if (a.isWildcard && !b.isWildcard) return 1;
+        const suitA = a.card.suit ? SUIT_SORT_ORDER[a.card.suit] ?? 99 : 99;
+        const suitB = b.card.suit ? SUIT_SORT_ORDER[b.card.suit] ?? 99 : 99;
+        return suitA - suitB;
+      }
+    });
+  }, [meld.slots, meld.cards, sortDirection]);
 
   return (
     <div
@@ -260,6 +336,10 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
               {meld.suit}
             </span>
           )}
+
+          <span className="text-[10px] text-slate-400 bg-slate-900/60 border border-slate-800 px-1.5 py-0.5 rounded font-mono">
+            {sortDirection === 'desc' ? 'High → Low' : 'Low → High'}
+          </span>
         </div>
 
         {canSelect && (
@@ -279,13 +359,17 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       </div>
 
       {/* Sequential Cards Layout (Overlapping for compact fit) */}
-      <div className="flex items-center overflow-x-auto py-2 px-1 scrollbar-thin">
-        {meld.cards.map((card, index) => {
-          const slot = slotMap.get(card.id);
-          const isSlotWild = slot ? slot.isWildcard : undefined;
+      <div
+        data-testid="meld-cards-row"
+        data-sort-direction={sortDirection}
+        className="flex items-center overflow-x-auto py-2 px-1 scrollbar-thin"
+      >
+        {sortedSlots.map((slot, index) => {
+          const card = slot.card;
+          const isSlotWild = slot.isWildcard;
           let wildLabel: string | undefined = undefined;
 
-          if (isSlotWild && slot) {
+          if (isSlotWild) {
             const repRank = getRankLabel(slot.representedRank);
             const repSuit = getSuitSymbol(slot.representedSuit ?? meld.suit ?? card.suit);
             wildLabel = `Wild (${repRank}${repSuit})`;
@@ -296,7 +380,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
 
           return (
             <div
-              key={`${card.id}-${index}`}
+              key={`${card.id}-${slot.representedRank}-${index}`}
               style={{
                 marginLeft: index === 0 ? 0 : '-18px',
                 zIndex: index + 1,
@@ -307,8 +391,8 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
                 card={card}
                 size="sm"
                 isWild={isSlotWild}
-                representedRank={slot?.representedRank}
-                representedSuit={slot?.representedSuit}
+                representedRank={slot.representedRank}
+                representedSuit={slot.representedSuit}
                 wildcardLabel={wildLabel}
               />
             </div>
