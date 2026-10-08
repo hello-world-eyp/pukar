@@ -689,6 +689,11 @@ export function App() {
           <PlayerHand
             cards={viewingPlayer.hand}
             selectedCardIds={selectedCardIds}
+            newCardIds={
+              isViewingActivePlayer
+                ? (gameState.newlyPickedUpCardIds ?? [])
+                : []
+            }
             onToggleCardSelection={handleToggleCardSelection}
             onClearSelection={handleClearSelection}
             playerName={viewingPlayer.name}
@@ -711,6 +716,7 @@ export function App() {
             pukarPoolCount={gameState.pukarPool.length}
             isGodModeOpen={isGodModeOpen}
             onToggleGodMode={() => setIsGodModeOpen((prev) => !prev)}
+            newlyPickedUpCardIds={gameState.newlyPickedUpCardIds}
           />
         </section>
       </main>

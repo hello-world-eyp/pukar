@@ -99,6 +99,7 @@ export interface GameState {
   finalTurnPlayerIndex?: number | null;
   lastTurnTriggeredByDeckExhaust?: boolean;
   lastPickedUpCard?: Card | null;
+  newlyPickedUpCardIds?: string[];
 }
 
 export type GameAction =
@@ -157,6 +158,7 @@ export interface SanitizedGameState {
   roundStatus: RoundStatus;
   isRoundOver?: boolean;
   lastPickedUpCard?: Card | null;
+  newlyPickedUpCardIds?: string[];
 }
 
 /**

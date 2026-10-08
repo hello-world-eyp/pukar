@@ -5,6 +5,8 @@ export interface PlayingCardProps {
   card: Card;
   size?: 'sm' | 'md' | 'lg';
   isSelected?: boolean;
+  isNew?: boolean;
+  isHighlighted?: boolean;
   isWild?: boolean;
   representedRank?: number;
   representedSuit?: Suit;
@@ -13,6 +15,7 @@ export interface PlayingCardProps {
   disabled?: boolean;
   onClick?: () => void;
   className?: string;
+  showNewBadge?: boolean;
 }
 
 export function getRankLabel(rank: Rank | number, isNaturalJoker?: boolean): string {
@@ -47,6 +50,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   card,
   size = 'md',
   isSelected = false,
+  isNew,
+  isHighlighted,
   isWild,
   representedRank,
   representedSuit,
@@ -55,7 +60,9 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   disabled = false,
   onClick,
   className = '',
+  showNewBadge = true,
 }) => {
+  const isCardNew = Boolean(isNew || isHighlighted);
   const isJoker = card.isNaturalJoker || card.rank === 0;
   const naturallyWild = checkIsWildcard(card);
   const actingAsWild = isWild !== undefined ? isWild : naturallyWild;
@@ -188,8 +195,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
   const ariaLabel = faceDown
     ? 'Face-down card'
     : isJoker
-    ? `Natural Joker${actingAsWild ? ' (Wild)' : ''}`
-    : `${rankStr} of ${card.suit ?? 'Unknown'}${actingAsWild ? ' (Wild)' : ''}`;
+    ? `Natural Joker${actingAsWild ? ' (Wild)' : ''}${isCardNew ? ' (New)' : ''}`
+    : `${rankStr} of ${card.suit ?? 'Unknown'}${actingAsWild ? ' (Wild)' : ''}${isCardNew ? ' (New)' : ''}`;
 
   if (faceDown) {
     return (
@@ -199,6 +206,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         onClick={isClickable ? handleCardClick : undefined}
         onKeyDown={isClickable ? handleKeyDown : undefined}
         aria-label={ariaLabel}
+        data-new-card={isCardNew ? 'true' : undefined}
+        data-is-new={isCardNew ? 'true' : undefined}
         className={`relative select-none flex-shrink-0 transition-transform duration-150 ${sizeStyles.card} ${
           isClickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''
         } ${isSelected ? 'ring-4 ring-amber-400 -translate-y-2' : ''} ${className}`}
@@ -225,6 +234,16 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const isImageActive = imgLoaded && !imgError;
 
+  const borderAndEffectClasses = isSelected
+    ? isCardNew
+      ? 'border-2 border-emerald-400 ring-4 ring-amber-400 ring-offset-1 border-amber-500 -translate-y-2.5 shadow-lg shadow-emerald-500/30'
+      : 'ring-4 ring-amber-400 ring-offset-1 border-amber-500 -translate-y-2.5 shadow-lg'
+    : isCardNew
+    ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/60 shadow-md shadow-emerald-500/25'
+    : actingAsWild
+    ? 'border-amber-400 ring-1 ring-amber-300/80 bg-amber-50/30'
+    : 'border border-stone-300/80';
+
   return (
     <div
       role={isClickable ? 'button' : undefined}
@@ -232,19 +251,15 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       onClick={isClickable ? handleCardClick : undefined}
       onKeyDown={isClickable ? handleKeyDown : undefined}
       aria-label={ariaLabel}
-      className={`relative select-none flex-shrink-0 bg-[#FAF7F0] border border-stone-300/80 transition-all duration-150 flex flex-col justify-between ${
+      data-new-card={isCardNew ? 'true' : undefined}
+      data-is-new={isCardNew ? 'true' : undefined}
+      className={`relative select-none flex-shrink-0 bg-[#FAF7F0] transition-all duration-150 flex flex-col justify-between ${
         sizeStyles.card
       } ${sizeStyles.paddings} ${
         isClickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''
-      } ${
-        isSelected
-          ? 'ring-4 ring-amber-400 ring-offset-1 border-amber-500 -translate-y-2.5 shadow-lg'
-          : ''
-      } ${
-        actingAsWild && !isSelected
-          ? 'border-amber-400 ring-1 ring-amber-300/80 bg-amber-50/30'
-          : ''
-      } ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
+      } ${borderAndEffectClasses} ${
+        disabled ? 'opacity-60 cursor-not-allowed' : ''
+      } ${className}`}
     >
       {/* Card Illustration Asset */}
       {currentSrc && !imgError && (
@@ -266,6 +281,16 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
           className={`absolute -top-2 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-md whitespace-nowrap z-20 ${sizeStyles.badge}`}
         >
           {wildBadgeText}
+        </span>
+      )}
+
+      {/* Newly Picked Up Badge */}
+      {isCardNew && showNewBadge && !wildBadgeText && (
+        <span
+          data-testid="new-card-badge"
+          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-extrabold uppercase rounded-full tracking-wider bg-emerald-500 text-slate-950 border border-emerald-300 shadow-md whitespace-nowrap z-20 ${sizeStyles.badge}`}
+        >
+          New
         </span>
       )}
 

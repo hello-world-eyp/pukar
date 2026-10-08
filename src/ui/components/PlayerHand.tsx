@@ -62,6 +62,7 @@ export function sortCardsByRank(cards: Card[]): Card[] {
 export interface PlayerHandProps {
   cards: Card[];
   selectedCardIds?: string[];
+  newCardIds?: string[];
   onToggleCardSelection?: (cardId: string) => void;
   onSelectCard?: (card: Card) => void;
   onClearSelection?: () => void;
@@ -79,6 +80,7 @@ export interface PlayerHandProps {
 export const PlayerHand: React.FC<PlayerHandProps> = ({
   cards,
   selectedCardIds = [],
+  newCardIds = [],
   onToggleCardSelection,
   onSelectCard,
   onClearSelection,
@@ -123,6 +125,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   }, [cards, activeSortMode]);
 
   const selectedSet = useMemo(() => new Set(selectedCardIds), [selectedCardIds]);
+  const newCardSet = useMemo(() => new Set(newCardIds), [newCardIds]);
 
   const handleCardClick = (card: Card) => {
     if (disabled) return;
@@ -245,17 +248,23 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           <div className="flex items-end gap-1.5 sm:gap-2 min-w-max px-1">
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
+              const isNew = newCardSet.has(card.id);
               return (
                 <div
                   key={card.id || `card-${index}`}
                   className={`transition-all duration-150 transform ${
-                    isSelected ? '-translate-y-2.5' : 'hover:-translate-y-1'
+                    isSelected
+                      ? '-translate-y-2.5'
+                      : isNew
+                      ? '-translate-y-1 hover:-translate-y-2'
+                      : 'hover:-translate-y-1'
                   }`}
                 >
                   <PlayingCard
                     card={card}
                     size={cardSize}
                     isSelected={isSelected}
+                    isNew={isNew}
                     disabled={disabled}
                     onClick={() => handleCardClick(card)}
                     className="cursor-pointer select-none"

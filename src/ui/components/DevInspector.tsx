@@ -15,6 +15,7 @@ export interface DevInspectorProps {
   discardPileCount?: number;
   isGodModeOpen?: boolean;
   onToggleGodMode?: () => void;
+  newlyPickedUpCardIds?: string[];
   className?: string;
 }
 
@@ -30,6 +31,7 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
   discardPileCount,
   isGodModeOpen: controlledGodMode,
   onToggleGodMode,
+  newlyPickedUpCardIds,
   className = '',
 }) => {
   const [internalGodMode, setInternalGodMode] = useState(false);
@@ -262,7 +264,14 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
                       <div className="flex items-center gap-1 min-w-max">
                         {handCards.map((card, cIdx) => (
                           <div key={card.id || `card-${cIdx}`} className="shrink-0">
-                            <PlayingCard card={card} size="sm" />
+                            <PlayingCard
+                              card={card}
+                              size="sm"
+                              isNew={
+                                pIdx === (activeTurnIndex ?? currentPlayerIndex) &&
+                                Boolean(newlyPickedUpCardIds?.includes(card.id))
+                              }
+                            />
                           </div>
                         ))}
                       </div>

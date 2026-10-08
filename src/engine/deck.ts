@@ -128,5 +128,6 @@ export function dealInitialState(playerCount: 4 | 6, customDeck?: Card[]): GameS
     round: 1,
     roundStatus: 'PLAYING',
     finalTurnPlayerIndex: null,
+    newlyPickedUpCardIds: [],
   };
 }

@@ -193,6 +193,7 @@ function handleDrawFromStock(state: GameState): {
     turnPhase: 'MELD',
     lastTurnTriggeredByDeckExhaust,
     lastPickedUpCard: null,
+    newlyPickedUpCardIds: [drawnCard.id],
   };
 
   return { state: nextState };
@@ -233,6 +234,7 @@ function handleTakeDiscard(state: GameState): {
     phase: 'MELD',
     turnPhase: 'MELD',
     lastPickedUpCard: null,
+    newlyPickedUpCardIds: cardsFromDiscard.map((c) => c.id),
   };
 
   return { state: nextState };
@@ -389,6 +391,10 @@ function handleAddToMeld(
     postResult.state = {
       ...postResult.state,
       lastPickedUpCard: validation.pickedUpCard,
+      newlyPickedUpCardIds: [
+        ...(postResult.state.newlyPickedUpCardIds ?? []),
+        validation.pickedUpCard.id,
+      ],
     };
   }
   return postResult;
@@ -419,6 +425,9 @@ function handlePostMeldState(
   let updatedHand = remainingHand;
   let roundStatus: RoundStatus = state.roundStatus;
   let isRoundOver = state.isRoundOver ?? false;
+  let newlyPickedUpCardIds = (state.newlyPickedUpCardIds ?? []).filter((id) =>
+    updatedHand.some((c) => c.id === id)
+  );
 
   // Check if active player's hand reached 0
   if (remainingHand.length === 0) {
@@ -427,6 +436,7 @@ function handlePostMeldState(
       const claimedPukar = pukarPool[0];
       pukarPool = pukarPool.slice(1);
       updatedHand = [...claimedPukar];
+      newlyPickedUpCardIds = claimedPukar.map((c) => c.id);
 
       scores[team] += 50;
       roundScores[team] += 50;
@@ -438,6 +448,7 @@ function handlePostMeldState(
       // Hand emptied with 0 Pukars remaining: Player went out!
       roundStatus = 'ROUND_OVER';
       isRoundOver = true;
+      newlyPickedUpCardIds = [];
     }
   }
 
@@ -461,6 +472,7 @@ function handlePostMeldState(
     pukarsClaimed,
     roundStatus,
     isRoundOver,
+    newlyPickedUpCardIds,
   };
 
   if (isRoundOver) {
@@ -522,6 +534,8 @@ function handleDiscardCard(
   let roundStatus: RoundStatus = state.roundStatus;
   let isRoundOver = state.isRoundOver ?? false;
 
+  let newlyPickedUpCardIds: string[] = [];
+
   // Check if hand reaches 0 upon discard
   if (remainingHand.length === 0) {
     if (pukarPool.length >= 1) {
@@ -529,6 +543,7 @@ function handleDiscardCard(
       const claimedPukar = pukarPool[0];
       pukarPool = pukarPool.slice(1);
       remainingHand = [...claimedPukar];
+      newlyPickedUpCardIds = claimedPukar.map((c) => c.id);
 
       scores[team] += 50;
       roundScores[team] += 50;
@@ -588,6 +603,7 @@ function handleDiscardCard(
     isRoundOver,
     finalTurnPlayerIndex,
     lastPickedUpCard: null,
+    newlyPickedUpCardIds,
   };
 
   if (isRoundOver) {
@@ -629,6 +645,7 @@ function handleStartNextRound(state: GameState): {
     phase: 'DRAW',
     turnPhase: 'DRAW',
     lastPickedUpCard: null,
+    newlyPickedUpCardIds: [],
   };
 
   return { state: nextState };
@@ -659,6 +676,7 @@ function handleResetGame(
     phase: 'DRAW',
     turnPhase: 'DRAW',
     lastPickedUpCard: null,
+    newlyPickedUpCardIds: [],
   };
 
   return { state: nextState };
