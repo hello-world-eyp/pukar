@@ -93,7 +93,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className={`relative w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
+        className={`relative w-full max-w-2xl game-modal-frame rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
       >
         {/* HEADER HERO BANNER */}
         <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 px-6 py-6 border-b border-slate-800 text-center relative">
@@ -285,7 +285,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                 console.error('Error in onStartNextRound:', err);
               }
             }}
-            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-extrabold text-sm shadow-lg shadow-emerald-900/40 flex items-center justify-center gap-2 transition-all active:scale-95"
+            className="w-full sm:w-auto h-12 px-7 rounded-xl btn-game-primary font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
           >
             <span>Next Round</span>
             <ArrowRight className="w-4 h-4" />

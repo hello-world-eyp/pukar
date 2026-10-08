@@ -95,7 +95,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
       data-testid="game-setup-modal"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-xl bg-slate-900 border border-slate-700/80 rounded-3xl p-5 sm:p-7 text-slate-100 shadow-2xl shadow-black/80 flex flex-col gap-5 max-h-[92vh] overflow-y-auto">
+      <div className="w-full max-w-xl game-modal-frame rounded-3xl p-5 sm:p-7 text-slate-100 shadow-2xl shadow-black/80 flex flex-col gap-5 max-h-[92vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
           <div className="flex items-center gap-3">
@@ -294,7 +294,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
             <button
               type="submit"
               data-testid="btn-start-game"
-              className="flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] active:scale-95"
+              className="flex-1 sm:flex-none h-11 px-7 rounded-xl btn-game-amber font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <Play className="w-4 h-4 fill-slate-950" />
               <span>{isGameInProgress ? 'Restart & Deal' : 'Start Game'}</span>

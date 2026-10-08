@@ -253,12 +253,120 @@
 
 /* Casino Poker Felt & Table Rail Styling */
 .poker-table-felt {
-  background: radial-gradient(ellipse at 50% 45%, #0e4e2d 0%, #083820 60%, #042113 100%);
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.7), 0 20px 50px rgba(0, 0, 0, 0.6);
+  background: radial-gradient(ellipse at 50% 45%, #0f5c35 0%, #0a4326 50%, #062b18 85%, #03180d 100%);
+  background-image:
+    radial-gradient(ellipse at 50% 45%, rgba(15, 92, 53, 0.95) 0%, rgba(10, 67, 38, 0.98) 50%, rgba(6, 43, 24, 1) 85%, rgba(3, 24, 13, 1) 100%),
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 8px 8px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 0, 0, 0.5), 0 25px 60px rgba(0, 0, 0, 0.7);
 }
 
 .poker-table-rail {
-  border: 4px solid #14492b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2), 0 25px 60px rgba(0, 0, 0, 0.8);
+  border: 4px solid #1a5635;
+  outline: 2px solid rgba(245, 158, 11, 0.35);
+  outline-offset: -1px;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3), 0 25px 60px rgba(0, 0, 0, 0.85);
 }
+
+/* Tactile 3D Game Buttons with Satisfying Physical Press */
+.btn-game-primary {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-bottom: 4px solid #047857;
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.35);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-game-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(5, 150, 105, 0.45);
+}
+.btn-game-primary:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3);
+}
+
+.btn-game-danger {
+  background: linear-gradient(180deg, #f43f5e 0%, #e11d48 100%);
+  border-bottom: 4px solid #be123c;
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.35);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-game-danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fb7185 0%, #f43f5e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(225, 29, 72, 0.45);
+}
+.btn-game-danger:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.3);
+}
+
+.btn-game-secondary {
+  background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+  border-bottom: 4px solid #0f172a;
+  color: #f1f5f9;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.4);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-game-secondary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.5);
+}
+.btn-game-secondary:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+}
+
+.btn-game-amber {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  border-bottom: 4px solid #d97706;
+  color: #0f172a;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+  transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-game-amber:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fcd34d 0%, #fbbf24 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.5);
+}
+.btn-game-amber:active:not(:disabled) {
+  transform: translateY(3px);
+  border-bottom-width: 1px;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);
+}
+
+/* Gaming Modal & Dialog Containers */
+.game-modal-backdrop {
+  background: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.game-modal-frame {
+  background: linear-gradient(180deg, #0f172a 0%, #090e17 100%);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-top: 3px solid rgba(245, 158, 11, 0.85);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 30px rgba(245, 158, 11, 0.15);
+}
+
+/* Card Realistic Drop Shadow & Felt Elevation */
+.card-elevation-shadow {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.38), 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.card-elevation-hover {
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
 

@@ -73,7 +73,7 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
       onClick={handleSafeClose}
     >
       <div
-        className={`relative w-full max-w-6xl max-h-[92vh] bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 ${className}`}
+        className={`relative w-full max-w-6xl max-h-[92vh] game-modal-frame rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Bar */}

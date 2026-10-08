@@ -785,30 +785,30 @@ export function App() {
           role="dialog"
           aria-modal="true"
           aria-labelledby="rules-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
           onClick={() => setIsRulesModalOpen(false)}
         >
           <div
-            className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden text-slate-100"
+            className="game-modal-frame rounded-3xl max-w-2xl w-full max-h-[88vh] shadow-2xl flex flex-col overflow-hidden text-slate-100"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-inner">
                   <HelpCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 id="rules-modal-title" className="text-lg font-bold text-white">
-                    Pukar Rules & Gameplay
+                  <h2 id="rules-modal-title" className="text-xl font-black tracking-tight text-white">
+                    Pukar Rules &amp; Gameplay
                   </h2>
-                  <p className="text-xs text-slate-400">Royal Partner Rummy Guide</p>
+                  <p className="text-xs text-amber-300/80 font-medium">Royal Partner Rummy Guide</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsRulesModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/60 transition-colors cursor-pointer"
                 aria-label="Close Rules"
               >
                 <X className="w-5 h-5" />
@@ -816,43 +816,43 @@ export function App() {
             </div>
 
             {/* Content */}
-            <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed">
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
-                <h3 className="font-bold text-white text-sm mb-1 flex items-center gap-1.5">
+            <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-200 leading-relaxed">
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+                <h3 className="font-black text-amber-300 text-sm mb-1.5 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-amber-400" />
-                  Objective & Teams
+                  Objective &amp; Teams
                 </h3>
                 <p>
                   Pukar is played in 2 teams (Team A vs Team B). Players take alternating turns.
                   Form melds on your team&apos;s board, empty your hand to claim Pukar decks (+50 pts
-                  each), and maximize your team&apos;s score.
+                  each), and maximize your team&apos;s cumulative score.
                 </p>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
-                <h3 className="font-bold text-white text-sm mb-1">Turn Sequence</h3>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-300">
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+                <h3 className="font-black text-amber-300 text-sm mb-1.5">Turn Sequence</h3>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-200">
                   <li>
-                    <strong className="text-amber-300">DRAW:</strong> Draw 1 card from the face-down
+                    <strong className="text-amber-300 font-bold">DRAW:</strong> Draw 1 card from the face-down
                     Stock deck OR take the entire face-up Discard pile (&ldquo;The Bottom&rdquo;).
                   </li>
                   <li>
-                    <strong className="text-amber-300">MELD:</strong> (Optional) Play new 3+ card
+                    <strong className="text-amber-300 font-bold">MELD:</strong> (Optional) Play new 3+ card
                     runs or sets, or add cards to existing team melds. You can make multiple melds!
                   </li>
                   <li>
-                    <strong className="text-amber-300">DISCARD:</strong> (Mandatory) Discard 1 card
+                    <strong className="text-amber-300 font-bold">DISCARD:</strong> (Mandatory) Discard 1 card
                     face-up to the Bottom to end your turn.
                   </li>
                 </ol>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
-                <h3 className="font-bold text-white text-sm mb-1 flex items-center gap-1.5">
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+                <h3 className="font-black text-amber-300 text-sm mb-1.5 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  Wildcards & Melds
+                  Wildcards &amp; Melds
                 </h3>
-                <ul className="list-disc list-inside space-y-1 text-slate-300">
+                <ul className="list-disc list-inside space-y-1.5 text-slate-200">
                   <li>
                     All <strong>2s</strong> and <strong>Natural Jokers</strong> are wildcards.
                   </li>
@@ -867,12 +867,12 @@ export function App() {
                 </ul>
               </div>
 
-              <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-4">
-                <h3 className="font-bold text-white text-sm mb-1 flex items-center gap-1.5">
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
+                <h3 className="font-black text-amber-300 text-sm mb-1.5 flex items-center gap-2">
                   <Trophy className="w-4 h-4 text-amber-400" />
-                  Pukar Claim & Scoring
+                  Pukar Claim &amp; Scoring
                 </h3>
-                <ul className="list-disc list-inside space-y-1 text-slate-300">
+                <ul className="list-disc list-inside space-y-1.5 text-slate-200">
                   <li>
                     When a player empties their hand and Pukars remain, they claim a 13-card Pukar deck
                     and score an immediate <strong>+50 points</strong>!
@@ -891,11 +891,11 @@ export function App() {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/90 flex justify-end">
+            <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 flex justify-end">
               <button
                 type="button"
                 onClick={() => setIsRulesModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 text-slate-950 hover:bg-amber-300 transition-colors"
+                className="h-10 px-5 rounded-xl text-xs sm:text-sm font-black btn-game-amber cursor-pointer"
               >
                 Got It, Let&apos;s Play!
               </button>

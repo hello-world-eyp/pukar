@@ -409,7 +409,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   if (isPure13) {
     badgeText = 'Pure 2-A Run - 500 pts';
     badgeClass =
-      'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-extrabold border-yellow-300 shadow-sm';
+      'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
     if (meld.type === 'RUN') {
       const isClean = !meld.cards.some(
@@ -417,10 +417,10 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       );
       if (isClean) {
         badgeText = 'Clean Run - 200 pts';
-        badgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
       } else {
         badgeText = 'Dirty Run - 100 pts';
-        badgeClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+        badgeClass = 'bg-blue-950/80 text-blue-300 border border-blue-500/50 font-black shadow-sm';
       }
     } else {
       const isClean = !meld.cards.some(
@@ -428,16 +428,16 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       );
       if (isClean) {
         badgeText = 'Clean 7-of-a-Kind - 200 pts';
-        badgeClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40';
+        badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
       } else {
         badgeText = 'Dirty 7-of-a-Kind - 100 pts';
-        badgeClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+        badgeClass = 'bg-blue-950/80 text-blue-300 border border-blue-500/50 font-black shadow-sm';
       }
     }
   } else {
     // Incomplete
     badgeText = `${meld.type === 'RUN' ? 'Run' : 'Set'} - ${meld.cards.length} cards`;
-    badgeClass = 'bg-slate-800 text-slate-400 border-slate-700';
+    badgeClass = 'bg-slate-900 text-slate-300 border border-slate-700 font-bold';
   }
 
   // Sort slots: Default highest to lowest (descending by representedRank)

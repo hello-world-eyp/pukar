@@ -29,7 +29,7 @@ export const JokerPromptModal: React.FC<JokerPromptModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className={`relative w-full max-w-md bg-gradient-to-b from-slate-900 to-slate-950 border border-amber-500/40 rounded-3xl p-6 shadow-2xl shadow-amber-950/40 flex flex-col gap-5 ${className}`}
+        className={`relative w-full max-w-md game-modal-frame rounded-3xl p-6 shadow-2xl shadow-black/80 flex flex-col gap-5 ${className}`}
       >
         {/* Close / Cancel Button */}
         <button

@@ -144,88 +144,88 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
         {/* ===================================================================
             2. CENTER: COMPACT MATCH SCOREBOARD (TEAM A vs TEAM B)
         ==================================================================== */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 flex-1 max-w-xl mx-auto order-3 md:order-2 w-full md:w-auto">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 flex-1 max-w-xl mx-auto order-3 md:order-2 w-full md:w-auto">
           {/* TEAM A CARD */}
           <div
-            className={`flex-1 flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+            className={`flex-1 flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl border transition-all ${
               resolvedActiveTeam === 'A'
-                ? 'bg-blue-950/80 border-blue-500/80 shadow-md shadow-blue-900/40 ring-1 ring-blue-500/50'
-                : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                ? 'bg-blue-950/90 border-blue-400 shadow-lg shadow-blue-900/50 ring-2 ring-blue-400/60'
+                : 'bg-slate-900/80 border-slate-700/80 hover:border-slate-600'
             }`}
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center shrink-0">
-                <Shield className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-600/30 text-blue-300 border border-blue-400/40 flex items-center justify-center shrink-0 shadow-inner">
+                <Shield className="w-4 h-4 text-blue-300" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-blue-300 truncate">Team A</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-black text-blue-200 tracking-tight truncate">Team A</span>
                   {teamALeading && (
-                    <Crown className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                    <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 drop-shadow" />
                   )}
                   {resolvedActiveTeam === 'A' && (
-                    <span className="text-[8px] font-extrabold bg-blue-500 text-white px-1 rounded uppercase tracking-wider">
+                    <span className="text-[9px] font-black bg-blue-500 text-white px-1.5 py-0.2 rounded uppercase tracking-wider shadow-sm">
                       Turn
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-blue-300/80">
-                  <Trophy className="w-2.5 h-2.5 text-blue-400" />
-                  <span>Pukars: <strong>{resolvedPukarsClaimed.A}</strong></span>
+                <div className="flex items-center gap-1 text-[11px] font-semibold text-blue-300/90">
+                  <Trophy className="w-3 h-3 text-amber-400" />
+                  <span className="text-white">Pukars: <strong>{resolvedPukarsClaimed.A}</strong></span>
                 </div>
               </div>
             </div>
 
             <div className="text-right shrink-0">
-              <span className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
+              <span className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-sm">
                 {resolvedTotalScores.A}
               </span>
-              <span className="text-[10px] text-slate-400 ml-1">
+              <span className="text-xs font-bold text-blue-300/80 ml-1.5">
                 {`(+${resolvedRoundScores.A})`}
               </span>
             </div>
           </div>
 
-          <span className="text-slate-500 font-extrabold text-[10px] uppercase tracking-widest px-1">
+          <span className="text-amber-400/80 font-black text-xs uppercase tracking-widest px-1 drop-shadow">
             VS
           </span>
 
           {/* TEAM B CARD */}
           <div
-            className={`flex-1 flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border transition-all ${
+            className={`flex-1 flex items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl border transition-all ${
               resolvedActiveTeam === 'B'
-                ? 'bg-amber-950/80 border-amber-500/80 shadow-md shadow-amber-900/40 ring-1 ring-amber-500/50'
-                : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                ? 'bg-amber-950/90 border-amber-400 shadow-lg shadow-amber-900/50 ring-2 ring-amber-400/60'
+                : 'bg-slate-900/80 border-slate-700/80 hover:border-slate-600'
             }`}
           >
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
-                <Shield className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-amber-600/30 text-amber-300 border border-amber-400/40 flex items-center justify-center shrink-0 shadow-inner">
+                <Shield className="w-4 h-4 text-amber-300" />
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs font-bold text-amber-300 truncate">Team B</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-black text-amber-200 tracking-tight truncate">Team B</span>
                   {teamBLeading && (
-                    <Crown className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                    <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0 drop-shadow" />
                   )}
                   {resolvedActiveTeam === 'B' && (
-                    <span className="text-[8px] font-extrabold bg-amber-500 text-slate-950 px-1 rounded uppercase tracking-wider">
+                    <span className="text-[9px] font-black bg-amber-500 text-slate-950 px-1.5 py-0.2 rounded uppercase tracking-wider shadow-sm">
                       Turn
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-amber-300/80">
-                  <Trophy className="w-2.5 h-2.5 text-amber-400" />
-                  <span>Pukars: <strong>{resolvedPukarsClaimed.B}</strong></span>
+                <div className="flex items-center gap-1 text-[11px] font-semibold text-amber-300/90">
+                  <Trophy className="w-3 h-3 text-amber-400" />
+                  <span className="text-white">Pukars: <strong>{resolvedPukarsClaimed.B}</strong></span>
                 </div>
               </div>
             </div>
 
             <div className="text-right shrink-0">
-              <span className="text-base sm:text-lg font-black text-slate-100 tracking-tight">
+              <span className="text-xl sm:text-2xl font-black text-white tracking-tight drop-shadow-sm">
                 {resolvedTotalScores.B}
               </span>
-              <span className="text-[10px] text-slate-400 ml-1">
+              <span className="text-xs font-bold text-amber-300/80 ml-1.5">
                 {`(+${resolvedRoundScores.B})`}
               </span>
             </div>

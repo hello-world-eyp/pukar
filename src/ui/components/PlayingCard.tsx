@@ -135,48 +135,48 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     }
   };
 
-  // Size specific styles with precise 2:3 aspect ratio
+  // Size specific styles with precise 2:3 aspect ratio and high-legibility fonts for older players
   const sizeStyles = {
     sm: {
-      card: 'w-12 h-[72px] text-[11px] rounded-md shadow-sm',
-      cornerRank: 'text-[11px]',
-      cornerSuit: 'text-[10px]',
-      centerSuit: 'text-base',
-      badge: 'text-[8px] px-1 py-0',
+      card: 'w-12 h-[72px] text-xs font-black rounded-md card-elevation-shadow',
+      cornerRank: 'text-xs font-black tracking-tight',
+      cornerSuit: 'text-[11px] font-bold leading-none',
+      centerSuit: 'text-xl font-bold',
+      badge: 'text-[9px] font-black px-1.5 py-0.2',
       paddings: 'p-1',
     },
     md: {
-      card: 'w-20 h-[120px] text-sm rounded-lg shadow-sm',
-      cornerRank: 'text-sm font-bold',
-      cornerSuit: 'text-xs',
-      centerSuit: 'text-2xl',
-      badge: 'text-[9px] px-1.5 py-0.5',
+      card: 'w-20 h-[120px] text-sm font-black rounded-lg card-elevation-shadow',
+      cornerRank: 'text-base font-black tracking-tight',
+      cornerSuit: 'text-xs font-bold leading-none',
+      centerSuit: 'text-3xl font-bold',
+      badge: 'text-[10px] font-black px-2 py-0.5',
       paddings: 'p-1.5',
     },
     lg: {
-      card: 'w-28 h-[168px] text-base rounded-xl shadow-md',
-      cornerRank: 'text-lg font-bold',
-      cornerSuit: 'text-sm',
-      centerSuit: 'text-4xl',
-      badge: 'text-[10px] px-2 py-0.5',
+      card: 'w-28 h-[168px] text-base font-black rounded-xl card-elevation-shadow',
+      cornerRank: 'text-xl font-black tracking-tight',
+      cornerSuit: 'text-sm font-bold leading-none',
+      centerSuit: 'text-5xl font-bold',
+      badge: 'text-xs font-black px-2.5 py-0.5',
       paddings: 'p-2',
     },
     xl: {
-      card: 'w-36 h-[216px] text-lg rounded-2xl shadow-lg',
-      cornerRank: 'text-xl font-bold',
-      cornerSuit: 'text-base',
-      centerSuit: 'text-5xl',
-      badge: 'text-xs px-2.5 py-0.5',
+      card: 'w-36 h-[216px] text-lg font-black rounded-2xl card-elevation-shadow',
+      cornerRank: 'text-2xl font-black tracking-tight',
+      cornerSuit: 'text-base font-bold leading-none',
+      centerSuit: 'text-6xl font-bold',
+      badge: 'text-xs font-black px-3 py-1',
       paddings: 'p-2.5',
     },
   }[size];
 
-  // Suit / Rank Color
+  // Suit / Rank Color - high contrast for accessibility
   const colorClass = isJoker
     ? 'text-amber-600'
     : isRed
-    ? 'text-red-600'
-    : 'text-slate-900';
+    ? 'text-red-600 font-black'
+    : 'text-slate-900 font-black';
 
   const isClickable = Boolean(onClick) && !disabled;
 
@@ -216,9 +216,9 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         aria-label={ariaLabel}
         data-new-card={isCardNew ? 'true' : undefined}
         data-is-new={isCardNew ? 'true' : undefined}
-        className={`relative select-none flex-shrink-0 transition-transform duration-150 ${sizeStyles.card} ${
-          isClickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''
-        } ${isSelected ? 'ring-4 ring-amber-400 -translate-y-2' : ''} ${className}`}
+        className={`relative select-none flex-shrink-0 transition-transform duration-150 card-elevation-shadow ${sizeStyles.card} ${
+          isClickable ? 'cursor-pointer hover:-translate-y-1.5 hover:shadow-xl' : ''
+        } ${isSelected ? 'ring-4 ring-amber-400 -translate-y-2.5' : ''} ${className}`}
       >
         <img
           src="/cards/card_back.png"
@@ -229,9 +229,9 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
             (e.currentTarget as HTMLElement).style.display = 'none';
           }}
         />
-        <div className="w-full h-full rounded-[inherit] bg-gradient-to-br from-blue-900 via-indigo-950 to-blue-950 p-1 border border-blue-800 flex items-center justify-center overflow-hidden">
-          <div className="w-full h-full rounded-[inherit] border border-blue-400/40 border-dashed flex items-center justify-center bg-blue-900/30">
-            <span className="text-blue-300/60 font-serif text-xs font-semibold select-none">
+        <div className="w-full h-full rounded-[inherit] bg-gradient-to-br from-blue-900 via-indigo-950 to-blue-950 p-1 border-2 border-amber-500/40 flex items-center justify-center overflow-hidden shadow-inner">
+          <div className="w-full h-full rounded-[inherit] border border-blue-400/40 border-dashed flex items-center justify-center bg-blue-900/40">
+            <span className="text-amber-200/90 font-serif text-xs font-black tracking-widest select-none drop-shadow">
               PUKAR
             </span>
           </div>
@@ -244,13 +244,13 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const borderAndEffectClasses = isSelected
     ? isCardNew
-      ? 'border-2 border-emerald-400 ring-4 ring-amber-400 ring-offset-1 border-amber-500 -translate-y-2.5 shadow-lg shadow-emerald-500/30'
-      : 'ring-4 ring-amber-400 ring-offset-1 border-amber-500 -translate-y-2.5 shadow-lg'
+      ? 'border-2 border-emerald-400 ring-4 ring-amber-400 ring-offset-2 ring-offset-slate-900 border-amber-500 -translate-y-2.5 shadow-xl shadow-emerald-500/30'
+      : 'ring-4 ring-amber-400 ring-offset-2 ring-offset-slate-900 border-amber-500 -translate-y-2.5 shadow-xl shadow-amber-500/20'
     : isCardNew
-    ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/60 shadow-md shadow-emerald-500/25'
+    ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/80 shadow-lg shadow-emerald-500/30'
     : actingAsWild
-    ? 'border-amber-400 ring-1 ring-amber-300/80 bg-amber-50/30'
-    : 'border border-stone-300/80';
+    ? 'border-2 border-amber-400 ring-1 ring-amber-300/80 bg-amber-50/40'
+    : 'border border-stone-300';
 
   return (
     <div
@@ -261,10 +261,10 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       aria-label={ariaLabel}
       data-new-card={isCardNew ? 'true' : undefined}
       data-is-new={isCardNew ? 'true' : undefined}
-      className={`relative select-none flex-shrink-0 bg-[#FAF7F0] transition-all duration-150 flex flex-col justify-between ${
+      className={`relative select-none flex-shrink-0 bg-gradient-to-b from-white via-[#FCFAF5] to-[#F7F4EB] transition-all duration-150 flex flex-col justify-between ${
         sizeStyles.card
       } ${sizeStyles.paddings} ${
-        isClickable ? 'cursor-pointer hover:-translate-y-1 hover:shadow-md' : ''
+        isClickable ? 'cursor-pointer hover:-translate-y-1.5 hover:shadow-xl' : ''
       } ${borderAndEffectClasses} ${
         disabled ? 'opacity-60 cursor-not-allowed' : ''
       } ${className}`}
