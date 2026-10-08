@@ -104,31 +104,47 @@ export const CenterTable: React.FC<CenterTableProps> = ({
 
             {/* Visual Card Stack with 3D Depth */}
             <div className="relative my-1 flex items-center justify-center">
-              {actualStockCount > 1 && (
-                <div className="absolute -top-1 -left-1 w-18 h-26 sm:w-20 sm:h-28 rounded-xl bg-blue-900 border border-blue-700/80 -rotate-3 shadow-md" />
-              )}
-              {actualStockCount > 2 && (
-                <div className="absolute -top-0.5 -right-1 w-18 h-26 sm:w-20 sm:h-28 rounded-xl bg-blue-900 border border-blue-700/80 rotate-2 shadow-md" />
-              )}
-
               {actualStockCount > 0 ? (
-                <div
-                  onClick={drawStockAllowed ? handleDrawStock : undefined}
-                  className={`relative z-10 transition-all ${
-                    isRippling ? 'animate-card-ripple' : ''
-                  } ${
-                    drawStockAllowed
-                      ? 'cursor-pointer hover:scale-105 active:scale-95 ring-4 ring-sky-500 ring-offset-2 ring-offset-amber-50 rounded-xl shadow-xl'
-                      : ''
-                  }`}
-                  style={isRippling ? { animationDelay: '60ms' } : undefined}
-                >
-                  <PlayingCard card={dummyStockCard} faceDown size="sm" />
+                <div className="relative inline-flex items-center justify-center">
+                  {/* Underneath deck cards creating clean, realistic physical depth */}
+                  {actualStockCount > 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-lg sm:rounded-xl bg-[#0c1836] border border-amber-500/40 shadow-sm pointer-events-none"
+                    />
+                  )}
+                  {actualStockCount > 2 && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-lg sm:rounded-xl bg-[#081024] border border-amber-500/30 shadow-md pointer-events-none"
+                    />
+                  )}
+                  {actualStockCount > 10 && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-lg sm:rounded-xl bg-[#040814] border border-amber-500/20 shadow-lg pointer-events-none"
+                    />
+                  )}
+
+                  {/* Top face-down card */}
+                  <div
+                    onClick={drawStockAllowed ? handleDrawStock : undefined}
+                    className={`relative z-10 transition-all ${
+                      isRippling ? 'animate-card-ripple' : ''
+                    } ${
+                      drawStockAllowed
+                        ? 'cursor-pointer hover:scale-105 active:scale-95 ring-4 ring-sky-500 ring-offset-2 ring-offset-amber-50 rounded-lg sm:rounded-xl shadow-xl'
+                        : ''
+                    }`}
+                    style={isRippling ? { animationDelay: '60ms' } : undefined}
+                  >
+                    <PlayingCard card={dummyStockCard} faceDown size="sm" />
+                  </div>
                 </div>
               ) : (
-                <div className="w-18 h-26 sm:w-20 sm:h-28 rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-xs sm:text-sm bg-stone-100/60">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 mb-1" />
-                  <span className="font-bold">Exhausted</span>
+                <div className="w-12 h-[72px] sm:w-16 sm:h-[96px] rounded-lg sm:rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-1 text-center text-stone-500 text-xs bg-stone-100/60">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 mb-0.5" />
+                  <span className="font-bold text-[11px] sm:text-xs">Exhausted</span>
                 </div>
               )}
             </div>
@@ -193,30 +209,50 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 }
               }}
             >
-              {discardPile.length > 1 && (
-                <div className="absolute -top-1 -right-1 w-18 h-26 sm:w-20 sm:h-28 rounded-xl bg-stone-300 border border-stone-400 rotate-2 pointer-events-none shadow-md" />
-              )}
               {topDiscardCard ? (
-                <div
-                  key={topDiscardCard.id}
-                  className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-xl shadow-xl ${
-                    isRippling ? 'animate-card-ripple' : 'animate-discard-landing'
-                  } ${
-                    drawDiscardAllowed
-                      ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-amber-50'
-                      : ''
-                  }`}
-                  style={isRippling ? { animationDelay: '80ms' } : undefined}
-                >
-                  <PlayingCard card={topDiscardCard} size="sm" />
-                  <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
-                    <ZoomIn className="w-3.5 h-3.5" />
-                    <span>Zoom</span>
+                <div className="relative inline-flex items-center justify-center">
+                  {/* Underneath discard cards creating clean physical depth */}
+                  {discardPile.length > 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-lg sm:rounded-xl bg-stone-200 border border-stone-300 shadow-sm pointer-events-none"
+                    />
+                  )}
+                  {discardPile.length > 2 && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-lg sm:rounded-xl bg-stone-300 border border-stone-400 shadow-md pointer-events-none"
+                    />
+                  )}
+                  {discardPile.length > 8 && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-lg sm:rounded-xl bg-stone-400 border border-stone-500 shadow-lg pointer-events-none"
+                    />
+                  )}
+
+                  {/* Top face-up card */}
+                  <div
+                    key={topDiscardCard.id}
+                    className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-lg sm:rounded-xl shadow-xl ${
+                      isRippling ? 'animate-card-ripple' : 'animate-discard-landing'
+                    } ${
+                      drawDiscardAllowed
+                        ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-amber-50'
+                        : ''
+                    }`}
+                    style={isRippling ? { animationDelay: '80ms' } : undefined}
+                  >
+                    <PlayingCard card={topDiscardCard} size="sm" />
+                    <div className="absolute inset-0 bg-stone-900/60 rounded-lg sm:rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
+                      <ZoomIn className="w-3.5 h-3.5" />
+                      <span>Zoom</span>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="w-18 h-26 sm:w-20 sm:h-28 rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-xs sm:text-sm bg-stone-100/60">
-                  <span className="font-bold">Empty Pile</span>
+                <div className="w-12 h-[72px] sm:w-16 sm:h-[96px] rounded-lg sm:rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-1 text-center text-stone-500 text-xs bg-stone-100/60">
+                  <span className="font-bold text-[11px] sm:text-xs">Empty Pile</span>
                 </div>
               )}
             </div>
