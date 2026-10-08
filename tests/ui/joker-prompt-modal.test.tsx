@@ -86,6 +86,37 @@ describe('JokerPromptModal & UI Integration for Normal Joker', () => {
     expect(html).toContain('Highest Card in Sequence');
   });
 
+  it('renders expanded modal layout with full authentic playing cards and font size minimum 11', () => {
+    const positionedOptions = [
+      { rank: 3, suit: 'SPADES' as const, label: '3 of Spades', positionLabel: 'Lowest Card in Sequence' as const },
+      { rank: 6, suit: 'SPADES' as const, label: '6 of Spades', positionLabel: 'Highest Card in Sequence' as const },
+    ];
+    const html = renderToString(
+      <JokerPromptModal
+        isOpen={true}
+        options={positionedOptions}
+        onSelect={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    // Verifies expanded modal dialog container
+    expect(html).toContain('max-w-xl sm:max-w-2xl');
+
+    // Verifies full playing card rendering with 2:3 aspect ratio and labels
+    expect(html).toContain('aria-label="3 of SPADES"');
+    expect(html).toContain('aria-label="6 of SPADES"');
+    expect(html).toContain('card-elevation-shadow');
+
+    // Verifies no font sizes under 11px (no text-[10px], text-[9px], etc.)
+    expect(html).not.toContain('text-[10px]');
+    expect(html).not.toContain('text-[9px]');
+    expect(html).not.toContain('text-[8px]');
+
+    // Verifies badges use text-xs (12px) or larger
+    expect(html).toContain('text-xs sm:text-sm font-black');
+  });
+
   it('displays "🃏 Picks up Joker!" badge on sequence item when adding natural replacement', () => {
     const card4 = makeCard('c4s', 'SPADES', 4);
     const joker = makeCard('joker', null, 0, true);
