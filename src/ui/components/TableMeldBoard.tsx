@@ -50,7 +50,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   onAddToMeld,
   className = '',
   defaultSortDirection = 'desc',
-  cardSize = 'md',
+  cardSize = 'sm',
   isRippling = false,
 }) => {
   const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
@@ -92,13 +92,13 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   const scoreB = calculateTeamPoints(listB);
 
   return (
-    <div className={`w-full flex flex-col gap-3 ${className}`}>
+    <div className={`w-full flex flex-col gap-2 sm:gap-2.5 ${className}`}>
       {/* Board Controls Bar */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className="text-sm sm:text-base font-black text-stone-800">Table Sequences</span>
           <span className="text-sm text-stone-400">•</span>
-          <span className="text-sm font-bold text-stone-600">
+          <span className="text-xs sm:text-sm font-bold text-stone-600">
             {sortDirection === 'desc' ? 'Sorted Highest to Lowest' : 'Sorted Lowest to Highest'}
           </span>
         </div>
@@ -106,15 +106,15 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           type="button"
           data-testid="btn-toggle-meld-sort"
           onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-sm font-bold text-stone-700 transition-all shadow-sm active:scale-95 cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-xs sm:text-sm font-bold text-stone-700 transition-all shadow-sm active:scale-95 cursor-pointer"
           title="Toggle sequence card order between Highest to Lowest and Lowest to Highest"
         >
-          <ArrowDownUp className="w-4 h-4 text-amber-600" />
+          <ArrowDownUp className="w-3.5 h-3.5 text-amber-600" />
           <span>{sortDirection === 'desc' ? 'Sort: High → Low' : 'Sort: Low → High'}</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-3.5">
         {/* TEAM A MELDS COLUMN */}
         <TeamMeldColumn
           team="A"
@@ -273,41 +273,41 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
       data-team={team}
       className={`rounded-2xl sm:rounded-3xl border-2 ${
         isBlue ? 'border-sky-200/80 bg-sky-50/40' : 'border-amber-200/80 bg-amber-50/40'
-      } p-4 flex flex-col gap-3.5 shadow-sm transition-all ${
+      } p-2.5 sm:p-3 flex flex-col gap-2 sm:gap-2.5 shadow-sm transition-all ${
         isActive ? activeRing : ''
       }`}
     >
       {/* Column Header */}
       <div
-        className={`flex items-center justify-between px-3.5 py-2 rounded-xl ${headerBg} border ${headerBorder}`}
+        className={`flex items-center justify-between px-3 py-1.5 rounded-xl ${headerBg} border ${headerBorder}`}
       >
         <div className="flex items-center gap-2">
           <Shield className={`w-4 h-4 ${headerTextColor}`} />
-          <h3 className={`font-black text-sm sm:text-base tracking-wide ${headerTextColor}`}>
+          <h3 className={`font-black text-xs sm:text-sm tracking-wide ${headerTextColor}`}>
             {teamName}
           </h3>
           {isActive && (
-            <span className="text-xs font-black px-2 py-0.5 rounded uppercase tracking-wider bg-sky-500 text-white shadow-sm">
+            <span className="text-[11px] sm:text-xs font-black px-1.5 py-0.5 rounded uppercase tracking-wider bg-sky-500 text-white shadow-sm">
               Active Turn
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm">
           <span className="text-stone-600 font-bold">
             {`${melds.length} ${melds.length === 1 ? 'sequence' : 'sequences'}`}
           </span>
-          <span className="font-black px-2.5 py-0.5 rounded-lg bg-stone-800 text-stone-100 shadow-sm">
+          <span className="font-black px-2 py-0.5 rounded-lg bg-stone-800 text-stone-100 shadow-sm">
             {`${score} pts`}
           </span>
         </div>
       </div>
 
       {/* Sequences List: Strictly 2 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-[105px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2.5 min-h-[75px]">
         {sortedMelds.length === 0 ? (
-          <div className="col-span-full flex-1 flex flex-col items-center justify-center p-3 sm:p-4 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-sm text-center bg-white/40 min-h-[100px]">
+          <div className="col-span-full flex-1 flex flex-col items-center justify-center p-2 sm:p-3 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-xs sm:text-sm text-center bg-white/40 min-h-[60px]">
             <p className="font-bold text-stone-700">No sequences placed yet</p>
-            <p className="text-sm text-stone-500 mt-0.5">
+            <p className="text-xs text-stone-500 mt-0.5">
               {`Sequences placed by ${teamName} will appear here.`}
             </p>
           </div>
@@ -512,7 +512,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       data-can-add={isEligibleToAutoAdd ? 'true' : undefined}
       data-highlight-yellow={isEligibleToAutoAdd ? 'true' : undefined}
       onClick={handleItemClick}
-      className={`relative group rounded-xl p-3 border transition-all ${
+      className={`relative group rounded-xl p-2 sm:p-2.5 border transition-all ${
         canSelect || isEligibleToAutoAdd ? 'cursor-pointer' : ''
       } ${containerClasses} ${absorbClass}`}
     >

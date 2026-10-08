@@ -109,7 +109,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   playerTeam,
   isCurrentPlayer = true,
   disabled = false,
-  cardSize = 'md',
+  cardSize = 'lg',
   className = '',
   sortMode: controlledSortMode,
   onSortChange,
@@ -518,7 +518,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             Hand is empty
           </div>
         ) : (
-          <div className="flex items-end gap-1 sm:gap-1.5 min-w-max px-2 py-1">
+          <div className="flex items-end gap-1.5 sm:gap-2 min-w-max px-2 py-1">
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);

@@ -289,7 +289,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       <div className="flex items-center gap-2.5">
         {/* Avatar circle */}
         <div
-          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-base shadow-md shrink-0 border-2 border-white ring-4 ${
+          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-sm sm:text-base shadow-md shrink-0 border-2 border-white ring-2 sm:ring-4 ${
             isTeamA
               ? 'ring-sky-400 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
               : 'ring-amber-400 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
@@ -343,9 +343,9 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
   const seats = getRelativeTableSeats(players, viewedPlayerIndex, activeTurnIndex);
 
   return (
-    <div className={`relative w-full flex flex-col items-center gap-2 sm:gap-2.5 ${className}`}>
+    <div className={`relative w-full flex flex-col items-center gap-1.5 sm:gap-2 ${className}`}>
       {/* 1. TOP / ACROSS SEATS (Teammate / Partners in Front) */}
-      <div className="w-full flex items-center justify-center gap-3 z-10 px-2 sm:px-4">
+      <div className="w-full flex items-center justify-center gap-2 sm:gap-3 z-10 px-2 sm:px-4">
         {seats.topSeats.map((seatConfig, index) => (
           <div key={`seat-top-${seatConfig.playerIndex}`} className="max-w-xs sm:max-w-sm w-full">
             <PlayerSeat
@@ -364,7 +364,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
       </div>
 
       {/* 2. MIDDLE TABLE SECTION: LEFT OPPONENT WING, MAIN BOARD (FELT), RIGHT OPPONENT WING */}
-      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[13rem_1fr_13rem] xl:grid-cols-[15rem_1fr_15rem] 2xl:grid-cols-[16.5rem_1fr_16.5rem] gap-3 sm:gap-4 xl:gap-5 items-center">
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[13rem_1fr_13rem] xl:grid-cols-[15rem_1fr_15rem] 2xl:grid-cols-[16.5rem_1fr_16.5rem] gap-2.5 sm:gap-3.5 xl:gap-4 items-center">
         {/* Left Seat (Opponent on Left Wing) */}
         <div className="w-full order-2 lg:order-1 flex flex-col justify-center">
           <PlayerSeat
