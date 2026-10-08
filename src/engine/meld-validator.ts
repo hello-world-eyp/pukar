@@ -8,6 +8,8 @@ import {
   isNaturalJoker,
 } from './types';
 
+export { isWildcard, isNaturalJoker };
+
 /**
  * Validates whether an array of cards can form a new RUN (sequence).
  * Requirements:
@@ -202,7 +204,7 @@ export function evaluateMeldScore(meld: Meld): {
   isPure13: boolean;
 } {
   try {
-    if (!meld || !meld.cards) {
+    if (!meld || (!meld.cards && !meld.slots)) {
       return {
         points: 0,
         description: 'Incomplete Meld',
@@ -211,7 +213,7 @@ export function evaluateMeldScore(meld: Meld): {
       };
     }
 
-    const cards = meld.cards;
+    const cards = meld.cards || meld.slots.map((s) => s.card);
     const count = cards.length;
 
     if (count < 7) {
@@ -305,7 +307,8 @@ export function canAddCardsToMeld(
       return { valid: false, error: 'Must add at least 1 card' };
     }
 
-    const existingIds = new Set((meld.cards || []).map((c) => c.id));
+    const meldCards = meld.cards || meld.slots?.map((s) => s.card) || [];
+    const existingIds = new Set(meldCards.map((c) => c.id));
     for (const c of cardsToAdd) {
       if (existingIds.has(c.id)) {
         return { valid: false, error: 'Card is already in meld' };
@@ -317,7 +320,7 @@ export function canAddCardsToMeld(
       return { valid: false, error: 'Duplicate cards in cards to add' };
     }
 
-    const existingWildcards = (meld.cards || []).filter((c) => isWildcard(c));
+    const existingWildcards = meldCards.filter((c) => isWildcard(c));
     const addedWildcards = cardsToAdd.filter((c) => isWildcard(c));
     if (existingWildcards.length + addedWildcards.length > 1) {
       return { valid: false, error: 'A meld cannot contain more than 1 wildcard' };
@@ -377,7 +380,7 @@ export function canAddCardsToMeld(
       }
     }
 
-    const allCards = [...meld.cards, ...cardsToAdd];
+    const allCards = [...meldCards, ...cardsToAdd];
     if (allCards.length > 14) {
       return { valid: false, error: 'Run cannot exceed 14 cards' };
     }
