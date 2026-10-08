@@ -139,7 +139,7 @@ describe('Pukar Claim - Turn Continuation & Drop to End Turn', () => {
     expect(dropResult.state.players[0].hand).toHaveLength(13);
   });
 
-  it('terminates round immediately when hand empties on discard and 0 Pukars remain in pool', () => {
+  it('terminates round immediately and awards +50 pts (counted as Pukar claim with no cards) when hand empties on discard and 0 Pukars remain', () => {
     const state = dealInitialState(4);
     state.phase = 'MELD';
     state.pukarPool = [];
@@ -157,6 +157,38 @@ describe('Pukar Claim - Turn Continuation & Drop to End Turn', () => {
     expect(result.error).toBeUndefined();
     expect(result.state.isRoundOver).toBe(true);
     expect(result.state.roundStatus).toBe('ROUND_OVER');
+    expect(result.state.players[0].hand).toHaveLength(0); // No cards dealt since all Pukars ran out
+    expect(result.state.pukarsClaimed?.A).toBe(1); // Counted as claiming a Pukar!
+    expect(result.state.scores.A).toBe(50); // Gets 50 points!
+    expect(result.state.roundScores?.A).toBe(50);
+  });
+
+  it('awards +50 pts (counted as Pukar claim with no cards) when player empties hand during MELD and 0 Pukars remain', () => {
+    const state = dealInitialState(4);
+    state.phase = 'MELD';
+    state.pukarPool = [];
+    if (state.pukars) state.pukars = [];
+    state.currentPlayerIndex = 0;
+
+    const runCards = [
+      makeCard('s4', 'SPADES', 4),
+      makeCard('s5', 'SPADES', 5),
+      makeCard('s6', 'SPADES', 6),
+    ];
+    state.players[0].hand = [...runCards];
+
+    const result = pukarReducer(state, {
+      type: 'PLAY_NEW_MELD',
+      cardIds: runCards.map((c) => c.id),
+    });
+
+    expect(result.error).toBeUndefined();
+    expect(result.state.isRoundOver).toBe(true);
+    expect(result.state.roundStatus).toBe('ROUND_OVER');
+    expect(result.state.players[0].hand).toHaveLength(0); // No cards dealt since all Pukars ran out
+    expect(result.state.pukarsClaimed?.A).toBe(1); // Counted as claiming a Pukar!
+    expect(result.state.scores.A).toBe(50); // Gets 50 points!
+    expect(result.state.roundScores?.A).toBe(50);
   });
 
   it('does not prematurely end FINAL_TURN when player claims a Pukar on discard', () => {

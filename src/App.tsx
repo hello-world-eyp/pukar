@@ -964,8 +964,8 @@ export function App() {
                     turn by dropping another card.
                   </li>
                   <li>
-                    A round concludes when a player empties their hand with 0 Pukars in pool, or after
-                    the final turn triggered by deck exhaustion.
+                    If all Pukars have run out and a player empties their hand, that also counts as claiming
+                    a Pukar for <strong>+50 points</strong> (with no cards dealt), and the round concludes immediately.
                   </li>
                 </ul>
               </div>

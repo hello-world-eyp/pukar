@@ -446,6 +446,13 @@ function handlePostMeldState(
       pukarsClaimed[team] += 1;
     } else {
       // Hand emptied with 0 Pukars remaining: Player went out!
+      // Counted as claiming a Pukar (+50 pts), but no cards since all Pukars ran out.
+      scores[team] += 50;
+      roundScores[team] += 50;
+      if (totalScores) {
+        totalScores[team] += 50;
+      }
+      pukarsClaimed[team] += 1;
       roundStatus = 'ROUND_OVER';
       isRoundOver = true;
       newlyPickedUpCardIds = [];
@@ -555,8 +562,16 @@ function handleDiscardCard(
       claimedPukarMidDiscard = true;
     } else {
       // Hand emptied with 0 Pukars remaining: Player went out!
+      // Counted as claiming a Pukar (+50 pts), but no cards since all Pukars ran out.
+      scores[team] += 50;
+      roundScores[team] += 50;
+      if (totalScores) {
+        totalScores[team] += 50;
+      }
+      pukarsClaimed[team] += 1;
       roundStatus = 'ROUND_OVER';
       isRoundOver = true;
+      newlyPickedUpCardIds = [];
     }
   }
 

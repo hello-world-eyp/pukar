@@ -513,10 +513,11 @@ describe('Turn Lifecycle & Game Reducer', () => {
 
       expect(err2).toBeUndefined();
       expect(step2.roundStatus).toBe('ROUND_OVER');
-      // Round 2 score is 50 (from 1 pukar). Total match score is 120 (R1) + 50 (R2) = 170 (no double count!)
-      expect(step2.roundScores?.A).toBe(50);
-      expect(step2.totalScores?.A).toBe(170);
-      expect(step2.scores.A).toBe(170);
+      // Round 2 score is 100 (from 1 mid-round pukar + 1 going-out pukar claim). Total match score is 120 (R1) + 100 (R2) = 220 (no double count!)
+      expect(step2.pukarsClaimed?.A).toBe(2);
+      expect(step2.roundScores?.A).toBe(100);
+      expect(step2.totalScores?.A).toBe(220);
+      expect(step2.scores.A).toBe(220);
     });
 
     it('scopes meld IDs with round prefix meld-r{round}-{team}-{index}', () => {
