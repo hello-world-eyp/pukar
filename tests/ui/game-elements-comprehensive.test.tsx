@@ -37,7 +37,7 @@ describe('Comprehensive UI Game Elements (src/ui/components/)', () => {
 
       expect(html).toContain('Stock Deck');
       expect(html).toContain('31');
-      expect(html).toContain('The Bottom');
+      expect(html).toContain('Discard Pile');
       expect(html).toContain('1 card');
       expect(html).toContain('Pukar Pool');
       expect(html).toContain('2 Pukars Available');

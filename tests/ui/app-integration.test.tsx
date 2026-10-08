@@ -46,7 +46,7 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(html).toContain('DRAW');
 
       // Table Arena & Decks
-      expect(html).toContain('The Bottom');
+      expect(html).toContain('Discard Pile');
       expect(html).toContain('Stock Deck');
       expect(html).toContain('Pukar Pool');
 

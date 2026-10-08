@@ -70,7 +70,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
                 id="discard-pile-modal-title"
                 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2 flex-wrap"
               >
-                <span>Discard Pile History &amp; Zoom (&ldquo;The Bottom&rdquo;)</span>
+                <span>Discard Pile History &amp; Zoom</span>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                   {`${pileCards.length} ${pileCards.length === 1 ? 'card' : 'cards'}`}
                 </span>
@@ -186,7 +186,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
         {/* Modal Footer */}
         <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 text-xs text-slate-400 flex-wrap gap-2">
           <span>
-            Drawing the bottom pile takes <strong>{`all ${pileCards.length} cards`}</strong> directly into the player&apos;s hand.
+            Drawing the discard pile takes <strong>{`all ${pileCards.length} cards`}</strong> directly into the player&apos;s hand.
           </span>
           <button
             type="button"

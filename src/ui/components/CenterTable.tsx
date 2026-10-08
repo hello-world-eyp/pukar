@@ -158,7 +158,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 type="button"
                 onClick={handleDrawStock}
                 disabled={!drawStockAllowed || actualStockCount === 0}
-                className={`w-full max-w-[170px] h-8 sm:h-8.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
+                className={`w-full max-w-[220px] sm:max-w-[240px] h-8 sm:h-8.5 px-3 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
                   drawStockAllowed && actualStockCount > 0
                     ? 'btn-game-primary'
                     : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
@@ -170,16 +170,13 @@ export const CenterTable: React.FC<CenterTableProps> = ({
             </div>
           </div>
 
-          {/* 2. DISCARD PILE ("THE BOTTOM") (MIDDLE) */}
+          {/* 2. DISCARD PILE (MIDDLE) */}
           <div className="flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-2xl table-well-light min-h-[145px]">
             <div className="flex items-center justify-between w-full mb-0.5 gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
                 <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                 <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-900 truncate">
                   Discard Pile
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-stone-600 shrink-0">
-                  (&ldquo;The Bottom&rdquo;)
                 </span>
               </div>
               <button
@@ -266,14 +263,14 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 type="button"
                 onClick={handleDrawDiscard}
                 disabled={!drawDiscardAllowed || discardPile.length === 0}
-                className={`w-full max-w-[190px] h-8 sm:h-8.5 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
+                className={`w-full max-w-[240px] sm:max-w-[260px] h-8 sm:h-8.5 px-3 rounded-xl text-xs sm:text-sm font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md ${
                   drawDiscardAllowed && discardPile.length > 0
                     ? 'btn-game-amber'
                     : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
                 }`}
               >
                 <ArrowDownCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>Take The Bottom (All)</span>
+                <span>Take Discard Pile</span>
               </button>
             </div>
           </div>
