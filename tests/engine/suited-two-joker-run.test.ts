@@ -263,7 +263,7 @@ describe('Suited Rank 2 + Joker Run Validation & Dynamics', () => {
   });
 
   describe('canAddCardsToMeld with Suited 2 and Wildcards', () => {
-    it('allows adding 4♥ to existing meld [2♥, 3♥, Joker(4♥)], shifting Joker to 5♥', () => {
+    it('auto picks up Joker when adding 4♥ to replace Joker in [2♥, 3♥, Joker(4♥)]', () => {
       const initialCards = [
         makeCard('twoHearts', 'HEARTS', 2),
         makeCard('threeHearts', 'HEARTS', 3),
@@ -284,21 +284,42 @@ describe('Suited Rank 2 + Joker Run Validation & Dynamics', () => {
       const cardToAdd = makeCard('fourHearts', 'HEARTS', 4);
       const addResult = canAddCardsToMeld(meld, [cardToAdd]);
       expect(addResult.valid).toBe(true);
+      expect(addResult.pickedUpCard).toBeDefined();
+      expect(addResult.pickedUpCard?.id).toBe('joker');
+
+      // Updated meld slots are now [2♥, 3♥, 4♥] - all natural cards
+      expect(addResult.updatedSlots).toHaveLength(3);
+      expect(addResult.updatedSlots?.map((s) => s.representedRank)).toEqual([2, 3, 4]);
+      expect(addResult.updatedSlots?.every((s) => !s.isWildcard)).toBe(true);
+    });
+
+    it('allows adding 5♥ to [2♥, 3♥, Joker(4♥)] with Joker remaining fixed at 4♥', () => {
+      const initialCards = [
+        makeCard('twoHearts', 'HEARTS', 2),
+        makeCard('threeHearts', 'HEARTS', 3),
+        makeCard('joker', null, 0, true),
+      ];
+      const validation = validateNewRun(initialCards);
+      expect(validation.valid).toBe(true);
+
+      const meld: Meld = {
+        id: 'meld-1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: initialCards,
+        slots: validation.slots!,
+      };
+
+      const cardToAdd = makeCard('fiveHearts', 'HEARTS', 5);
+      const addResult = canAddCardsToMeld(meld, [cardToAdd]);
+      expect(addResult.valid).toBe(true);
+      expect(addResult.pickedUpCard).toBeUndefined();
       expect(addResult.updatedSlots).toHaveLength(4);
 
-      // 2♥ retains rank 2
-      const slot2 = addResult.updatedSlots?.find((s) => s.card.id === 'twoHearts');
-      expect(slot2?.representedRank).toBe(2);
-      expect(slot2?.isWildcard).toBe(false);
-
-      // 4♥ is natural at rank 4
-      const slot4 = addResult.updatedSlots?.find((s) => s.card.id === 'fourHearts');
-      expect(slot4?.representedRank).toBe(4);
-      expect(slot4?.isWildcard).toBe(false);
-
-      // Joker shifts up to rank 5
+      // Joker stays locked at rank 4
       const slotJoker = addResult.updatedSlots?.find((s) => s.card.id === 'joker');
-      expect(slotJoker?.representedRank).toBe(5);
+      expect(slotJoker?.representedRank).toBe(4);
       expect(slotJoker?.isWildcard).toBe(true);
     });
 

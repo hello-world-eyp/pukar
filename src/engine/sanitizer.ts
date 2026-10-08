@@ -55,6 +55,7 @@ export function sanitizeStateForPlayer(
       isRoundOver:
         state?.isRoundOver ??
         (state?.roundStatus === 'ROUND_OVER' || state?.roundStatus === 'GAME_OVER'),
+      lastPickedUpCard: state?.lastPickedUpCard ? { ...state.lastPickedUpCard } : null,
     };
   } catch (err) {
     console.error('Error in sanitizeStateForPlayer:', err);

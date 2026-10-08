@@ -98,13 +98,14 @@ export interface GameState {
   isRoundOver?: boolean;
   finalTurnPlayerIndex?: number | null;
   lastTurnTriggeredByDeckExhaust?: boolean;
+  lastPickedUpCard?: Card | null;
 }
 
 export type GameAction =
   | { type: 'DRAW_FROM_STOCK' }
   | { type: 'TAKE_DISCARD' }
   | { type: 'DRAW_CARD'; source?: 'DECK' | 'STOCK' | 'BOTTOM' | 'DISCARD' }
-  | { type: 'PLAY_NEW_MELD'; cardIds: string[] }
+  | { type: 'PLAY_NEW_MELD'; cardIds: string[]; jokerRepresentedRank?: number }
   | { type: 'ADD_TO_MELD'; meldId: string; cardIds: string[] }
   | { type: 'DISCARD_CARD'; cardId: string }
   | { type: 'START_NEXT_ROUND' }
@@ -155,6 +156,7 @@ export interface SanitizedGameState {
   round: number;
   roundStatus: RoundStatus;
   isRoundOver?: boolean;
+  lastPickedUpCard?: Card | null;
 }
 
 /**

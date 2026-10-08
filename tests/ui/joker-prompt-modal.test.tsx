@@ -1,0 +1,143 @@
+import { describe, it, expect, vi } from 'vitest';
+import { renderToString } from 'react-dom/server';
+import { JokerPromptModal } from '../../src/ui/components/JokerPromptModal';
+import { ActionControls } from '../../src/ui/components/ActionControls';
+import { App } from '../../src/App';
+import { Card, Meld } from '../../src/engine/types';
+
+function makeCard(id: string, suit: any, rank: number, isNaturalJoker = false): Card {
+  return {
+    id,
+    suit,
+    rank: rank as any,
+    isNaturalJoker,
+    isJoker: isNaturalJoker || rank === 2,
+  };
+}
+
+describe('JokerPromptModal & UI Integration for Normal Joker', () => {
+  const sampleOptions = [
+    { rank: 3, suit: 'SPADES' as const, label: '3 of Spades' },
+    { rank: 6, suit: 'SPADES' as const, label: '6 of Spades' },
+  ];
+
+  it('renders nothing when isOpen is false', () => {
+    const html = renderToString(
+      <JokerPromptModal
+        isOpen={false}
+        options={sampleOptions}
+        onSelect={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(html).toBe('');
+  });
+
+  it('renders nothing when options list is empty', () => {
+    const html = renderToString(
+      <JokerPromptModal
+        isOpen={true}
+        options={[]}
+        onSelect={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(html).toBe('');
+  });
+
+  it('renders all candidate options when isOpen is true', () => {
+    const html = renderToString(
+      <JokerPromptModal
+        isOpen={true}
+        options={sampleOptions}
+        onSelect={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(html).toContain('data-testid="joker-prompt-modal"');
+    expect(html).toContain('Designate Joker Card');
+    expect(html).toContain('data-testid="joker-option-3"');
+    expect(html).toContain('data-testid="joker-option-6"');
+    expect(html).toContain('3 of Spades');
+    expect(html).toContain('6 of Spades');
+    expect(html).toContain('Plays as 3 of spades');
+    expect(html).toContain('Plays as 6 of spades');
+    expect(html).toContain('Cancel');
+  });
+
+  it('displays "🃏 Picks up Joker!" badge in ActionControls preview when adding natural replacement', () => {
+    const card4 = makeCard('c4s', 'SPADES', 4);
+    const joker = makeCard('joker', null, 0, true);
+    const card6 = makeCard('c6s', 'SPADES', 6);
+
+    const meld: Meld = {
+      id: 'meld-1',
+      team: 'A',
+      type: 'RUN',
+      suit: 'SPADES',
+      cards: [card4, joker, card6],
+      slots: [
+        { card: card4, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+        { card: joker, representedRank: 5, representedSuit: 'SPADES', isWildcard: true },
+        { card: card6, representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+      ],
+    };
+
+    const card5 = makeCard('c5s', 'SPADES', 5);
+
+    const html = renderToString(
+      <ActionControls
+        phase="MELD"
+        selectedMeld={meld}
+        selectedCards={[card5]}
+        allHandCards={[card5]}
+      />
+    );
+
+    expect(html).toContain('data-testid="add-meld-badge"');
+    expect(html).toContain('Add to RUN');
+    expect(html).toContain('Picks up Joker!');
+  });
+
+  it('does NOT display "Picks up Joker!" badge when adding a regular card that does not replace Joker', () => {
+    const card4 = makeCard('c4s', 'SPADES', 4);
+    const joker = makeCard('joker', null, 0, true);
+    const card6 = makeCard('c6s', 'SPADES', 6);
+
+    const meld: Meld = {
+      id: 'meld-1',
+      team: 'A',
+      type: 'RUN',
+      suit: 'SPADES',
+      cards: [card4, joker, card6],
+      slots: [
+        { card: card4, representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+        { card: joker, representedRank: 5, representedSuit: 'SPADES', isWildcard: true },
+        { card: card6, representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+      ],
+    };
+
+    // Adding 7♠ extends run; Joker stays at 5♠ and is NOT picked up
+    const card7 = makeCard('c7s', 'SPADES', 7);
+
+    const html = renderToString(
+      <ActionControls
+        phase="MELD"
+        selectedMeld={meld}
+        selectedCards={[card7]}
+        allHandCards={[card7]}
+      />
+    );
+
+    expect(html).toContain('data-testid="add-meld-badge"');
+    expect(html).toContain('Add to RUN');
+    expect(html).not.toContain('Picks up Joker!');
+  });
+
+  it('renders the complete App component cleanly with Joker modal wired', () => {
+    const html = renderToString(<App />);
+    expect(html).toContain('data-testid="pukar-app"');
+    expect(html).toContain('PUKAR');
+  });
+});

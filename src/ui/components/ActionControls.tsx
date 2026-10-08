@@ -24,7 +24,7 @@ export interface ActionControlsProps {
   discardCount?: number;
   onDrawStock?: () => void;
   onTakeDiscard?: () => void;
-  onPlayMeld?: (cardIds: string[]) => void;
+  onPlayMeld?: (cardIds: string[], jokerRepresentedRank?: number) => void;
   onAddToMeld?: (meldId: string, cardIds: string[]) => void;
   onDiscard?: (cardId: string) => void;
   disabled?: boolean;
@@ -302,6 +302,9 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
                 <span className="inline-flex items-center gap-1 text-teal-400 font-semibold bg-teal-950/60 border border-teal-700/40 px-2 py-0.5 rounded truncate max-w-full">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
                   {`Add to ${selectedMeld?.type}`}
+                  {addToMeldValidation.pickedUpCard && (
+                    <span className="text-amber-300 font-bold ml-1">🃏 Picks up Joker!</span>
+                  )}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2 py-0.5 rounded truncate max-w-full">

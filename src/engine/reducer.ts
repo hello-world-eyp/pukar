@@ -100,7 +100,11 @@ export function pukarReducer(
       }
 
       case 'PLAY_NEW_MELD': {
-        return handlePlayNewMeld(state, action.cardIds);
+        return handlePlayNewMeld(
+          state,
+          action.cardIds,
+          action.jokerRepresentedRank
+        );
       }
 
       case 'ADD_TO_MELD': {
@@ -188,6 +192,7 @@ function handleDrawFromStock(state: GameState): {
     phase: 'MELD',
     turnPhase: 'MELD',
     lastTurnTriggeredByDeckExhaust,
+    lastPickedUpCard: null,
   };
 
   return { state: nextState };
@@ -227,6 +232,7 @@ function handleTakeDiscard(state: GameState): {
     players: updatedPlayers,
     phase: 'MELD',
     turnPhase: 'MELD',
+    lastPickedUpCard: null,
   };
 
   return { state: nextState };
@@ -234,7 +240,8 @@ function handleTakeDiscard(state: GameState): {
 
 function handlePlayNewMeld(
   state: GameState,
-  cardIds: string[]
+  cardIds: string[],
+  jokerRepresentedRank?: number
 ): { state: GameState; error?: string } {
   if (state.roundStatus === 'ROUND_OVER' || state.roundStatus === 'GAME_OVER') {
     return { state, error: 'Cannot meld: round is already over' };
@@ -265,7 +272,7 @@ function handlePlayNewMeld(
     cardsToMeld.push(card);
   }
 
-  const meldValidation = validateNewMeld(cardsToMeld);
+  const meldValidation = validateNewMeld(cardsToMeld, jokerRepresentedRank);
   if (!meldValidation.valid || !meldValidation.slots || !meldValidation.type) {
     return { state, error: meldValidation.error || 'Cards do not form a valid meld' };
   }
@@ -354,11 +361,20 @@ function handleAddToMeld(
   }
 
   const cardIdSet = new Set(cardIds);
-  const remainingHand = activePlayer.hand.filter((c) => !cardIdSet.has(c.id));
+  let remainingHand = activePlayer.hand.filter((c) => !cardIdSet.has(c.id));
+
+  // If a Normal Joker was replaced in the meld, it is auto picked up into player's hand!
+  if (validation.pickedUpCard) {
+    remainingHand = [...remainingHand, validation.pickedUpCard];
+  }
+
+  const meldCardsWithoutPickedUp = validation.pickedUpCard
+    ? existingMeld.cards.filter((c) => c.id !== validation.pickedUpCard!.id)
+    : existingMeld.cards;
 
   const updatedMeld: Meld = {
     ...existingMeld,
-    cards: [...existingMeld.cards, ...cardsToAdd],
+    cards: [...meldCardsWithoutPickedUp, ...cardsToAdd],
     slots: validation.updatedSlots,
   };
   updatedMeld.points = evaluateMeldScore(updatedMeld).points;
@@ -368,7 +384,14 @@ function handleAddToMeld(
     [team]: state.melds[team].map((m) => (m.id === meldId ? updatedMeld : m)),
   };
 
-  return handlePostMeldState(state, remainingHand, updatedMelds);
+  const postResult = handlePostMeldState(state, remainingHand, updatedMelds);
+  if (validation.pickedUpCard) {
+    postResult.state = {
+      ...postResult.state,
+      lastPickedUpCard: validation.pickedUpCard,
+    };
+  }
+  return postResult;
 }
 
 /**
@@ -564,6 +587,7 @@ function handleDiscardCard(
     roundStatus,
     isRoundOver,
     finalTurnPlayerIndex,
+    lastPickedUpCard: null,
   };
 
   if (isRoundOver) {
@@ -604,6 +628,7 @@ function handleStartNextRound(state: GameState): {
     isRoundOver: false,
     phase: 'DRAW',
     turnPhase: 'DRAW',
+    lastPickedUpCard: null,
   };
 
   return { state: nextState };
@@ -633,6 +658,7 @@ function handleResetGame(
     isRoundOver: false,
     phase: 'DRAW',
     turnPhase: 'DRAW',
+    lastPickedUpCard: null,
   };
 
   return { state: nextState };

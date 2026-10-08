@@ -54,6 +54,73 @@ function getMinWildcardsForRun(cards: Card[], runSuit: Suit): number {
   return wildcards;
 }
 
+export interface JokerOption {
+  rank: number;
+  suit: Suit;
+  label: string;
+}
+
+export function getRankDisplayName(rank: number): string {
+  if (rank === 1 || rank === 14) return 'Ace';
+  if (rank === 11) return 'Jack';
+  if (rank === 12) return 'Queen';
+  if (rank === 13) return 'King';
+  return String(rank);
+}
+
+export function getSuitDisplayName(suit: Suit): string {
+  switch (suit) {
+    case 'SPADES':
+      return 'Spades';
+    case 'HEARTS':
+      return 'Hearts';
+    case 'DIAMONDS':
+      return 'Diamonds';
+    case 'CLUBS':
+      return 'Clubs';
+  }
+}
+
+/**
+ * Returns the candidate rank/suit options that a Normal Joker can represent in a valid run.
+ */
+export function getRunCandidateOptions(cards: Card[]): JokerOption[] {
+  const normalJoker = cards.find((c) => isNaturalJoker(c));
+  if (!normalJoker) return [];
+
+  const naturalSuits = Array.from(
+    new Set(cards.filter((c) => c.suit !== null && c.rank >= 3).map((c) => c.suit as Suit))
+  );
+  if (naturalSuits.length > 1) return [];
+
+  const candidateSuits: Suit[] =
+    naturalSuits.length === 1
+      ? naturalSuits
+      : Array.from(new Set(cards.map((c) => c.suit).filter((s): s is Suit => s !== null)));
+
+  if (candidateSuits.length === 0) return [];
+
+  const options: JokerOption[] = [];
+  const seenRanks = new Set<number>();
+
+  for (const suit of candidateSuits) {
+    const candidates = findRunCandidates(cards, suit);
+    for (const cand of candidates) {
+      const jokerSlot = cand.find((s) => s.card.id === normalJoker.id && s.isWildcard);
+      if (jokerSlot && !seenRanks.has(jokerSlot.representedRank)) {
+        seenRanks.add(jokerSlot.representedRank);
+        options.push({
+          rank: jokerSlot.representedRank,
+          suit,
+          label: `${getRankDisplayName(jokerSlot.representedRank)} of ${getSuitDisplayName(suit)}`,
+        });
+      }
+    }
+  }
+
+  return options.sort((a, b) => a.rank - b.rank);
+}
+
 /**
  * Validates whether an array of cards can form a new RUN (sequence).
  * Requirements:
@@ -61,8 +128,12 @@ function getMinWildcardsForRun(cards: Card[], runSuit: Suit): number {
  * - Same suit for all natural cards.
  * - Strictly consecutive ranks (Ace can be 1 or 14).
  * - At most 1 wildcard (Natural Joker or any 2).
+ * - Optional targetJokerRank to designate what rank the Normal Joker should represent.
  */
-export function validateNewRun(cards: Card[]): {
+export function validateNewRun(
+  cards: Card[],
+  targetJokerRank?: number
+): {
   valid: boolean;
   slots?: MeldSlot[];
   error?: string;
@@ -137,11 +208,25 @@ export function validateNewRun(cards: Card[]): {
       return { valid: false, error: 'Cards do not form a valid consecutive sequence' };
     }
 
-    // Select best candidate
+    // Select candidate matching chosen suit
     const chosenSuit = allCandidates[0].suit;
-    const sameSuitCandidates = allCandidates
+    let sameSuitCandidates = allCandidates
       .filter((ac) => ac.suit === chosenSuit)
       .map((ac) => ac.slots);
+
+    // If caller specified a target rank for the Normal Joker, filter for that rank
+    if (targetJokerRank !== undefined) {
+      const normalJoker = cards.find((c) => isNaturalJoker(c));
+      if (normalJoker) {
+        const matchingRankCandidates = sameSuitCandidates.filter((cand) => {
+          const slot = cand.find((s) => s.card.id === normalJoker.id);
+          return slot && slot.representedRank === targetJokerRank;
+        });
+        if (matchingRankCandidates.length > 0) {
+          sameSuitCandidates = matchingRankCandidates;
+        }
+      }
+    }
 
     const bestCandidate = selectBestCandidate(cards, sameSuitCandidates, chosenSuit);
     return { valid: true, slots: bestCandidate };
@@ -218,8 +303,12 @@ export function validateNewSet(cards: Card[]): {
 
 /**
  * Validates a new meld, auto-detecting whether it is a RUN or a SET.
+ * Accepts optional targetJokerRank to designate what rank the Normal Joker should represent in a run.
  */
-export function validateNewMeld(cards: Card[]): {
+export function validateNewMeld(
+  cards: Card[],
+  targetJokerRank?: number
+): {
   valid: boolean;
   type?: MeldType;
   suit?: Suit;
@@ -232,7 +321,7 @@ export function validateNewMeld(cards: Card[]): {
       return { valid: false, error: 'A meld requires at least 3 cards' };
     }
 
-    const runResult = validateNewRun(cards);
+    const runResult = validateNewRun(cards, targetJokerRank);
     if (runResult.valid && runResult.slots) {
       const wildcardSlot = runResult.slots.find((s) => s.isWildcard);
       return {
@@ -378,6 +467,7 @@ export function canAddCardsToMeld(
 ): {
   valid: boolean;
   updatedSlots?: MeldSlot[];
+  pickedUpCard?: Card;
   error?: string;
 } {
   try {
@@ -399,12 +489,6 @@ export function canAddCardsToMeld(
     }
 
     if (meld.type === 'SET') {
-      const existingWildcards = (meld.slots || []).filter((s) => s.isWildcard).length;
-      const addedWildcards = cardsToAdd.filter((c) => isWildcard(c)).length;
-      if (existingWildcards + addedWildcards > 1) {
-        return { valid: false, error: 'A set cannot contain more than 1 wildcard' };
-      }
-
       const setRank =
         meld.rank ??
         meld.slots.find((s) => !s.isWildcard)?.representedRank ??
@@ -420,23 +504,43 @@ export function canAddCardsToMeld(
         }
       }
 
-      const updatedSlots: MeldSlot[] = [...meld.slots];
-      for (const c of cardsToAdd) {
-        if (isWildcard(c)) {
+      // Check if meld has a Normal Joker that can be replaced and picked up
+      const normalJokerSlot = meld.slots.find((s) => s.isWildcard && isNaturalJoker(s.card));
+      const hasNaturalCardToAdd = cardsToAdd.some((c) => !isWildcard(c) && c.rank === setRank);
+
+      if (normalJokerSlot && hasNaturalCardToAdd) {
+        // Natural card replaces the Normal Joker in the set!
+        // The Normal Joker is auto picked up to the player's hand!
+        const pickedUpCard = normalJokerSlot.card;
+        const remainingSlots = meld.slots.filter((s) => s.card.id !== pickedUpCard.id);
+        const updatedSlots: MeldSlot[] = [...remainingSlots];
+
+        for (const c of cardsToAdd) {
           updatedSlots.push({
             card: c,
             representedRank: setRank,
             representedSuit: c.suit ?? undefined,
-            isWildcard: true,
-          });
-        } else {
-          updatedSlots.push({
-            card: c,
-            representedRank: setRank,
-            representedSuit: c.suit ?? undefined,
-            isWildcard: false,
+            isWildcard: isWildcard(c),
           });
         }
+
+        return { valid: true, updatedSlots, pickedUpCard };
+      }
+
+      const existingWildcards = (meld.slots || []).filter((s) => s.isWildcard).length;
+      const addedWildcards = cardsToAdd.filter((c) => isWildcard(c)).length;
+      if (existingWildcards + addedWildcards > 1) {
+        return { valid: false, error: 'A set cannot contain more than 1 wildcard' };
+      }
+
+      const updatedSlots: MeldSlot[] = [...meld.slots];
+      for (const c of cardsToAdd) {
+        updatedSlots.push({
+          card: c,
+          representedRank: setRank,
+          representedSuit: c.suit ?? undefined,
+          isWildcard: isWildcard(c),
+        });
       }
 
       return { valid: true, updatedSlots };
@@ -471,6 +575,89 @@ export function canAddCardsToMeld(
       return { valid: false, error: 'A run cannot contain duplicate ranks' };
     }
 
+    // 1. Check if meld currently contains a Normal Joker acting as wildcard
+    const normalJokerSlot = meld.slots.find((s) => s.isWildcard && isNaturalJoker(s.card));
+    if (normalJokerSlot) {
+      const jokerRepresentedRank = normalJokerSlot.representedRank;
+      const jokerRepresentedSuit = normalJokerSlot.representedSuit ?? runSuit;
+
+      // Check if cardsToAdd contains the exact card the Normal Joker represents!
+      const hasReplacementCard = cardsToAdd.some(
+        (c) => !isWildcard(c) && c.rank === jokerRepresentedRank && c.suit === jokerRepresentedSuit
+      );
+
+      if (hasReplacementCard) {
+        // The Normal Joker is being replaced!
+        // It is AUTO PICKED UP to the player's hand.
+        const pickedUpCard = normalJokerSlot.card;
+
+        // The remaining cards in the meld: meldCards without Joker + cardsToAdd
+        const remainingMeldCards = meldCards.filter((c) => c.id !== pickedUpCard.id);
+        const newMeldCards = [...remainingMeldCards, ...cardsToAdd];
+
+        if (newMeldCards.length > 14) {
+          return { valid: false, error: 'Run cannot exceed 14 cards' };
+        }
+
+        const candidates = findRunCandidates(newMeldCards, runSuit);
+        if (candidates.length === 0) {
+          return { valid: false, error: 'Cards added do not form a valid consecutive run' };
+        }
+
+        const bestSlots = selectBestCandidate(newMeldCards, candidates, runSuit);
+        return {
+          valid: true,
+          updatedSlots: bestSlots,
+          pickedUpCard,
+        };
+      } else {
+        // The Normal Joker was NOT replaced!
+        // Rule: The Normal Joker CANNOT shift up or down!
+        // Its representedRank MUST remain unchanged.
+        const candidates = findRunCandidates(allCards, runSuit);
+        if (candidates.length === 0) {
+          if (getMinWildcardsForRun(allCards, runSuit) > 1) {
+            return { valid: false, error: 'A run cannot contain more than 1 wildcard' };
+          }
+          return { valid: false, error: 'Cards added do not form a valid consecutive run' };
+        }
+
+        // Filter candidates: Normal Joker MUST retain its exact representedRank!
+        const fixedJokerCandidates = candidates.filter((cand) => {
+          const slot = cand.find((s) => s.card.id === normalJokerSlot.card.id);
+          return slot && slot.representedRank === jokerRepresentedRank && slot.isWildcard;
+        });
+
+        if (fixedJokerCandidates.length === 0) {
+          return {
+            valid: false,
+            error: 'The Normal Joker cannot shift up or down; it must remain at its current rank',
+          };
+        }
+
+        const existingNatural2Slot = meld.slots.find(
+          (s) => s.card.rank === 2 && !s.isWildcard && s.representedRank === 2
+        );
+        let eligibleCandidates = fixedJokerCandidates;
+        if (existingNatural2Slot) {
+          const natural2Filtered = fixedJokerCandidates.filter((cand) => {
+            const slot = cand.find((s) => s.card.id === existingNatural2Slot.card.id);
+            return slot && slot.representedRank === 2 && !slot.isWildcard;
+          });
+          if (natural2Filtered.length > 0) {
+            eligibleCandidates = natural2Filtered;
+          }
+        }
+
+        const bestSlots = selectBestCandidate(allCards, eligibleCandidates, runSuit);
+        return {
+          valid: true,
+          updatedSlots: bestSlots,
+        };
+      }
+    }
+
+    // 2. Movable 2 Wildcard Dynamics (when no Normal Joker is in the meld)
     const candidates = findRunCandidates(allCards, runSuit);
     if (candidates.length === 0) {
       if (getMinWildcardsForRun(allCards, runSuit) > 1) {
@@ -479,12 +666,11 @@ export function canAddCardsToMeld(
       return { valid: false, error: 'Cards added do not form a valid consecutive run' };
     }
 
-    // Identify any substituting wildcard in current meld (Natural Joker or substituting 2)
-    const existingWildSlot = meld.slots.find((s) => s.isWildcard);
-    const previousWildRank = existingWildSlot?.representedRank;
-    const isReplacingWild =
-      previousWildRank !== undefined &&
-      cardsToAdd.some((c) => !isWildcard(c) && c.rank === previousWildRank);
+    const existingSub2Slot = meld.slots.find((s) => s.card.rank === 2 && s.isWildcard);
+    const previousSubRank = existingSub2Slot?.representedRank;
+    const isReplacingSub2 =
+      previousSubRank !== undefined &&
+      cardsToAdd.some((c) => !isWildcard(c) && c.rank === previousSubRank);
 
     // If existing meld had a natural 2, filter candidates to those that preserve 2 at natural rank 2
     const existingNatural2Slot = meld.slots.find(
@@ -501,13 +687,13 @@ export function canAddCardsToMeld(
       }
     }
 
-    // Sort/select best candidate honoring Movable Wildcard priority
-    if (isReplacingWild && existingWildSlot) {
-      const wildCardId = existingWildSlot.card.id;
+    // Sort/select best candidate honoring Movable 2 priority (Table permanence - 2 is NOT picked up)
+    if (isReplacingSub2 && existingSub2Slot) {
+      const twoCardId = existingSub2Slot.card.id;
       // 1. Downward slide: if wildcard is a suited 2 and rank 2 is open, 2 takes natural rank 2
-      if (existingWildSlot.card.rank === 2 && existingWildSlot.card.suit === runSuit) {
+      if (existingSub2Slot.card.suit === runSuit) {
         const downwardCandidate = eligibleCandidates.find((cand) => {
-          const slot = cand.find((s) => s.card.id === wildCardId);
+          const slot = cand.find((s) => s.card.id === twoCardId);
           return slot && slot.representedRank === 2 && !slot.isWildcard;
         });
         if (downwardCandidate) {
@@ -515,22 +701,22 @@ export function canAddCardsToMeld(
         }
       }
 
-      // 2. Upward shift: wildcard shifts higher than previous substituted rank
+      // 2. Upward shift: 2 shifts higher than previous substituted rank
       const upwardCandidate = eligibleCandidates.find((cand) => {
-        const slot = cand.find((s) => s.card.id === wildCardId);
-        return slot && slot.representedRank > previousWildRank && slot.isWildcard;
+        const slot = cand.find((s) => s.card.id === twoCardId);
+        return slot && slot.representedRank > previousSubRank && slot.isWildcard;
       });
       if (upwardCandidate) {
         return { valid: true, updatedSlots: upwardCandidate };
       }
     }
 
-    // If wildcard was not replaced, prefer keeping wildcard's represented rank unchanged if possible
-    if (existingWildSlot) {
-      const wildCardId = existingWildSlot.card.id;
+    // If 2 was not replaced, prefer keeping 2's represented rank unchanged if possible
+    if (existingSub2Slot) {
+      const twoCardId = existingSub2Slot.card.id;
       const sameRankCandidate = eligibleCandidates.find((cand) => {
-        const slot = cand.find((s) => s.card.id === wildCardId);
-        return slot && slot.representedRank === previousWildRank;
+        const slot = cand.find((s) => s.card.id === twoCardId);
+        return slot && slot.representedRank === previousSubRank;
       });
       if (sameRankCandidate) {
         return { valid: true, updatedSlots: sameRankCandidate };

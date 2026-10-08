@@ -3,9 +3,11 @@ import {
   GameState,
   GameAction,
   Meld,
+  Card,
 } from './engine/types';
 import { dealInitialState } from './engine/deck';
 import { pukarReducer } from './engine/reducer';
+import { getRunCandidateOptions, JokerOption } from './engine/meld-validator';
 import { ScoreBoard } from './ui/components/ScoreBoard';
 import { TableMeldBoard } from './ui/components/TableMeldBoard';
 import { CenterTable } from './ui/components/CenterTable';
@@ -14,6 +16,7 @@ import { ActionControls } from './ui/components/ActionControls';
 import { DevInspector } from './ui/components/DevInspector';
 import { RoundSummaryModal } from './ui/components/RoundSummaryModal';
 import { DiscardPileModal } from './ui/components/DiscardPileModal';
+import { JokerPromptModal } from './ui/components/JokerPromptModal';
 import { playSound, setSoundEnabled } from './ui/sound';
 import {
   RotateCcw,
@@ -60,6 +63,16 @@ export function App() {
     points: number;
   } | null>(null);
   const [exhaustNotification, setExhaustNotification] = useState<string | null>(null);
+  const [jokerPickupBanner, setJokerPickupBanner] = useState<{
+    playerName: string;
+  } | null>(null);
+
+  // Joker Selection Prompt Modal State
+  const [jokerPromptData, setJokerPromptData] = useState<{
+    isOpen: boolean;
+    options: JokerOption[];
+    cardIds: string[];
+  } | null>(null);
 
   // Auto-dismiss error message after 4.5 seconds
   useEffect(() => {
@@ -188,12 +201,24 @@ export function App() {
           } catch {}
         }
 
+        // Detect Normal Joker pickup into hand
+        if (next.lastPickedUpCard) {
+          const actor = gameState.players[gameState.currentPlayerIndex];
+          setJokerPickupBanner({
+            playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
+          });
+          try {
+            playSound('pukar');
+          } catch {}
+        }
+
         // Clean up selection state
         if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
           setSelectedCardIds([]);
         } else if (action.type === 'DISCARD_CARD') {
           setSelectedCardIds([]);
           setSelectedMeldId(null);
+          setJokerPickupBanner(null);
           // On turn advance, reset viewed perspective so active turn stays in view
           setViewedPlayerIndex(null);
         } else if (action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME') {
@@ -202,6 +227,7 @@ export function App() {
           setViewedPlayerIndex(null);
           setPukarBanner(null);
           setExhaustNotification(null);
+          setJokerPickupBanner(null);
         }
 
         setGameState(next);
@@ -240,6 +266,41 @@ export function App() {
       console.error('Error in handleClearSelection:', err);
     }
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Play New Meld Handler with Joker Designation Prompt
+  // ---------------------------------------------------------------------------
+  const handlePlayMeld = useCallback(
+    (cardIds: string[], jokerRepresentedRank?: number) => {
+      try {
+        const activeHand = gameState.players[gameState.currentPlayerIndex]?.hand ?? [];
+        const cardsToMeld = cardIds
+          .map((id) => activeHand.find((c) => c.id === id))
+          .filter((c): c is Card => c !== undefined);
+
+        const candidateOptions = getRunCandidateOptions(cardsToMeld);
+        if (jokerRepresentedRank === undefined && candidateOptions.length > 1) {
+          setJokerPromptData({
+            isOpen: true,
+            options: candidateOptions,
+            cardIds,
+          });
+          return;
+        }
+
+        handleAction({
+          type: 'PLAY_NEW_MELD',
+          cardIds,
+          jokerRepresentedRank:
+            jokerRepresentedRank ??
+            (candidateOptions.length === 1 ? candidateOptions[0].rank : undefined),
+        });
+      } catch (err) {
+        console.error('Error in handlePlayMeld:', err);
+      }
+    },
+    [gameState.players, gameState.currentPlayerIndex, handleAction]
+  );
 
   // ---------------------------------------------------------------------------
   // Hot-Seat Perspective Switcher
@@ -473,6 +534,41 @@ export function App() {
           </div>
         )}
 
+        {/* Normal Joker Picked Up Banner */}
+        {jokerPickupBanner && (
+          <div
+            data-testid="joker-pickup-banner"
+            role="status"
+            className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-950/90 via-indigo-950/90 to-purple-950/90 border-2 border-purple-500/80 text-purple-200 shadow-xl shadow-purple-950/60 animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center font-black shadow-md">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="font-extrabold text-sm sm:text-base text-purple-100 flex items-center gap-2">
+                  <span>🃏 NORMAL JOKER PICKED UP!</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500 text-white font-bold">
+                    Added to Hand
+                  </span>
+                </div>
+                <div className="text-xs text-purple-300/90">
+                  {`${jokerPickupBanner.playerName} contributed the natural card replacing the Joker! The Joker has returned to your hand to be played in another meld.`}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              data-testid="btn-dismiss-joker-pickup"
+              onClick={() => setJokerPickupBanner(null)}
+              className="p-1.5 rounded-xl hover:bg-purple-900/50 text-purple-300 hover:text-white transition-colors"
+              aria-label="Dismiss Joker Pickup Announcement"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Deck Exhaustion Alert */}
         {exhaustNotification && (
           <div
@@ -565,7 +661,7 @@ export function App() {
             discardCount={gameState.discardPile.length}
             onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
             onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
-            onPlayMeld={(cardIds) => handleAction({ type: 'PLAY_NEW_MELD', cardIds })}
+            onPlayMeld={handlePlayMeld}
             onAddToMeld={(meldId, cardIds) =>
               handleAction({ type: 'ADD_TO_MELD', meldId, cardIds })
             }
@@ -703,7 +799,24 @@ export function App() {
         </div>
       )}
 
-      {/* 4. Rules & Instructions Modal */}
+      {/* 4. Joker Designation Prompt Modal */}
+      <JokerPromptModal
+        isOpen={Boolean(jokerPromptData?.isOpen)}
+        options={jokerPromptData?.options ?? []}
+        onSelect={(rank) => {
+          if (jokerPromptData) {
+            handleAction({
+              type: 'PLAY_NEW_MELD',
+              cardIds: jokerPromptData.cardIds,
+              jokerRepresentedRank: rank,
+            });
+            setJokerPromptData(null);
+          }
+        }}
+        onCancel={() => setJokerPromptData(null)}
+      />
+
+      {/* 5. Rules & Instructions Modal */}
       {isRulesModalOpen && (
         <div
           role="dialog"
