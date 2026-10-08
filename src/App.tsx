@@ -438,7 +438,7 @@ export function App() {
   return (
     <div
       data-testid="pukar-app"
-      className="min-h-screen lg:h-screen lg:max-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white overflow-y-auto lg:overflow-hidden"
+      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white overflow-x-hidden"
     >
       {/* =====================================================================
           1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
@@ -587,9 +587,9 @@ export function App() {
       {/* =====================================================================
           2. MAIN PLAYING ARENA (NO-SCROLL DESKTOP FIT)
       ====================================================================== */}
-      <main className="max-w-[1680px] mx-auto w-full px-2 sm:px-4 lg:px-6 py-2 flex flex-col gap-3 flex-1 min-h-0">
+      <main className="max-w-[1680px] mx-auto w-full px-2 sm:px-4 lg:px-6 py-2 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-0">
         {/* Spatial Seating & Casino Felt Card Table Arena */}
-        <section aria-label="Table Arena and Seating" className="w-full flex-1 min-h-0 flex flex-col justify-center">
+        <section aria-label="Table Arena and Seating" className="w-full flex flex-col justify-start my-auto">
           <TableSeating
             players={gameState.players}
             viewedPlayerIndex={currentViewIndex}
@@ -599,7 +599,7 @@ export function App() {
           >
             {/* The Modern Wood & Cream Table Arena Mat */}
             <div
-              className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 table-cream-mat wood-table-rail flex flex-col gap-3 sm:gap-4 shadow-2xl transition-transform ${
+              className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-4 table-cream-mat flex flex-col gap-3 shadow-2xl transition-transform ${
                 isTableRippling ? 'animate-table-quake' : ''
               }`}
             >

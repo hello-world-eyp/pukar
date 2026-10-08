@@ -96,14 +96,14 @@ export const CenterTable: React.FC<CenterTableProps> = ({
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-stretch">
           {/* 1. STOCK DECK (LEFT) */}
-          <div className="flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl table-well-light min-h-[200px]">
+          <div className="flex flex-col items-center justify-between p-3 sm:p-3.5 rounded-2xl table-well-light min-h-[175px]">
             <div className="flex items-center gap-1.5 text-sm sm:text-base font-black uppercase tracking-wider text-stone-800 mb-1">
               <Layers className="w-4 h-4 text-sky-600" />
               <span>Stock Deck</span>
             </div>
 
             {/* Visual Card Stack with 3D Depth */}
-            <div className="relative my-2 flex items-center justify-center">
+            <div className="relative my-1.5 flex items-center justify-center">
               {actualStockCount > 1 && (
                 <div className="absolute -top-1.5 -left-1.5 w-22 h-32 rounded-xl bg-blue-900 border border-blue-700/80 -rotate-3 shadow-md" />
               )}
@@ -134,49 +134,54 @@ export const CenterTable: React.FC<CenterTableProps> = ({
             </div>
 
             {/* Stock Count & Tactile Button */}
-            <div className="flex flex-col items-center gap-2 mt-2 w-full">
-              <span className="text-sm sm:text-base font-extrabold text-stone-700">
+            <div className="flex flex-col items-center gap-1.5 mt-1.5 w-full">
+              <span className="text-sm font-extrabold text-stone-700">
                 {`${actualStockCount} ${actualStockCount === 1 ? 'card' : 'cards'} remaining`}
               </span>
               <button
                 type="button"
                 onClick={handleDrawStock}
                 disabled={!drawStockAllowed || actualStockCount === 0}
-                className={`w-full max-w-[190px] h-11 px-3 rounded-xl text-sm sm:text-base font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+                className={`w-full max-w-[190px] h-10 px-3 rounded-xl text-sm font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                   drawStockAllowed && actualStockCount > 0
                     ? 'btn-game-primary'
                     : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
                 }`}
               >
-                <ArrowDownCircle className="w-5 h-5 shrink-0" />
+                <ArrowDownCircle className="w-4 h-4 shrink-0" />
                 <span>Draw 1 Card</span>
               </button>
             </div>
           </div>
 
           {/* 2. DISCARD PILE ("THE BOTTOM") (MIDDLE) */}
-          <div className="flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl table-well-light min-h-[200px]">
-            <div className="flex items-center justify-between w-full mb-1">
-              <div className="flex items-center gap-1.5 text-sm sm:text-base font-black uppercase tracking-wider text-amber-900">
-                <Layers className="w-4 h-4 text-amber-600" />
-                <span>Discard Pile (&ldquo;The Bottom&rdquo;)</span>
+          <div className="flex flex-col items-center justify-between p-3 sm:p-3.5 rounded-2xl table-well-light min-h-[175px]">
+            <div className="flex items-center justify-between w-full mb-1 gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Layers className="w-4 h-4 text-amber-600 shrink-0" />
+                <span className="text-sm sm:text-base font-black uppercase tracking-wider text-amber-900 truncate">
+                  Discard Pile
+                </span>
+                <span className="text-xs font-bold text-stone-600 shrink-0">
+                  (&ldquo;The Bottom&rdquo;)
+                </span>
               </div>
               <button
                 type="button"
                 onClick={handleOpenPeek}
                 aria-label="Peek Pile"
                 data-testid="btn-zoom-discard-pile"
-                className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer shadow-sm hover:scale-105"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer shadow-sm hover:scale-105 shrink-0"
                 title="Click to peek into pile and see all buried cards"
               >
-                <ZoomIn className="w-4 h-4" />
+                <ZoomIn className="w-3.5 h-3.5" />
                 <span>{`Zoom (${discardPile.length})`}</span>
               </button>
             </div>
 
             {/* Visual Top Card - Click to Zoom */}
             <div
-              className="relative my-2 flex items-center justify-center cursor-pointer group"
+              className="relative my-1.5 flex items-center justify-center cursor-pointer group"
               onClick={handleOpenPeek}
               title="Click pile to zoom and view all cards"
               role="button"
@@ -217,28 +222,28 @@ export const CenterTable: React.FC<CenterTableProps> = ({
             </div>
 
             {/* Discard Count & Draw Button */}
-            <div className="flex flex-col items-center gap-2 mt-2 w-full">
-              <span className="text-sm sm:text-base font-extrabold text-stone-700">
+            <div className="flex flex-col items-center gap-1.5 mt-1.5 w-full">
+              <span className="text-sm font-extrabold text-stone-700">
                 {`${discardPile.length} ${discardPile.length === 1 ? 'card' : 'cards'} in pile`}
               </span>
               <button
                 type="button"
                 onClick={handleDrawDiscard}
                 disabled={!drawDiscardAllowed || discardPile.length === 0}
-                className={`w-full max-w-[210px] h-11 px-3 rounded-xl text-sm sm:text-base font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
+                className={`w-full max-w-[210px] h-10 px-3 rounded-xl text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                   drawDiscardAllowed && discardPile.length > 0
                     ? 'btn-game-amber'
                     : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
                 }`}
               >
-                <ArrowDownCircle className="w-5 h-5 shrink-0" />
+                <ArrowDownCircle className="w-4 h-4 shrink-0" />
                 <span>Take The Bottom (All)</span>
               </button>
             </div>
           </div>
 
           {/* 3. PUKAR POOL (RIGHT) */}
-          <div className="flex flex-col items-center justify-between p-3.5 sm:p-4 rounded-2xl table-well-light min-h-[200px]">
+          <div className="flex flex-col items-center justify-between p-3 sm:p-3.5 rounded-2xl table-well-light min-h-[175px]">
             <div className="flex items-center gap-1.5 text-sm sm:text-base font-black uppercase tracking-wider text-emerald-900 mb-1">
               <Sparkles className="w-4 h-4 text-emerald-600" />
               <span>Pukar Pool (Reserve)</span>

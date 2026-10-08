@@ -303,11 +303,11 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
       </div>
 
       {/* Sequences List */}
-      <div className="flex flex-col gap-3 min-h-[160px]">
+      <div className="flex flex-col gap-2.5 min-h-[105px]">
         {sortedMelds.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-sm text-center bg-white/40">
+          <div className="flex-1 flex flex-col items-center justify-center p-3 sm:p-4 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-sm text-center bg-white/40 min-h-[100px]">
             <p className="font-bold text-stone-700">No sequences placed yet</p>
-            <p className="text-sm text-stone-500 mt-1">
+            <p className="text-sm text-stone-500 mt-0.5">
               {`Sequences placed by ${teamName} will appear here.`}
             </p>
           </div>

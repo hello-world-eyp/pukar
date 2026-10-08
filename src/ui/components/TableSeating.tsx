@@ -140,16 +140,97 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       ? player.cardCount
       : 0;
 
-  const teamBorder = isTeamA
-    ? 'border-sky-300 bg-white/90 shadow-md'
-    : 'border-amber-300 bg-white/90 shadow-md';
-
-  const avatarBg = isTeamA
-    ? 'bg-gradient-to-br from-sky-500 to-blue-600 text-white shadow-md'
-    : 'bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 shadow-md';
-
   const rippleClass = isRippling ? 'animate-card-ripple' : '';
 
+  // 1. TOP SEATS: Compact horizontal partner pill
+  if (seatPosition === 'top' || seatPosition.startsWith('top')) {
+    return (
+      <div
+        data-testid={testId}
+        data-position={seatPosition}
+        onClick={() => onSelectPlayer?.(playerIndex)}
+        role={onSelectPlayer ? 'button' : undefined}
+        tabIndex={onSelectPlayer ? 0 : undefined}
+        className={`relative rounded-2xl border-2 px-3 py-1.5 shadow-md backdrop-blur-md transition-all bg-white/95 ${
+          isTeamA ? 'border-sky-300' : 'border-amber-300'
+        } ${rippleClass} ${
+          isTurn
+            ? 'ring-4 ring-emerald-500 shadow-emerald-500/20 scale-[1.02]'
+            : 'hover:border-stone-400'
+        } ${onSelectPlayer ? 'cursor-pointer' : ''} ${className}`}
+      >
+        {/* Top Badges */}
+        <div className="flex items-center justify-between gap-1.5 mb-1 flex-wrap">
+          <div className="flex items-center gap-1">
+            <span
+              className={`text-xs font-black uppercase px-2 py-0.5 rounded tracking-wider flex items-center gap-1 ${
+                isTeammate
+                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                  : 'bg-stone-100 text-stone-700 border border-stone-300'
+              }`}
+            >
+              {isTeammate ? (
+                <>
+                  <Shield className="w-3 h-3 text-emerald-700" />
+                  <span>Teammate</span>
+                </>
+              ) : (
+                <span>Opponent</span>
+              )}
+            </span>
+
+            <span
+              className={`text-xs font-black px-1.5 py-0.5 rounded border ${
+                isTeamA
+                  ? 'bg-blue-100 text-blue-900 border-blue-300'
+                  : 'bg-amber-100 text-amber-900 border-amber-300'
+              }`}
+            >
+              {`Team ${player.team}`}
+            </span>
+          </div>
+
+          {isTurn && (
+            <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+              <span>Current Turn</span>
+            </span>
+          )}
+        </div>
+
+        {/* Player Row: Avatar + Name + Card Count */}
+        <div className="flex items-center gap-2.5">
+          <div
+            className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md shrink-0 border-2 border-white ring-2 ${
+              isTeamA
+                ? 'ring-sky-300 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
+                : 'ring-amber-300 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
+            }`}
+          >
+            {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
+          </div>
+
+          <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+            <div className="text-sm font-black text-stone-900 truncate flex items-center gap-1">
+              <span className="truncate">{player.name || `Player ${playerIndex + 1}`}</span>
+              {isViewed && (
+                <span className="text-[11px] font-black text-amber-900 px-1 bg-amber-100 border border-amber-300 rounded">
+                  (You)
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 text-sm font-extrabold text-stone-800 shrink-0">
+              <Layers className="w-3.5 h-3.5 text-emerald-600" />
+              <span>{`${cardCount} cards`}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. SIDE SEATS (Left / Right): Sleek Circular Avatar Capsules embedded on table rail
   return (
     <div
       data-testid={testId}
@@ -157,17 +238,19 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       onClick={() => onSelectPlayer?.(playerIndex)}
       role={onSelectPlayer ? 'button' : undefined}
       tabIndex={onSelectPlayer ? 0 : undefined}
-      className={`relative rounded-2xl border-2 p-3 shadow-md backdrop-blur-md transition-all ${teamBorder} ${rippleClass} ${
+      className={`relative rounded-2xl border-2 p-2 sm:p-2.5 shadow-md backdrop-blur-md transition-all bg-white/95 ${
+        isTeamA ? 'border-sky-300' : 'border-amber-300'
+      } ${rippleClass} ${
         isTurn
           ? 'ring-4 ring-emerald-500 shadow-emerald-500/20 scale-[1.03]'
-          : 'hover:border-stone-400'
+          : 'hover:border-stone-400 hover:scale-[1.01]'
       } ${onSelectPlayer ? 'cursor-pointer' : ''} ${className}`}
     >
-      {/* Top Tag: Turn / Role */}
-      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-        <div className="flex items-center gap-1.5">
+      {/* Top Tag: Role & Team */}
+      <div className="flex items-center justify-between gap-1 mb-1.5 flex-wrap">
+        <div className="flex items-center gap-1">
           <span
-            className={`text-sm font-bold uppercase px-2 py-0.5 rounded-md tracking-wider flex items-center gap-1 ${
+            className={`text-xs font-black uppercase px-1.5 py-0.5 rounded tracking-wider flex items-center gap-1 ${
               isTeammate
                 ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                 : 'bg-stone-100 text-stone-700 border border-stone-300'
@@ -175,7 +258,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           >
             {isTeammate ? (
               <>
-                <Shield className="w-3.5 h-3.5 text-emerald-700" />
+                <Shield className="w-3 h-3 text-emerald-700" />
                 <span>Teammate</span>
               </>
             ) : (
@@ -184,7 +267,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           </span>
 
           <span
-            className={`text-sm font-bold px-2 py-0.5 rounded-md border ${
+            className={`text-xs font-black px-1.5 py-0.5 rounded border ${
               isTeamA
                 ? 'bg-blue-100 text-blue-900 border-blue-300'
                 : 'bg-amber-100 text-amber-900 border-amber-300'
@@ -195,38 +278,42 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
         </div>
 
         {isTurn && (
-          <span className="text-sm font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500 text-slate-950 flex items-center gap-1.5 shadow-sm animate-pulse">
-            <span className="w-2 h-2 rounded-full bg-slate-950" />
+          <span className="text-xs font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
             <span>Current Turn</span>
           </span>
         )}
       </div>
 
-      {/* Main Seat Info */}
-      <div className="flex items-center gap-3">
+      {/* Main Seat Info: Avatar Circle + Name + Large Bold Card Count */}
+      <div className="flex items-center gap-2.5">
         {/* Avatar circle */}
         <div
-          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-base shadow-md shrink-0 border-2 border-white ring-2 ring-stone-200 ${avatarBg}`}
+          className={`w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-black text-base shadow-md shrink-0 border-2 border-white ring-4 ${
+            isTeamA
+              ? 'ring-sky-400 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
+              : 'ring-amber-400 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
+          }`}
         >
           {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
         </div>
 
         {/* Name and Card count */}
         <div className="min-w-0 flex-1">
-          <div className="text-sm sm:text-base font-extrabold text-stone-900 truncate flex items-center gap-1.5">
+          <div className="text-sm sm:text-base font-black text-stone-900 truncate flex items-center gap-1">
             <span className="truncate">{player.name || `Player ${playerIndex + 1}`}</span>
             {isViewed && (
-              <span className="text-xs font-black text-amber-900 px-1.5 py-0.2 bg-amber-100 border border-amber-300 rounded">
+              <span className="text-[11px] font-black text-amber-900 px-1 bg-amber-100 border border-amber-300 rounded">
                 (You)
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2 mt-0.5 text-sm text-stone-600">
-            <div className="flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-emerald-600" />
-              <span className="font-extrabold text-stone-800 text-sm sm:text-base">{`${cardCount} cards`}</span>
-            </div>
+          <div className="flex items-center gap-1.5 mt-0.5 text-stone-700">
+            <Layers className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-extrabold text-stone-900 text-sm sm:text-base tracking-tight">
+              {`${cardCount} cards`}
+            </span>
           </div>
         </div>
       </div>
@@ -256,11 +343,11 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
   const seats = getRelativeTableSeats(players, viewedPlayerIndex, activeTurnIndex);
 
   return (
-    <div className={`relative w-full flex flex-col items-center gap-4 ${className}`}>
+    <div className={`relative w-full flex flex-col items-center gap-2 sm:gap-2.5 ${className}`}>
       {/* 1. TOP / ACROSS SEATS (Teammate / Partners in Front) */}
-      <div className="w-full flex items-center justify-center gap-4 z-10 px-4">
+      <div className="w-full flex items-center justify-center gap-3 z-10 px-2 sm:px-4">
         {seats.topSeats.map((seatConfig, index) => (
-          <div key={`seat-top-${seatConfig.playerIndex}`} className="max-w-xs w-full">
+          <div key={`seat-top-${seatConfig.playerIndex}`} className="max-w-xs sm:max-w-sm w-full">
             <PlayerSeat
               player={seatConfig.player}
               playerIndex={seatConfig.playerIndex}
@@ -277,9 +364,9 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
       </div>
 
       {/* 2. MIDDLE TABLE SECTION: LEFT WING, TABLE FELT (CHILDREN), RIGHT WING */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-center">
         {/* Left Seat (Wing) */}
-        <div className="lg:col-span-2 flex flex-col justify-center order-2 lg:order-1 px-2">
+        <div className="lg:col-span-2 flex flex-col justify-center order-2 lg:order-1 px-1 sm:px-2">
           <PlayerSeat
             player={seats.leftSeat.player}
             playerIndex={seats.leftSeat.playerIndex}
@@ -299,7 +386,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
         </div>
 
         {/* Right Seat (Wing) */}
-        <div className="lg:col-span-2 flex flex-col justify-center order-3 px-2">
+        <div className="lg:col-span-2 flex flex-col justify-center order-3 px-1 sm:px-2">
           <PlayerSeat
             player={seats.rightSeat.player}
             playerIndex={seats.rightSeat.playerIndex}
