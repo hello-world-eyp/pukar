@@ -64,7 +64,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
                 id="discard-pile-modal-title"
                 className="text-lg font-bold tracking-tight text-white flex items-center gap-2"
               >
-                Discard Pile History (&ldquo;The Bottom&rdquo;)
+                Discard Pile History &amp; Zoom (&ldquo;The Bottom&rdquo;)
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                   {`${pileCards.length} ${pileCards.length === 1 ? 'card' : 'cards'}`}
                 </span>
@@ -85,7 +85,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 overflow-y-auto flex-1 bg-slate-950/60 min-h-[220px]">
+        <div className="p-6 overflow-y-auto flex-1 bg-slate-950/60 min-h-[260px]">
           {pileCards.length === 0 ? (
             <div className="h-48 flex flex-col items-center justify-center text-slate-500 text-sm">
               <Layers className="w-10 h-10 mb-2 opacity-40" />
@@ -95,7 +95,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-3 justify-items-center">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3.5 justify-items-center">
               {pileCards.map((card, index) => {
                 const isBottom = index === 0;
                 const isTop = index === pileCards.length - 1;
@@ -126,7 +126,7 @@ export const DiscardPileModal: React.FC<DiscardPileModalProps> = ({
                         ? `#${index + 1} (Bottom)`
                         : `#${index + 1}`}
                     </span>
-                    <PlayingCard card={card} size="sm" />
+                    <PlayingCard card={card} size="md" />
                   </div>
                 );
               })}

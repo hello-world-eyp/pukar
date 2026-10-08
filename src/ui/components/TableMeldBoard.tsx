@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Meld, Team, Suit } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
-import { Shield, Sparkles, CheckCircle2, PlusCircle, ArrowDownUp } from 'lucide-react';
+import { Shield, Sparkles, CheckCircle2, PlusCircle, ArrowDownUp, ZoomIn } from 'lucide-react';
 
 export type MeldSortDirection = 'desc' | 'asc';
 
@@ -23,8 +23,10 @@ export interface TableMeldBoardProps {
   activeTeam?: Team;
   selectedMeldId?: string | null;
   onSelectMeld?: (meld: Meld) => void;
+  onZoomMeld?: (meld: Meld) => void;
   className?: string;
   defaultSortDirection?: MeldSortDirection;
+  cardSize?: 'sm' | 'md';
 }
 
 export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
@@ -34,8 +36,10 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   activeTeam,
   selectedMeldId,
   onSelectMeld,
+  onZoomMeld,
   className = '',
   defaultSortDirection = 'desc',
+  cardSize = 'md',
 }) => {
   const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
 
@@ -94,7 +98,9 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           isActive={activeTeam === 'A'}
           selectedMeldId={selectedMeldId}
           onSelectMeld={onSelectMeld}
+          onZoomMeld={onZoomMeld}
           sortDirection={sortDirection}
+          cardSize={cardSize}
         />
 
         {/* TEAM B MELDS COLUMN */}
@@ -107,7 +113,9 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           isActive={activeTeam === 'B'}
           selectedMeldId={selectedMeldId}
           onSelectMeld={onSelectMeld}
+          onZoomMeld={onZoomMeld}
           sortDirection={sortDirection}
+          cardSize={cardSize}
         />
       </div>
     </div>
@@ -123,7 +131,9 @@ interface TeamMeldColumnProps {
   isActive: boolean;
   selectedMeldId?: string | null;
   onSelectMeld?: (meld: Meld) => void;
+  onZoomMeld?: (meld: Meld) => void;
   sortDirection: MeldSortDirection;
+  cardSize?: 'sm' | 'md';
 }
 
 export function sortMelds(
@@ -196,7 +206,9 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   isActive,
   selectedMeldId,
   onSelectMeld,
+  onZoomMeld,
   sortDirection,
+  cardSize = 'md',
 }) => {
   const isBlue = teamColor === 'blue';
 
@@ -269,7 +281,9 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                   }
                 }}
                 canSelect={Boolean(onSelectMeld)}
+                onZoom={onZoomMeld}
                 sortDirection={sortDirection}
+                cardSize={cardSize}
               />
             );
           })
@@ -285,7 +299,9 @@ interface MeldCardItemProps {
   isSelected: boolean;
   onSelect: () => void;
   canSelect: boolean;
+  onZoom?: (meld: Meld) => void;
   sortDirection: MeldSortDirection;
+  cardSize?: 'sm' | 'md';
 }
 
 const MeldCardItem: React.FC<MeldCardItemProps> = ({
@@ -294,7 +310,9 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   isSelected,
   onSelect,
   canSelect,
+  onZoom,
   sortDirection,
+  cardSize = 'md',
 }) => {
   const { isComplete7, isPure13 } = evaluation;
 
@@ -407,27 +425,49 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
           </span>
         </div>
 
-        {canSelect && (
-          <div className="flex items-center gap-1 text-[11px]">
-            {isSelected ? (
-              <span className="text-amber-400 font-bold flex items-center gap-1">
-                <span>Selected to add</span>
-              </span>
-            ) : (
-              <span className="text-slate-500 group-hover:text-slate-300 flex items-center gap-1 transition-colors">
-                <PlusCircle className="w-3 h-3" />
-                <span>Select</span>
-              </span>
-            )}
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {onZoom && (
+            <button
+              type="button"
+              data-testid={`btn-zoom-meld-${meld.id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                try {
+                  onZoom(meld);
+                } catch (err) {
+                  console.error('Error invoking onZoom:', err);
+                }
+              }}
+              title="Zoom into sequence to inspect cards in detail"
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 transition-all cursor-pointer hover:scale-105"
+            >
+              <ZoomIn className="w-3 h-3" />
+              <span>Zoom</span>
+            </button>
+          )}
+
+          {canSelect && (
+            <div className="flex items-center gap-1 text-[11px]">
+              {isSelected ? (
+                <span className="text-amber-400 font-bold flex items-center gap-1">
+                  <span>Selected to add</span>
+                </span>
+              ) : (
+                <span className="text-slate-500 group-hover:text-slate-300 flex items-center gap-1 transition-colors">
+                  <PlusCircle className="w-3 h-3" />
+                  <span>Select</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Sequential Cards Layout (Overlapping for compact fit) */}
       <div
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center overflow-x-auto py-2 px-1 scrollbar-thin"
+        className="flex items-center overflow-x-auto py-2.5 px-1 scrollbar-thin"
       >
         {sortedSlots.map((slot, index) => {
           const card = slot.card;
@@ -447,14 +487,14 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
             <div
               key={`${card.id}-${slot.representedRank}-${index}`}
               style={{
-                marginLeft: index === 0 ? 0 : '-18px',
+                marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-30px' : '-18px',
                 zIndex: index + 1,
               }}
-              className="relative transition-transform hover:-translate-y-2 hover:!z-30"
+              className="relative transition-transform hover:-translate-y-2.5 hover:!z-30 shrink-0"
             >
               <PlayingCard
                 card={card}
-                size="sm"
+                size={cardSize}
                 isWild={isSlotWild}
                 representedRank={slot.representedRank}
                 representedSuit={slot.representedSuit}

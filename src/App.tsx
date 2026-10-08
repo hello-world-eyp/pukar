@@ -17,6 +17,8 @@ import { DevInspector } from './ui/components/DevInspector';
 import { RoundSummaryModal } from './ui/components/RoundSummaryModal';
 import { DiscardPileModal } from './ui/components/DiscardPileModal';
 import { JokerPromptModal } from './ui/components/JokerPromptModal';
+import { TableSeating } from './ui/components/TableSeating';
+import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { playSound, setSoundEnabled } from './ui/sound';
 import {
   RotateCcw,
@@ -51,6 +53,7 @@ export function App() {
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [resetPlayerCount, setResetPlayerCount] = useState<4 | 6>(4);
+  const [zoomedMeld, setZoomedMeld] = useState<Meld | null>(null);
 
   // Audio mute
   const [isMuted, setIsMuted] = useState(false);
@@ -595,7 +598,7 @@ export function App() {
       {/* =====================================================================
           MAIN PLAYING ARENA
       ====================================================================== */}
-      <main className="max-w-7xl mx-auto w-full px-4 lg:px-6 py-4 flex flex-col gap-5 flex-1">
+      <main className="max-w-[1680px] mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 flex flex-col gap-6 flex-1">
         {/* 1. ScoreBoard */}
         <section aria-label="Score Board">
           <ScoreBoard
@@ -612,33 +615,44 @@ export function App() {
           />
         </section>
 
-        {/* 2. Table Area: Melds Board (Team A & B) + Center Table (Stock & Bottom) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left/Main Column: Table Sequences */}
-          <section className="lg:col-span-8 flex flex-col gap-4" aria-label="Table Sequences">
-            <TableMeldBoard
-              melds={gameState.melds}
-              activeTeam={activePlayer.team}
-              selectedMeldId={selectedMeldId}
-              onSelectMeld={(meld) => {
-                setSelectedMeldId((prev) => (prev === meld.id ? null : meld.id));
-              }}
-            />
-          </section>
+        {/* 2. Casino Felt Card Table Arena & Spatial Seating */}
+        <section aria-label="Table Arena and Seating" className="w-full">
+          <TableSeating
+            players={gameState.players}
+            viewedPlayerIndex={currentViewIndex}
+            activeTurnIndex={activeTurnIndex}
+            onSelectPlayer={handleSwitchPlayer}
+          >
+            {/* The Casino Felt Surface */}
+            <div className="w-full rounded-3xl p-4 sm:p-6 poker-table-felt poker-table-rail flex flex-col gap-6 shadow-2xl">
+              {/* Center Decks & Piles */}
+              <div aria-label="Center Table Decks" className="w-full">
+                <CenterTable
+                  stockDeckCount={gameState.stockDeck.length}
+                  discardPile={gameState.discardPile}
+                  pukarPoolCount={gameState.pukarPool.length}
+                  canDraw={gameState.phase === 'DRAW' && isViewingActivePlayer}
+                  onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
+                  onDrawDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
+                  onPeekDiscard={() => setIsDiscardModalOpen(true)}
+                />
+              </div>
 
-          {/* Right Column: Center Table - Stock, Discard, Pukars (4 Cols on LG) */}
-          <section className="lg:col-span-4 flex flex-col gap-4" aria-label="Center Table Decks">
-            <CenterTable
-              stockDeckCount={gameState.stockDeck.length}
-              discardPile={gameState.discardPile}
-              pukarPoolCount={gameState.pukarPool.length}
-              canDraw={gameState.phase === 'DRAW' && isViewingActivePlayer}
-              onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
-              onDrawDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
-              onPeekDiscard={() => setIsDiscardModalOpen(true)}
-            />
-          </section>
-        </div>
+              {/* Table Sequences Board (Team A & Team B) */}
+              <div aria-label="Table Sequences" className="w-full">
+                <TableMeldBoard
+                  melds={gameState.melds}
+                  activeTeam={activePlayer.team}
+                  selectedMeldId={selectedMeldId}
+                  onSelectMeld={(meld) => {
+                    setSelectedMeldId((prev) => (prev === meld.id ? null : meld.id));
+                  }}
+                  onZoomMeld={(meld) => setZoomedMeld(meld)}
+                />
+              </div>
+            </div>
+          </TableSeating>
+        </section>
 
         {/* 3. Action Controls */}
         <section aria-label="Turn Actions">
@@ -721,6 +735,13 @@ export function App() {
         isOpen={isDiscardModalOpen}
         onClose={() => setIsDiscardModalOpen(false)}
         discardPile={gameState.discardPile}
+      />
+
+      {/* 3. Sequence Zoom Inspection Modal */}
+      <SequenceZoomModal
+        isOpen={Boolean(zoomedMeld)}
+        meld={zoomedMeld}
+        onClose={() => setZoomedMeld(null)}
       />
 
       {/* 3. Restart / New Game Confirmation Modal */}

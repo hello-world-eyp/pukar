@@ -150,7 +150,7 @@ describe('UI Components', () => {
       expect(html).toContain('Stock Deck');
       expect(html).toContain('Discard Pile');
       expect(html).toContain('2 cards in pile');
-      expect(html).toContain('Peek (2)');
+      expect(html).toContain('Zoom (2)');
       expect(html).toContain('2 Pukars Available');
       expect(html).toContain('+50 pts bonus');
     });

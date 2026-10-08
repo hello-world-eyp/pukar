@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, Meld, TurnPhase } from '../../engine/types';
 import { validateNewMeld, canAddCardsToMeld } from '../../engine/meld-validator';
-import { getRankLabel, getSuitSymbol } from './PlayingCard';
+import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
 import {
   PlusCircle,
   Trash2,
@@ -167,18 +167,28 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
         </div>
 
         {/* Real-time selection summary */}
-        <div className="text-xs text-slate-400">
+        <div className="flex items-center gap-2 flex-wrap">
           {selectedCardCount === 0 ? (
-            <span>No cards selected</span>
+            <span className="text-xs text-slate-400">No cards selected</span>
           ) : (
-            <span className="text-slate-200">
-              Selected:{' '}
-              <strong className="text-amber-400">
-                {selectedCards
-                  .map((c) => `${getRankLabel(c.rank, c.isNaturalJoker || c.rank === 0)}${getSuitSymbol(c.suit)}`)
-                  .join(', ')}
-              </strong>
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-300 font-semibold">
+                Selected ({selectedCardCount}):
+              </span>
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                {selectedCards.map((c) => (
+                  <div key={`selected-preview-${c.id}`} className="shrink-0 shadow-md rounded-md hover:scale-105 transition-transform">
+                    <PlayingCard card={c} size="sm" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {selectedMeld && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-950/60 border border-teal-600/40 text-teal-300 text-xs font-semibold">
+              <span className="text-slate-400 font-normal">Target:</span>
+              <span>{`Team ${selectedMeld.team} ${selectedMeld.type} Sequence (${selectedMeld.cards.length} cards)`}</span>
+            </div>
           )}
         </div>
       </div>

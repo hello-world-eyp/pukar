@@ -1,6 +1,6 @@
 import React from 'react';
-import { Player, SanitizedPlayer, Team } from '../../engine/types';
-import { Shield, Sparkles, User, Layers } from 'lucide-react';
+import { Player, SanitizedPlayer } from '../../engine/types';
+import { Shield, Layers } from 'lucide-react';
 
 export type SeatPosition = 'left' | 'right' | 'top' | 'top-left' | 'top-right' | 'top-center' | 'bottom';
 
@@ -149,6 +149,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   return (
     <div
       data-testid={testId}
+      data-position={seatPosition}
       onClick={() => onSelectPlayer?.(playerIndex)}
       role={onSelectPlayer ? 'button' : undefined}
       tabIndex={onSelectPlayer ? 0 : undefined}

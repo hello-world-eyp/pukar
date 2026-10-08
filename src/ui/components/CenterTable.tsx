@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
 import { DiscardPileModal } from './DiscardPileModal';
-import { Eye, Layers, ArrowDownCircle, Sparkles, AlertTriangle } from 'lucide-react';
+import { Layers, ArrowDownCircle, Sparkles, AlertTriangle, ZoomIn } from 'lucide-react';
 
 export interface CenterTableProps {
   stockDeckCount?: number;
@@ -160,28 +160,39 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 type="button"
                 onClick={handleOpenPeek}
                 aria-label="Peek Pile"
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 transition-colors cursor-pointer"
+                data-testid="btn-zoom-discard-pile"
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer shadow-sm hover:scale-105"
+                title="Click to zoom into pile and see all buried cards"
               >
-                <Eye className="w-3 h-3" />
-                <span>{`Peek (${discardPile.length})`}</span>
+                <ZoomIn className="w-3.5 h-3.5" />
+                <span>{`Zoom (${discardPile.length})`}</span>
               </button>
             </div>
 
-            {/* Visual Top Card */}
-            <div className="relative my-2 flex items-center justify-center">
+            {/* Visual Top Card - Click to Zoom */}
+            <div
+              className="relative my-2 flex items-center justify-center cursor-pointer group"
+              onClick={handleOpenPeek}
+              title="Click pile to zoom and view all cards"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleOpenPeek();
+                }
+              }}
+            >
               {discardPile.length > 1 && (
-                <div className="absolute -top-1 -right-1 w-20 h-28 rounded-lg bg-slate-800/70 border border-slate-700 rotate-2" />
+                <div className="absolute -top-1 -right-1 w-20 h-28 rounded-lg bg-slate-800/70 border border-slate-700 rotate-2 pointer-events-none" />
               )}
               {topDiscardCard ? (
-                <div
-                  onClick={drawDiscardAllowed ? handleDrawDiscard : undefined}
-                  className={`relative z-10 transition-all ${
-                    drawDiscardAllowed
-                      ? 'cursor-pointer hover:scale-105 active:scale-95 ring-2 ring-amber-400/80 ring-offset-2 ring-offset-slate-900 rounded-lg shadow-lg shadow-amber-500/20'
-                      : ''
-                  }`}
-                >
+                <div className="relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-lg shadow-lg">
                   <PlayingCard card={topDiscardCard} size="md" />
+                  <div className="absolute inset-0 bg-slate-950/50 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-300 font-bold text-xs gap-1 backdrop-blur-[1px]">
+                    <ZoomIn className="w-4 h-4" />
+                    <span>Zoom Pile</span>
+                  </div>
                 </div>
               ) : (
                 <div className="w-20 h-28 rounded-lg border-2 border-dashed border-slate-700 flex flex-col items-center justify-center p-2 text-center text-slate-500 text-xs">
