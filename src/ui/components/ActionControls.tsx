@@ -83,7 +83,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
       if (selectedCardCount < 3) {
         return {
           valid: false,
-          error: selectedCardCount === 0 ? 'Select cards to meld' : `Need at least 3 cards (${selectedCardCount}/3)`,
+          error: selectedCardCount === 0 ? 'Select cards to form sequence' : `Need at least 3 cards (${selectedCardCount}/3)`,
         };
       }
       return validateNewMeld(selectedCards);
@@ -99,7 +99,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   const addToMeldValidation = useMemo(() => {
     try {
       if (!selectedMeld) {
-        return { valid: false, error: 'Select a meld on table first' };
+        return { valid: false, error: 'Select a sequence on table first' };
       }
       if (selectedCardCount === 0) {
         return { valid: false, error: 'Select cards to add' };
@@ -255,7 +255,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             }`}
           >
             <Sparkles className="w-4 h-4 shrink-0 text-emerald-300" />
-            <span className="truncate">Meld Selected</span>
+            <span className="truncate">Play Sequence</span>
           </button>
 
           {/* Validation Preview Badge */}
@@ -264,7 +264,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
               meldValidation.valid ? (
                 <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-700/40 px-2 py-0.5 rounded">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  {`Valid ${meldValidation.type}`}
+                  {`Valid ${meldValidation.type} Sequence`}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2 py-0.5 rounded">
@@ -273,12 +273,12 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
                 </span>
               )
             ) : (
-              <span className="text-slate-500">Only in MELD phase</span>
+              <span className="text-slate-500">Only in SEQUENCE phase</span>
             )}
           </div>
         </div>
 
-        {/* ACTION 4: ADD TO SELECTED MELD */}
+        {/* ACTION 4: ADD TO SELECTED SEQUENCE */}
         <div className="flex flex-col gap-1.5">
           <button
             type="button"
@@ -292,16 +292,16 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             }`}
           >
             <PlusCircle className="w-4 h-4 shrink-0" />
-            <span className="truncate">Add to Meld</span>
+            <span className="truncate">Add to Sequence</span>
           </button>
 
-          {/* Add to Meld Preview Badge */}
+          {/* Add to Sequence Preview Badge */}
           <div data-testid="add-meld-badge" className="text-[11px] text-center min-h-[18px]">
             {isMeldPhase ? (
               addToMeldValidation.valid ? (
                 <span className="inline-flex items-center gap-1 text-teal-400 font-semibold bg-teal-950/60 border border-teal-700/40 px-2 py-0.5 rounded truncate max-w-full">
                   <CheckCircle2 className="w-3 h-3 shrink-0" />
-                  {`Add to ${selectedMeld?.type}`}
+                  {`Add to ${selectedMeld?.type} Sequence`}
                   {addToMeldValidation.pickedUpCard && (
                     <span className="text-amber-300 font-bold ml-1">🃏 Picks up Joker!</span>
                   )}
@@ -313,7 +313,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
                 </span>
               )
             ) : (
-              <span className="text-slate-500">Only in MELD phase</span>
+              <span className="text-slate-500">Only in SEQUENCE phase</span>
             )}
           </div>
         </div>

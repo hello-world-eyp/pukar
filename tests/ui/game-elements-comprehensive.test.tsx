@@ -162,7 +162,7 @@ describe('Comprehensive UI Game Elements (src/ui/components/)', () => {
         <TableMeldBoard melds={{ A: [], B: [] }} onSelectMeld={() => {}} />
       );
 
-      expect(html).toContain('No melds placed yet');
+      expect(html).toContain('No sequences placed yet');
     });
   });
 
@@ -242,7 +242,7 @@ describe('Comprehensive UI Game Elements (src/ui/components/)', () => {
         />
       );
 
-      expect(html).toContain('Meld Selected');
+      expect(html).toContain('Play Sequence');
       expect(html).toContain('Valid RUN');
     });
 

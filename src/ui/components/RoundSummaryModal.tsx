@@ -151,10 +151,10 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
               {/* Itemized List */}
               <div className="flex flex-col gap-2 text-xs">
                 <div className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
-                  Melds Itemization:
+                  Sequences Itemization:
                 </div>
                 {meldDetailsA.length === 0 ? (
-                  <div className="text-slate-500 italic py-1">No melds made (0 pts)</div>
+                  <div className="text-slate-500 italic py-1">No sequences made (0 pts)</div>
                 ) : (
                   meldDetailsA.map((item, idx) => (
                     <div key={`meld-a-${item.meld.id || idx}`} className="flex items-center justify-between text-slate-300">
@@ -216,10 +216,10 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
               {/* Itemized List */}
               <div className="flex flex-col gap-2 text-xs">
                 <div className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
-                  Melds Itemization:
+                  Sequences Itemization:
                 </div>
                 {meldDetailsB.length === 0 ? (
-                  <div className="text-slate-500 italic py-1">No melds made (0 pts)</div>
+                  <div className="text-slate-500 italic py-1">No sequences made (0 pts)</div>
                 ) : (
                   meldDetailsB.map((item, idx) => (
                     <div key={`meld-b-${item.meld.id || idx}`} className="flex items-center justify-between text-slate-300">

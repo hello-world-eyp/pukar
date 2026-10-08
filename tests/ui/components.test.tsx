@@ -288,7 +288,7 @@ describe('UI Components', () => {
 
       expect(html).toContain('Run - 3 cards');
       expect(html).toContain('0 pts');
-      expect(html).toContain('No melds placed yet');
+      expect(html).toContain('No sequences placed yet');
     });
 
     it('renders pure 13-card 2-to-A run badge (500 pts)', () => {

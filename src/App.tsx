@@ -614,8 +614,8 @@ export function App() {
 
         {/* 2. Table Area: Melds Board (Team A & B) + Center Table (Stock & Bottom) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left/Main Column: Table Melds (8 Cols on LG) */}
-          <section className="lg:col-span-8 flex flex-col gap-4" aria-label="Table Melds">
+          {/* Left/Main Column: Table Sequences */}
+          <section className="lg:col-span-8 flex flex-col gap-4" aria-label="Table Sequences">
             <TableMeldBoard
               melds={gameState.melds}
               activeTeam={activePlayer.team}

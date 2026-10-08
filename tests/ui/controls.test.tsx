@@ -343,7 +343,7 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         />
       );
 
-      expect(html).toContain('Select a meld on table first');
+      expect(html).toContain('Select a sequence on table first');
       expect(html).toMatch(/btn-add-meld[^>]*disabled=""/);
     });
 

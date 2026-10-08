@@ -65,7 +65,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
       {/* Board Controls Bar */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-300">Table Melds</span>
+          <span className="text-xs font-bold text-slate-300">Table Sequences</span>
           <span className="text-[11px] text-slate-500">•</span>
           <span className="text-[11px] text-slate-400">
             {sortDirection === 'desc' ? 'Sorted Highest to Lowest' : 'Sorted Lowest to Highest'}
@@ -76,7 +76,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           data-testid="btn-toggle-meld-sort"
           onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
-          title="Toggle meld card order between Highest to Lowest and Lowest to Highest"
+          title="Toggle sequence card order between Highest to Lowest and Lowest to Highest"
         >
           <ArrowDownUp className="w-3.5 h-3.5 text-amber-400" />
           <span>{sortDirection === 'desc' ? 'Sort: High → Low' : 'Sort: Low → High'}</span>
@@ -233,7 +233,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
         </div>
         <div className="flex items-center gap-3 text-xs">
           <span className="text-slate-400">
-            {`${melds.length} ${melds.length === 1 ? 'meld' : 'melds'}`}
+            {`${melds.length} ${melds.length === 1 ? 'sequence' : 'sequences'}`}
           </span>
           <span className="font-extrabold px-2 py-0.5 rounded-md bg-slate-800 text-slate-200 border border-slate-700">
             {`${score} pts`}
@@ -241,13 +241,13 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
         </div>
       </div>
 
-      {/* Melds List */}
+      {/* Sequences List */}
       <div className="flex flex-col gap-3 min-h-[160px]">
         {sortedMelds.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-6 border-2 border-dashed border-slate-800 rounded-xl text-slate-500 text-xs text-center">
-            <p className="font-medium">No melds placed yet</p>
+            <p className="font-medium">No sequences placed yet</p>
             <p className="text-[11px] text-slate-600 mt-1">
-              {`Melds placed by ${teamName} will appear here.`}
+              {`Sequences placed by ${teamName} will appear here.`}
             </p>
           </div>
         ) : (
@@ -467,3 +467,5 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     </div>
   );
 };
+
+export const TableSequenceBoard = TableMeldBoard;
