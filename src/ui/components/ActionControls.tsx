@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Inbox,
+  MousePointerClick,
 } from 'lucide-react';
 
 export interface ActionControlsProps {
@@ -28,6 +29,8 @@ export interface ActionControlsProps {
   onDiscard?: (cardId: string) => void;
   disabled?: boolean;
   className?: string;
+  showDrawButtons?: boolean;
+  unifiedMode?: boolean;
 }
 
 export const ActionControls: React.FC<ActionControlsProps> = ({
@@ -46,6 +49,8 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   onDiscard,
   disabled = false,
   className = '',
+  showDrawButtons,
+  unifiedMode = false,
 }) => {
   // Resolve effective selected cards
   const selectedCards: Card[] = useMemo(() => {
@@ -74,6 +79,10 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     !disabled && isDrawPhase && (canDrawStock !== undefined ? canDrawStock : (stockCount === undefined || stockCount > 0));
   const actualCanTakeDiscard =
     !disabled && isDrawPhase && (canTakeDiscard !== undefined ? canTakeDiscard : (discardCount === undefined || discardCount > 0));
+
+  // Determine whether to display the legacy draw buttons
+  const shouldRenderDrawButtons =
+    showDrawButtons !== undefined ? showDrawButtons : !unifiedMode;
 
   // 2. Play New Meld Validation Preview
   const meldValidation = useMemo(() => {
@@ -121,6 +130,106 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     }
   };
 
+  const discardButtonLabel = useMemo(() => {
+    if (selectedCardCount === 1) {
+      const card = selectedCards[0];
+      return `Discard ${getRankLabel(card.rank, card.isNaturalJoker || card.rank === 0)}${getSuitSymbol(card.suit)}`;
+    }
+    return 'Discard Selected Card';
+  }, [selectedCardCount, selectedCards]);
+
+  // =========================================================================
+  // UNIFIED INLINE MODE (Rendered cleanly within the player dock)
+  // =========================================================================
+  if (unifiedMode) {
+    return (
+      <div
+        data-testid="action-controls"
+        className={`flex items-center gap-2 flex-wrap sm:flex-nowrap ${className}`}
+      >
+        {/* DRAW PHASE INLINE GUIDANCE */}
+        {isDrawPhase && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-200 text-xs font-semibold shadow-sm animate-pulse">
+            <MousePointerClick className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>Turn: DRAW • Click Stock Deck or Discard Pile to draw a card</span>
+          </div>
+        )}
+
+        {/* MELD / DISCARD PHASE ACTIONS */}
+        {!isDrawPhase && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Play New Sequence Button (enabled when valid sequence selected) */}
+            <button
+              type="button"
+              data-testid="btn-play-meld"
+              disabled={!canPlayNewMeld}
+              onClick={handlePlayMeldClick}
+              className={`h-9 px-3.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md ${
+                canPlayNewMeld
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-700/30 ring-2 ring-emerald-400/50 hover:scale-[1.02] active:scale-95'
+                  : 'bg-slate-800/60 text-slate-500 border border-slate-800/80 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+              <span>
+                {canPlayNewMeld
+                  ? `Play ${meldValidation.type || ''} Sequence`
+                  : 'Play Sequence'}
+              </span>
+            </button>
+
+            {/* Validation Preview / Tip Badge */}
+            <div data-testid="meld-validation-badge" className="text-xs">
+              {isMeldPhase && (
+                canPlayNewMeld ? (
+                  <span className="inline-flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-700/40 px-2 py-1 rounded-lg">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    <span>{`Valid ${meldValidation.type} (+pts)`}</span>
+                  </span>
+                ) : selectedCardCount >= 3 ? (
+                  <span className="inline-flex items-center gap-1 text-amber-300 bg-amber-950/60 border border-amber-700/40 px-2 py-1 rounded-lg">
+                    <AlertCircle className="w-3 h-3 text-amber-400" />
+                    <span>{meldValidation.error}</span>
+                  </span>
+                ) : null
+              )}
+            </div>
+
+            {/* Add to Sequence Tip / Merge Guidance */}
+            {selectedCardCount > 0 && isMeldPhase && (
+              <div
+                data-testid="add-to-sequence-tip"
+                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-950/60 border border-yellow-500/40 text-yellow-300 text-xs font-semibold"
+              >
+                <Sparkles className="w-3 h-3 text-yellow-400 shrink-0" />
+                <span>Click highlighted sequence on table to add</span>
+              </div>
+            )}
+
+            {/* Discard Action Button */}
+            <button
+              type="button"
+              data-testid="btn-discard"
+              disabled={!canDiscard}
+              onClick={handleDiscardClick}
+              className={`h-9 px-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md ${
+                canDiscard
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-700/30 ring-2 ring-rose-400/40 hover:scale-[1.02] active:scale-95'
+                  : 'bg-slate-800/50 text-slate-500 border border-slate-800/80 cursor-not-allowed opacity-50'
+              }`}
+            >
+              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+              <span>{discardButtonLabel}</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // STANDARD / STANDALONE CARD MODE (Used for standalone test suites & pages)
+  // =========================================================================
   return (
     <div
       data-testid="action-controls"
@@ -180,62 +289,66 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
       </div>
 
       {/* ACTION BUTTONS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* ACTION 1: DRAW FROM STOCK */}
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            data-testid="btn-draw-stock"
-            disabled={!actualCanDrawStock}
-            onClick={onDrawStock}
-            className={`w-full h-12 px-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
-              actualCanDrawStock
-                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-700/30 active:scale-95'
-                : 'bg-slate-800/60 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
-            }`}
-          >
-            <ArrowDownCircle className="w-4 h-4 shrink-0" />
-            <span className="truncate">Draw Deck</span>
-            {stockCount !== undefined && (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-200 border border-blue-400/30">
-                {stockCount}
-              </span>
-            )}
-          </button>
-          <div className="text-[11px] text-slate-400 text-center truncate">
-            {isDrawPhase ? 'Draw 1 card from Stock' : 'Only in DRAW phase'}
+      <div className={`grid grid-cols-1 ${shouldRenderDrawButtons ? 'sm:grid-cols-3' : 'sm:grid-cols-1'} gap-3`}>
+        {/* ACTION 1: DRAW FROM STOCK (Rendered in standard mode) */}
+        {shouldRenderDrawButtons && (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              data-testid="btn-draw-stock"
+              disabled={!actualCanDrawStock}
+              onClick={onDrawStock}
+              className={`w-full h-12 px-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
+                actualCanDrawStock
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-700/30 active:scale-95'
+                  : 'bg-slate-800/60 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <ArrowDownCircle className="w-4 h-4 shrink-0" />
+              <span className="truncate">Draw Deck</span>
+              {stockCount !== undefined && (
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-200 border border-blue-400/30">
+                  {stockCount}
+                </span>
+              )}
+            </button>
+            <div className="text-[11px] text-slate-400 text-center truncate">
+              {isDrawPhase ? 'Draw 1 card from Stock' : 'Only in DRAW phase'}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* ACTION 2: TAKE BOTTOM / DISCARD */}
-        <div className="flex flex-col gap-1.5">
-          <button
-            type="button"
-            data-testid="btn-take-discard"
-            disabled={!actualCanTakeDiscard}
-            onClick={onTakeDiscard}
-            className={`w-full h-12 px-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
-              actualCanTakeDiscard
-                ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-700/30 active:scale-95'
-                : 'bg-slate-800/60 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
-            }`}
-          >
-            <Inbox className="w-4 h-4 shrink-0" />
-            <span className="truncate">Take Bottom</span>
-            {discardCount !== undefined && (
-              <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-200 border border-indigo-400/30">
-                {discardCount}
-              </span>
-            )}
-          </button>
-          <div className="text-[11px] text-slate-400 text-center truncate">
-            {isDrawPhase
-              ? discardCount === 0
-                ? 'Discard pile empty'
-                : `Take all ${discardCount ?? ''} discards`
-              : 'Only in DRAW phase'}
+        {/* ACTION 2: TAKE BOTTOM / DISCARD (Rendered in standard mode) */}
+        {shouldRenderDrawButtons && (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              data-testid="btn-take-discard"
+              disabled={!actualCanTakeDiscard}
+              onClick={onTakeDiscard}
+              className={`w-full h-12 px-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
+                actualCanTakeDiscard
+                  ? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-700/30 active:scale-95'
+                  : 'bg-slate-800/60 text-slate-500 border border-slate-800 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <Inbox className="w-4 h-4 shrink-0" />
+              <span className="truncate">Take Bottom</span>
+              {discardCount !== undefined && (
+                <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-200 border border-indigo-400/30">
+                  {discardCount}
+                </span>
+              )}
+            </button>
+            <div className="text-[11px] text-slate-400 text-center truncate">
+              {isDrawPhase
+                ? discardCount === 0
+                  ? 'Discard pile empty'
+                  : `Take all ${discardCount ?? ''} discards`
+                : 'Only in DRAW phase'}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ACTION 3: MELD SELECTED (RUN / SET) */}
         <div className="flex flex-col gap-1.5">
@@ -293,13 +406,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
           }`}
         >
           <Trash2 className="w-4 h-4 shrink-0" />
-          <span>
-            {selectedCardCount === 1
-              ? `Discard ${getRankLabel(selectedCards[0].rank, selectedCards[0].isNaturalJoker || selectedCards[0].rank === 0)}${getSuitSymbol(
-                  selectedCards[0].suit
-                )}`
-              : 'Discard Selected Card'}
-          </span>
+          <span>{discardButtonLabel}</span>
         </button>
       </div>
     </div>

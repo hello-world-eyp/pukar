@@ -28,14 +28,11 @@ import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
 import { playSound, setSoundEnabled } from './ui/sound';
 import {
   RotateCcw,
-  Volume2,
-  VolumeX,
   HelpCircle,
   Sparkles,
   Shield,
   AlertCircle,
   X,
-  Users,
   Trophy,
   Info,
 } from 'lucide-react';
@@ -439,131 +436,42 @@ export function App() {
   return (
     <div
       data-testid="pukar-app"
-      className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white"
+      className="min-h-screen lg:h-screen lg:max-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white overflow-y-auto lg:overflow-hidden"
     >
       {/* =====================================================================
-          HEADER / TOP NAVIGATION BAR
+          1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
       ====================================================================== */}
-      <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 shadow-lg px-4 lg:px-6 py-2.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          {/* Brand & Round Info */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 shadow-md shadow-amber-900/40 font-black text-lg">
-              ♠
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="font-black text-base lg:text-lg tracking-tight bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400 bg-clip-text text-transparent">
-                  PUKAR
-                </h1>
-                <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
-                  Royal Rummy
-                </span>
-                <span className="text-xs font-semibold text-slate-400 hidden sm:inline">
-                  {`Round ${gameState.round}`}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Strategic 4/6-Player Partner Card Game
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Controls: Player Count, Sound, Rules, Restart */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Player Count Toggle */}
-            <div
-              className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5 text-xs font-bold"
-              role="group"
-              aria-label="Player count selector"
-            >
-              <button
-                type="button"
-                data-testid="btn-toggle-4p"
-                onClick={() => {
-                  if (gameState.playerCount !== 4) handleOpenResetModal(4);
-                }}
-                className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 ${
-                  gameState.playerCount === 4
-                    ? 'bg-amber-500 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="4-Player Mode"
-              >
-                <Users className="w-3 h-3" />
-                <span>4P</span>
-              </button>
-              <button
-                type="button"
-                data-testid="btn-toggle-6p"
-                onClick={() => {
-                  if (gameState.playerCount !== 6) handleOpenResetModal(6);
-                }}
-                className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 ${
-                  gameState.playerCount === 6
-                    ? 'bg-amber-500 text-slate-950 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="6-Player Mode"
-              >
-                <Users className="w-3 h-3" />
-                <span>6P</span>
-              </button>
-            </div>
-
-            {/* Sound Toggle */}
-            <button
-              type="button"
-              data-testid="btn-sound-toggle"
-              onClick={toggleMute}
-              className={`p-2 rounded-xl border text-xs font-semibold transition-colors ${
-                isMuted
-                  ? 'bg-red-950/60 text-red-300 border-red-800/80 hover:bg-red-900/60'
-                  : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800'
-              }`}
-              title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-              aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-
-            {/* Rules Modal Button */}
-            <button
-              type="button"
-              data-testid="btn-rules-modal"
-              onClick={() => setIsRulesModalOpen(true)}
-              className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 text-xs font-semibold transition-colors flex items-center gap-1"
-              title="Game Rules & Guide"
-              aria-label="Game Rules & Guide"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span className="hidden md:inline text-xs">Rules</span>
-            </button>
-
-            {/* Restart / New Game */}
-            <button
-              type="button"
-              data-testid="btn-restart-game"
-              onClick={() => handleOpenResetModal(gameState.playerCount)}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-xs font-bold transition-colors flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">New Game</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <ScoreBoard
+        round={gameState.round}
+        roundStatus={gameState.roundStatus}
+        phase={gameState.phase}
+        scores={gameState.scores}
+        roundScores={gameState.roundScores}
+        totalScores={gameState.totalScores}
+        pukarsClaimed={gameState.pukarsClaimed}
+        currentPlayerIndex={activeTurnIndex}
+        currentPlayerName={activePlayer.name}
+        activeTeam={activePlayer.team}
+        playerCount={gameState.playerCount}
+        onTogglePlayerCount={(count) => {
+          if (gameState.playerCount !== count) handleOpenResetModal(count);
+        }}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
+        onOpenRules={() => setIsRulesModalOpen(true)}
+        onRestartGame={() => handleOpenResetModal(gameState.playerCount)}
+      />
 
       {/* =====================================================================
           NOTIFICATION & CELEBRATION BANNERS
       ====================================================================== */}
-      <div className="max-w-7xl mx-auto w-full px-4 lg:px-6 pt-3 flex flex-col gap-2">
+      <div className="max-w-[1680px] mx-auto w-full px-3 sm:px-6 pt-2 flex flex-col gap-1.5 shrink-0 z-30">
         {/* Error Toast */}
         {errorMessage && (
           <div
             data-testid="error-toast"
             role="alert"
-            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-red-950/90 border border-red-600/70 text-red-200 shadow-lg shadow-red-950/50 text-sm animate-in fade-in slide-in-from-top duration-200"
+            className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-red-950/90 border border-red-600/70 text-red-200 shadow-lg shadow-red-950/50 text-xs sm:text-sm animate-in fade-in slide-in-from-top duration-200"
           >
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -586,20 +494,20 @@ export function App() {
           <div
             data-testid="pukar-celebration-banner"
             role="status"
-            className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-950/90 via-yellow-950/90 to-amber-950/90 border-2 border-amber-500/80 text-amber-200 shadow-xl shadow-amber-950/60 animate-in fade-in zoom-in-95 duration-200"
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-950/90 via-yellow-950/90 to-amber-950/90 border-2 border-amber-500/80 text-amber-200 shadow-xl shadow-amber-950/60 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-md">
-                <Sparkles className="w-5 h-5 animate-spin" />
+              <div className="w-7 h-7 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-black shadow-md shrink-0">
+                <Sparkles className="w-4 h-4 animate-spin" />
               </div>
               <div>
-                <div className="font-extrabold text-sm sm:text-base text-amber-100 flex items-center gap-2">
+                <div className="font-extrabold text-xs sm:text-sm text-amber-100 flex items-center gap-2">
                   <span>🎉 ROYAL PUKAR CLAIMED!</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 font-black">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-black">
                     +50 PTS
                   </span>
                 </div>
-                <div className="text-xs text-amber-300/90">
+                <div className="text-[11px] text-amber-300/90">
                   {`${pukarBanner.playerName} (Team ${pukarBanner.team}) emptied their hand and claimed a 13-card Pukar deck! Turn continues — play sequences or drop a card to end your turn.`}
                 </div>
               </div>
@@ -608,7 +516,7 @@ export function App() {
               type="button"
               data-testid="btn-dismiss-pukar"
               onClick={() => setPukarBanner(null)}
-              className="p-1.5 rounded-xl hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors"
+              className="p-1 rounded-xl hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors"
               aria-label="Dismiss Pukar Announcement"
             >
               <X className="w-4 h-4" />
@@ -621,20 +529,20 @@ export function App() {
           <div
             data-testid="joker-pickup-banner"
             role="status"
-            className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-950/90 via-indigo-950/90 to-purple-950/90 border-2 border-purple-500/80 text-purple-200 shadow-xl shadow-purple-950/60 animate-in fade-in zoom-in-95 duration-200"
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-950/90 via-indigo-950/90 to-purple-950/90 border-2 border-purple-500/80 text-purple-200 shadow-xl shadow-purple-950/60 animate-in fade-in zoom-in-95 duration-200"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-purple-500 text-white flex items-center justify-center font-black shadow-md">
-                <Sparkles className="w-5 h-5 animate-pulse" />
+              <div className="w-7 h-7 rounded-xl bg-purple-500 text-white flex items-center justify-center font-black shadow-md shrink-0">
+                <Sparkles className="w-4 h-4 animate-pulse" />
               </div>
               <div>
-                <div className="font-extrabold text-sm sm:text-base text-purple-100 flex items-center gap-2">
+                <div className="font-extrabold text-xs sm:text-sm text-purple-100 flex items-center gap-2">
                   <span>🃏 NORMAL JOKER PICKED UP!</span>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500 text-white font-bold">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-500 text-white font-bold">
                     Added to Hand
                   </span>
                 </div>
-                <div className="text-xs text-purple-300/90">
+                <div className="text-[11px] text-purple-300/90">
                   {`${jokerPickupBanner.playerName} contributed the natural card replacing the Joker! The Joker has returned to your hand to be played in another meld.`}
                 </div>
               </div>
@@ -643,7 +551,7 @@ export function App() {
               type="button"
               data-testid="btn-dismiss-joker-pickup"
               onClick={() => setJokerPickupBanner(null)}
-              className="p-1.5 rounded-xl hover:bg-purple-900/50 text-purple-300 hover:text-white transition-colors"
+              className="p-1 rounded-xl hover:bg-purple-900/50 text-purple-300 hover:text-white transition-colors"
               aria-label="Dismiss Joker Pickup Announcement"
             >
               <X className="w-4 h-4" />
@@ -656,7 +564,7 @@ export function App() {
           <div
             data-testid="exhaust-notification"
             role="status"
-            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs sm:text-sm animate-in fade-in"
+            className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-indigo-950/80 border border-indigo-700/60 text-indigo-200 text-xs sm:text-sm animate-in fade-in"
           >
             <div className="flex items-center gap-2">
               <Info className="w-4 h-4 text-indigo-400 shrink-0" />
@@ -675,27 +583,11 @@ export function App() {
       </div>
 
       {/* =====================================================================
-          MAIN PLAYING ARENA
+          2. MAIN PLAYING ARENA (NO-SCROLL DESKTOP FIT)
       ====================================================================== */}
-      <main className="max-w-[1680px] mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 flex flex-col gap-6 flex-1">
-        {/* 1. ScoreBoard */}
-        <section aria-label="Score Board">
-          <ScoreBoard
-            round={gameState.round}
-            roundStatus={gameState.roundStatus}
-            phase={gameState.phase}
-            scores={gameState.scores}
-            roundScores={gameState.roundScores}
-            totalScores={gameState.totalScores}
-            pukarsClaimed={gameState.pukarsClaimed}
-            currentPlayerIndex={activeTurnIndex}
-            currentPlayerName={activePlayer.name}
-            activeTeam={activePlayer.team}
-          />
-        </section>
-
-        {/* 2. Casino Felt Card Table Arena & Spatial Seating */}
-        <section aria-label="Table Arena and Seating" className="w-full">
+      <main className="max-w-[1680px] mx-auto w-full px-2 sm:px-4 lg:px-6 py-2 flex flex-col gap-3 flex-1 min-h-0">
+        {/* Spatial Seating & Casino Felt Card Table Arena */}
+        <section aria-label="Table Arena and Seating" className="w-full flex-1 min-h-0 flex flex-col justify-center">
           <TableSeating
             players={gameState.players}
             viewedPlayerIndex={currentViewIndex}
@@ -705,7 +597,7 @@ export function App() {
           >
             {/* The Casino Felt Surface */}
             <div
-              className={`w-full rounded-3xl p-4 sm:p-6 poker-table-felt poker-table-rail flex flex-col gap-6 shadow-2xl transition-transform ${
+              className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-5 poker-table-felt poker-table-rail flex flex-col gap-3 sm:gap-4 shadow-2xl transition-transform ${
                 isTableRippling ? 'animate-table-quake' : ''
               }`}
             >
@@ -744,37 +636,10 @@ export function App() {
           </TableSeating>
         </section>
 
-        {/* 3. Action Controls */}
-        <section aria-label="Turn Actions">
-          <ActionControls
-            phase={gameState.phase}
-            selectedCards={selectedCards}
-            selectedCardIds={selectedCardIds}
-            allHandCards={viewingPlayer.hand}
-            selectedMeld={selectedMeld}
-            canDrawStock={
-              gameState.phase === 'DRAW' &&
-              isViewingActivePlayer &&
-              gameState.stockDeck.length > 0
-            }
-            canTakeDiscard={
-              gameState.phase === 'DRAW' &&
-              isViewingActivePlayer &&
-              gameState.discardPile.length > 0
-            }
-            stockCount={gameState.stockDeck.length}
-            discardCount={gameState.discardPile.length}
-            onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
-            onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
-            onPlayMeld={handlePlayMeld}
-            onAddToMeld={handleAddToMeld}
-            onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
-            disabled={!isViewingActivePlayer || gameState.roundStatus === 'ROUND_OVER'}
-          />
-        </section>
-
-        {/* 4. Active Player Hand */}
-        <section aria-label="Player Hand">
+        {/* ===================================================================
+            3. DOCKED UNIFIED PLAYER CONSOLE (HAND + CONTEXTUAL ACTIONS)
+        ==================================================================== */}
+        <section aria-label="Player Hand and Actions" className="w-full shrink-0">
           <PlayerHand
             cards={viewingPlayer.hand}
             selectedCardIds={selectedCardIds}
@@ -790,11 +655,40 @@ export function App() {
             isCurrentPlayer={isViewingActivePlayer}
             disabled={gameState.roundStatus === 'ROUND_OVER'}
             isRippling={isTableRippling}
+            actionsSlot={
+              <ActionControls
+                phase={gameState.phase}
+                selectedCards={selectedCards}
+                selectedCardIds={selectedCardIds}
+                allHandCards={viewingPlayer.hand}
+                selectedMeld={selectedMeld}
+                canDrawStock={
+                  gameState.phase === 'DRAW' &&
+                  isViewingActivePlayer &&
+                  gameState.stockDeck.length > 0
+                }
+                canTakeDiscard={
+                  gameState.phase === 'DRAW' &&
+                  isViewingActivePlayer &&
+                  gameState.discardPile.length > 0
+                }
+                stockCount={gameState.stockDeck.length}
+                discardCount={gameState.discardPile.length}
+                onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
+                onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
+                onPlayMeld={handlePlayMeld}
+                onAddToMeld={handleAddToMeld}
+                onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
+                disabled={!isViewingActivePlayer || gameState.roundStatus === 'ROUND_OVER'}
+                unifiedMode={true}
+                showDrawButtons={false}
+              />
+            }
           />
         </section>
 
-        {/* 5. Dev Inspector & Hot-Seat Switcher */}
-        <section aria-label="Hot-Seat Tools & Dev Inspector">
+        {/* 4. Dev Inspector & Hot-Seat Switcher */}
+        <section aria-label="Hot-Seat Tools & Dev Inspector" className="shrink-0">
           <DevInspector
             players={gameState.players}
             currentPlayerIndex={currentViewIndex}

@@ -92,13 +92,13 @@ export const CenterTable: React.FC<CenterTableProps> = ({
   return (
     <>
       <div
-        className={`relative w-full rounded-2xl bg-gradient-to-b from-slate-900/95 via-slate-900 to-slate-950 border border-slate-800/80 p-5 shadow-2xl text-slate-100 ${className}`}
+        className={`relative w-full rounded-2xl bg-gradient-to-b from-slate-900/95 via-slate-900 to-slate-950 border border-slate-800/80 p-3 sm:p-4 shadow-xl text-slate-100 ${className}`}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-center">
           {/* 1. STOCK DECK */}
-          <div className="flex flex-col items-center justify-between p-4 rounded-xl bg-slate-950/50 border border-slate-800/60 min-h-[220px]">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              <Layers className="w-4 h-4 text-sky-400" />
+          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 min-h-[165px]">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              <Layers className="w-3.5 h-3.5 text-sky-400" />
               <span>Stock Deck</span>
             </div>
 
@@ -155,10 +155,10 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           </div>
 
           {/* 2. DISCARD PILE ("THE BOTTOM") */}
-          <div className="flex flex-col items-center justify-between p-4 rounded-xl bg-slate-950/50 border border-slate-800/60 min-h-[220px]">
-            <div className="flex items-center justify-between w-full mb-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                <Layers className="w-4 h-4 text-amber-400" />
+          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 min-h-[165px]">
+            <div className="flex items-center justify-between w-full mb-1">
+              <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <Layers className="w-3.5 h-3.5 text-amber-400" />
                 <span>Discard Pile (&ldquo;The Bottom&rdquo;)</span>
               </div>
               <button
@@ -166,10 +166,10 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 onClick={handleOpenPeek}
                 aria-label="Peek Pile"
                 data-testid="btn-zoom-discard-pile"
-                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer shadow-sm hover:scale-105"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer shadow-sm hover:scale-105"
                 title="Click to zoom into pile and see all buried cards"
               >
-                <ZoomIn className="w-3.5 h-3.5" />
+                <ZoomIn className="w-3 h-3" />
                 <span>{`Zoom (${discardPile.length})`}</span>
               </button>
             </div>
@@ -234,9 +234,9 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           </div>
 
           {/* 3. PUKAR POOL */}
-          <div className="flex flex-col items-center justify-between p-4 rounded-xl bg-slate-950/50 border border-slate-800/60 min-h-[220px]">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              <Sparkles className="w-4 h-4 text-emerald-400" />
+          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-xl bg-slate-950/50 border border-slate-800/60 min-h-[165px]">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
               <span>Pukar Pool (Reserve)</span>
             </div>
 

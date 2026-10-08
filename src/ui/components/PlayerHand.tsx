@@ -94,6 +94,7 @@ export interface PlayerHandProps {
   initialSort?: SortMode;
   initialSortDirection?: SortDirection;
   isRippling?: boolean;
+  actionsSlot?: React.ReactNode;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -116,6 +117,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   initialSort = 'none',
   initialSortDirection = 'desc',
   isRippling = false,
+  actionsSlot,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(initialSortDirection);
@@ -180,14 +182,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   return (
     <div
       data-testid="player-hand"
-      className={`w-full bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col gap-3 ${className}`}
+      className={`w-full bg-slate-900/90 backdrop-blur-md border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl flex flex-col gap-2.5 ${className}`}
     >
       {/* HAND TOOLBAR & STATUS */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-2.5">
         {/* PLAYER IDENTITY & CARD COUNTS */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm">
+            <div className="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold text-sm shrink-0">
               <User className="w-4 h-4" />
             </div>
             <div>
@@ -226,6 +228,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             </div>
           </div>
         </div>
+
+        {/* CONTEXTUAL ACTION CONTROLS SLOT */}
+        {actionsSlot && (
+          <div className="flex items-center justify-center my-1 sm:my-0">
+            {actionsSlot}
+          </div>
+        )}
 
         {/* SORT CONTROLS & SELECTION ACTIONS */}
         <div className="flex flex-wrap items-center gap-2">
