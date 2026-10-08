@@ -32,6 +32,7 @@ export interface TableMeldBoardProps {
   className?: string;
   defaultSortDirection?: MeldSortDirection;
   cardSize?: 'sm' | 'md';
+  isRippling?: boolean;
 }
 
 export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
@@ -50,6 +51,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   className = '',
   defaultSortDirection = 'desc',
   cardSize = 'md',
+  isRippling = false,
 }) => {
   const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
 
@@ -129,6 +131,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           selectedCards={effectiveSelectedCards}
           canAdd={canAdd}
           onAddToMeld={onAddToMeld}
+          isRippling={isRippling}
         />
 
         {/* TEAM B MELDS COLUMN */}
@@ -147,6 +150,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           selectedCards={effectiveSelectedCards}
           canAdd={canAdd}
           onAddToMeld={onAddToMeld}
+          isRippling={isRippling}
         />
       </div>
     </div>
@@ -168,6 +172,7 @@ interface TeamMeldColumnProps {
   selectedCards?: Card[];
   canAdd?: boolean;
   onAddToMeld?: (meldId: string, cardIds: string[]) => void;
+  isRippling?: boolean;
 }
 
 export function sortMelds(
@@ -246,6 +251,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   selectedCards,
   canAdd = true,
   onAddToMeld,
+  isRippling = false,
 }) => {
   const isBlue = teamColor === 'blue';
 
@@ -342,6 +348,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 onZoom={onZoomMeld}
                 sortDirection={sortDirection}
                 cardSize={cardSize}
+                isRippling={isRippling}
               />
             );
           })
@@ -364,6 +371,7 @@ interface MeldCardItemProps {
   autoAddValidation?: ReturnType<typeof canAddCardsToMeld>;
   selectedCardsCount?: number;
   onAutoAdd?: () => void;
+  isRippling?: boolean;
 }
 
 const MeldCardItem: React.FC<MeldCardItemProps> = ({
@@ -379,6 +387,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   autoAddValidation,
   selectedCardsCount = 0,
   onAutoAdd,
+  isRippling = false,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
 
@@ -458,9 +467,13 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     });
   }, [meld.slots, meld.cards, sortDirection]);
 
+  const [isAbsorbing, setIsAbsorbing] = useState(false);
+
   const handleItemClick = () => {
     if (isEligibleToAutoAdd && onAutoAdd) {
       try {
+        setIsAbsorbing(true);
+        setTimeout(() => setIsAbsorbing(false), 550);
         onAutoAdd();
       } catch (err) {
         console.error('Error auto-adding to sequence:', err);
@@ -478,6 +491,8 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     ? 'bg-amber-500/10 border-amber-400 ring-2 ring-amber-400/50 shadow-lg'
     : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 hover:bg-slate-950/80';
 
+  const absorbClass = isAbsorbing ? 'animate-sequence-absorb' : '';
+
   return (
     <div
       data-testid={`meld-item-${meld.id}`}
@@ -486,7 +501,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       onClick={handleItemClick}
       className={`relative group rounded-xl p-3 border transition-all ${
         canSelect || isEligibleToAutoAdd ? 'cursor-pointer' : ''
-      } ${containerClasses}`}
+      } ${containerClasses} ${absorbClass}`}
     >
       {/* Yellow Auto-Add Banner */}
       {isEligibleToAutoAdd && (
@@ -606,8 +621,11 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
               style={{
                 marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-30px' : '-18px',
                 zIndex: index + 1,
+                animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
               }}
-              className="relative transition-transform hover:-translate-y-2.5 hover:!z-30 shrink-0"
+              className={`relative transition-transform hover:-translate-y-2.5 hover:!z-30 shrink-0 ${
+                isRippling ? 'animate-card-ripple' : 'animate-sequence-pop-in'
+              }`}
             >
               <PlayingCard
                 card={card}

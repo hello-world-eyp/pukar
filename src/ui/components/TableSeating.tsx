@@ -117,6 +117,7 @@ export interface PlayerSeatProps {
   onSelectPlayer?: (playerIndex: number) => void;
   className?: string;
   'data-testid'?: string;
+  isRippling?: boolean;
 }
 
 export const PlayerSeat: React.FC<PlayerSeatProps> = ({
@@ -129,6 +130,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   onSelectPlayer,
   className = '',
   'data-testid': testId,
+  isRippling = false,
 }) => {
   const isTeamA = player.team === 'A';
   const cardCount =
@@ -146,6 +148,8 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
     ? 'bg-blue-600 text-white shadow-blue-900/50'
     : 'bg-amber-500 text-slate-950 shadow-amber-900/50';
 
+  const rippleClass = isRippling ? 'animate-card-ripple' : '';
+
   return (
     <div
       data-testid={testId}
@@ -153,7 +157,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       onClick={() => onSelectPlayer?.(playerIndex)}
       role={onSelectPlayer ? 'button' : undefined}
       tabIndex={onSelectPlayer ? 0 : undefined}
-      className={`relative rounded-2xl border p-2.5 sm:p-3 shadow-xl backdrop-blur-md transition-all ${teamBorder} ${
+      className={`relative rounded-2xl border p-2.5 sm:p-3 shadow-xl backdrop-blur-md transition-all ${teamBorder} ${rippleClass} ${
         isTurn
           ? 'ring-2 ring-emerald-400 shadow-emerald-500/20 scale-[1.03]'
           : 'hover:border-slate-500'
@@ -237,6 +241,7 @@ export interface TableSeatingProps {
   onSelectPlayer?: (playerIndex: number) => void;
   className?: string;
   children?: React.ReactNode;
+  isRippling?: boolean;
 }
 
 export const TableSeating: React.FC<TableSeatingProps> = ({
@@ -246,6 +251,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
   onSelectPlayer,
   className = '',
   children,
+  isRippling = false,
 }) => {
   const seats = getRelativeTableSeats(players, viewedPlayerIndex, activeTurnIndex);
 
@@ -264,6 +270,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
               isTeammate={seatConfig.isTeammate}
               onSelectPlayer={onSelectPlayer}
               data-testid={`table-seat-top-${index}`}
+              isRippling={isRippling}
             />
           </div>
         ))}
@@ -282,6 +289,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
             isTeammate={seats.leftSeat.isTeammate}
             onSelectPlayer={onSelectPlayer}
             data-testid="table-seat-left"
+            isRippling={isRippling}
           />
         </div>
 
@@ -301,6 +309,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
             isTeammate={seats.rightSeat.isTeammate}
             onSelectPlayer={onSelectPlayer}
             data-testid="table-seat-right"
+            isRippling={isRippling}
           />
         </div>
       </div>

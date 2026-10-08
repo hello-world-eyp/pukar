@@ -19,6 +19,7 @@ import { DiscardPileModal } from './ui/components/DiscardPileModal';
 import { JokerPromptModal } from './ui/components/JokerPromptModal';
 import { TableSeating } from './ui/components/TableSeating';
 import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
+import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
 import { playSound, setSoundEnabled } from './ui/sound';
 import {
   RotateCcw,
@@ -65,6 +66,12 @@ export function App() {
     playerName: string;
     points: number;
   } | null>(null);
+  const [pukarSlamEvent, setPukarSlamEvent] = useState<{
+    team: 'A' | 'B';
+    playerName: string;
+    points: number;
+  } | null>(null);
+  const [isTableRippling, setIsTableRippling] = useState(false);
   const [exhaustNotification, setExhaustNotification] = useState<string | null>(null);
   const [jokerPickupBanner, setJokerPickupBanner] = useState<{
     playerName: string;
@@ -156,13 +163,17 @@ export function App() {
         const nextPukarsA = next.pukarsClaimed?.A ?? 0;
         const nextPukarsB = next.pukarsClaimed?.B ?? 0;
         if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
-          const claimingTeam = nextPukarsA > prevPukarsA ? 'A' : 'B';
+          const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
           const actor = gameState.players[gameState.currentPlayerIndex];
-          setPukarBanner({
+          const pukarInfo: { team: 'A' | 'B'; playerName: string; points: number } = {
             team: claimingTeam,
             playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
             points: 50,
-          });
+          };
+          setPukarBanner(pukarInfo);
+          setPukarSlamEvent(pukarInfo);
+          setIsTableRippling(true);
+          setTimeout(() => setIsTableRippling(false), 1400);
           try {
             playSound('pukar');
           } catch {}
@@ -240,6 +251,8 @@ export function App() {
           setSelectedMeldId(null);
           setViewedPlayerIndex(null);
           setPukarBanner(null);
+          setPukarSlamEvent(null);
+          setIsTableRippling(false);
           setExhaustNotification(null);
           setJokerPickupBanner(null);
         }
@@ -633,9 +646,14 @@ export function App() {
             viewedPlayerIndex={currentViewIndex}
             activeTurnIndex={activeTurnIndex}
             onSelectPlayer={handleSwitchPlayer}
+            isRippling={isTableRippling}
           >
             {/* The Casino Felt Surface */}
-            <div className="w-full rounded-3xl p-4 sm:p-6 poker-table-felt poker-table-rail flex flex-col gap-6 shadow-2xl">
+            <div
+              className={`w-full rounded-3xl p-4 sm:p-6 poker-table-felt poker-table-rail flex flex-col gap-6 shadow-2xl transition-transform ${
+                isTableRippling ? 'animate-table-quake' : ''
+              }`}
+            >
               {/* Center Decks & Piles */}
               <div aria-label="Center Table Decks" className="w-full">
                 <CenterTable
@@ -646,6 +664,7 @@ export function App() {
                   onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
                   onDrawDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
                   onPeekDiscard={() => setIsDiscardModalOpen(true)}
+                  isRippling={isTableRippling}
                 />
               </div>
 
@@ -664,6 +683,7 @@ export function App() {
                   onAddToMeld={(meldId, cardIds) =>
                     handleAction({ type: 'ADD_TO_MELD', meldId, cardIds })
                   }
+                  isRippling={isTableRippling}
                 />
               </div>
             </div>
@@ -717,6 +737,7 @@ export function App() {
             playerTeam={viewingPlayer.team}
             isCurrentPlayer={isViewingActivePlayer}
             disabled={gameState.roundStatus === 'ROUND_OVER'}
+            isRippling={isTableRippling}
           />
         </section>
 
@@ -983,6 +1004,20 @@ export function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Pukar Slam Celebration & Ripple Shockwave Overlay */}
+      {pukarSlamEvent && (
+        <PukarSlamOverlay
+          team={pukarSlamEvent.team}
+          playerName={pukarSlamEvent.playerName}
+          points={pukarSlamEvent.points}
+          onClose={() => setPukarSlamEvent(null)}
+          onImpact={() => {
+            setIsTableRippling(true);
+            setTimeout(() => setIsTableRippling(false), 1200);
+          }}
+        />
       )}
     </div>
   );

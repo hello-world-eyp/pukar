@@ -17,6 +17,7 @@ export interface CenterTableProps {
   onDrawDiscard?: () => void;
   onPeekDiscard?: () => void;
   className?: string;
+  isRippling?: boolean;
 }
 
 export const CenterTable: React.FC<CenterTableProps> = ({
@@ -32,6 +33,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
   onDrawDiscard,
   onPeekDiscard,
   className = '',
+  isRippling = false,
 }) => {
   const [internalPeekOpen, setInternalPeekOpen] = useState(false);
 
@@ -113,10 +115,13 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 <div
                   onClick={drawStockAllowed ? handleDrawStock : undefined}
                   className={`relative z-10 transition-all ${
+                    isRippling ? 'animate-card-ripple' : ''
+                  } ${
                     drawStockAllowed
                       ? 'cursor-pointer hover:scale-105 active:scale-95 ring-2 ring-sky-400/80 ring-offset-2 ring-offset-slate-900 rounded-lg shadow-lg shadow-sky-500/20'
                       : ''
                   }`}
+                  style={isRippling ? { animationDelay: '60ms' } : undefined}
                 >
                   <PlayingCard card={dummyStockCard} faceDown size="md" />
                 </div>
@@ -187,7 +192,13 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 <div className="absolute -top-1 -right-1 w-20 h-28 rounded-lg bg-slate-800/70 border border-slate-700 rotate-2 pointer-events-none" />
               )}
               {topDiscardCard ? (
-                <div className="relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-lg shadow-lg">
+                <div
+                  key={topDiscardCard.id}
+                  className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-lg shadow-lg ${
+                    isRippling ? 'animate-card-ripple' : 'animate-discard-landing'
+                  }`}
+                  style={isRippling ? { animationDelay: '80ms' } : undefined}
+                >
                   <PlayingCard card={topDiscardCard} size="md" />
                   <div className="absolute inset-0 bg-slate-950/50 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-300 font-bold text-xs gap-1 backdrop-blur-[1px]">
                     <ZoomIn className="w-4 h-4" />

@@ -75,6 +75,7 @@ export interface PlayerHandProps {
   sortMode?: SortMode;
   onSortChange?: (mode: SortMode) => void;
   initialSort?: SortMode;
+  isRippling?: boolean;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -93,6 +94,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   sortMode: controlledSortMode,
   onSortChange,
   initialSort = 'none',
+  isRippling = false,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const activeSortMode = controlledSortMode !== undefined ? controlledSortMode : internalSortMode;
@@ -249,10 +251,23 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);
+              const animationClasses = isRippling
+                ? 'animate-card-ripple'
+                : isNew
+                ? 'animate-card-deal-in'
+                : '';
+
+              const animStyle: React.CSSProperties = isRippling
+                ? { animationDelay: `${(index % 12) * 50}ms` }
+                : isNew
+                ? { animationDelay: `${(index % 8) * 40}ms` }
+                : {};
+
               return (
                 <div
                   key={card.id || `card-${index}`}
-                  className={`transition-all duration-150 transform ${
+                  style={animStyle}
+                  className={`transition-all duration-150 transform ${animationClasses} ${
                     isSelected
                       ? '-translate-y-2.5'
                       : isNew
