@@ -509,6 +509,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   return (
     <div
       data-testid={`meld-item-${meld.id}`}
+      data-selected={isSelected ? 'true' : undefined}
       data-can-add={isEligibleToAutoAdd ? 'true' : undefined}
       data-highlight-yellow={isEligibleToAutoAdd ? 'true' : undefined}
       onClick={handleItemClick}
@@ -557,10 +558,6 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
               {meld.suit}
             </span>
           )}
-
-          <span className="text-[11px] sm:text-xs text-stone-600 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded font-mono font-bold whitespace-nowrap shrink-0">
-            {sortDirection === 'desc' ? 'High → Low' : 'Low → High'}
-          </span>
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -584,27 +581,14 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
             </button>
           )}
 
-          {isEligibleToAutoAdd ? (
+          {isEligibleToAutoAdd && (
             <div className="flex items-center gap-1 text-sm">
               <span className="px-2 py-0.5 rounded bg-yellow-400 text-stone-950 font-black flex items-center gap-1 shadow-sm">
                 <PlusCircle className="w-4 h-4" />
                 <span>Auto-Add</span>
               </span>
             </div>
-          ) : canSelect ? (
-            <div className="flex items-center gap-1 text-[11px]">
-              {isSelected ? (
-                <span className="text-amber-400 font-bold flex items-center gap-1">
-                  <span>Selected to add</span>
-                </span>
-              ) : (
-                <span className="text-slate-500 group-hover:text-slate-300 flex items-center gap-1 transition-colors">
-                  <PlusCircle className="w-3 h-3" />
-                  <span>Select</span>
-                </span>
-              )}
-            </div>
-          ) : null}
+          )}
         </div>
       </div>
 

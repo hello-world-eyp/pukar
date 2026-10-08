@@ -392,8 +392,11 @@ describe('UI Components', () => {
         />
       );
 
-      expect(html).toContain('Selected to add');
+      expect(html).toContain('data-selected="true"');
       expect(html).toContain('ring-amber-400/50');
+      // Verifies 'Select' and redundant 'High → Low' are removed from sequence item header
+      expect(html).not.toContain('>Select<');
+      expect(html).not.toContain('Selected to add');
     });
 
     it('default sorts cards in a meld highest to lowest (descending)', () => {
