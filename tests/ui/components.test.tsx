@@ -314,7 +314,7 @@ describe('UI Components', () => {
         />
       );
 
-      expect(html).toContain('Run - 3 cards');
+      expect(html).toContain('3c');
       expect(html).toContain('0 pts');
       expect(html).toContain('No sequences placed yet');
     });

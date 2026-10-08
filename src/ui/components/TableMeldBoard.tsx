@@ -437,8 +437,8 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       }
     }
   } else {
-    // Incomplete
-    badgeText = `${meld.type === 'RUN' ? 'Run' : 'Set'} - ${meld.cards.length} cards`;
+    // Incomplete (under 7 cards)
+    badgeText = `${meld.cards.length}c`;
     badgeClass = 'bg-slate-900 text-slate-300 border border-slate-700 font-bold';
   }
 
