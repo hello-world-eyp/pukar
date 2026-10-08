@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
-import { ArrowDownUp, Sparkles, X, User } from 'lucide-react';
+import { ArrowDownUp, Sparkles, X, User, ArrowDown, ArrowUp } from 'lucide-react';
 
 export type SortMode = 'suit' | 'rank' | 'none';
+export type SortDirection = 'desc' | 'asc';
 
 const SUIT_ORDER: Record<Suit, number> = {
   SPADES: 1,
@@ -13,10 +14,12 @@ const SUIT_ORDER: Record<Suit, number> = {
 };
 
 /**
- * Sorts cards by suit first, then by ascending rank (2..14).
- * Natural Jokers (null suit / rank 0) are placed first.
+ * Sorts cards by suit first, then by rank within each suit.
+ * When direction === 'desc' (default): Highest card first within each suit (A..2).
+ * When direction === 'asc': Lowest card first within each suit (2..A).
+ * Natural Jokers (null suit / rank 0) are placed first as universal wildcards.
  */
-export function sortCardsBySuit(cards: Card[]): Card[] {
+export function sortCardsBySuit(cards: Card[], direction: SortDirection = 'desc'): Card[] {
   try {
     if (!cards || !Array.isArray(cards)) return [];
     return [...cards].sort((a, b) => {
@@ -30,7 +33,8 @@ export function sortCardsBySuit(cards: Card[]): Card[] {
       const suitDiff = (SUIT_ORDER[a.suit as Suit] ?? 99) - (SUIT_ORDER[b.suit as Suit] ?? 99);
       if (suitDiff !== 0) return suitDiff;
 
-      return a.rank - b.rank;
+      // Secondary filter: rank order within suit
+      return direction === 'desc' ? b.rank - a.rank : a.rank - b.rank;
     });
   } catch (err) {
     console.error('Error in sortCardsBySuit:', err);
@@ -39,18 +43,29 @@ export function sortCardsBySuit(cards: Card[]): Card[] {
 }
 
 /**
- * Sorts cards by rank ascending (0/Jokers first, then 2..14).
- * Ties are broken by suit order.
+ * Sorts cards primarily by rank (High to Low when 'desc' [default], or Low to High when 'asc').
+ * Ties in rank are broken secondary by suit order (SPADES, HEARTS, CLUBS, DIAMONDS).
+ * Natural Jokers (rank 0 / null suit) are placed first as universal wildcards.
  */
-export function sortCardsByRank(cards: Card[]): Card[] {
+export function sortCardsByRank(cards: Card[], direction: SortDirection = 'desc'): Card[] {
   try {
     if (!cards || !Array.isArray(cards)) return [];
     return [...cards].sort((a, b) => {
+      // Natural Jokers first
+      const aIsJoker = a.isNaturalJoker || a.rank === 0 || a.suit === null;
+      const bIsJoker = b.isNaturalJoker || b.rank === 0 || b.suit === null;
+      if (aIsJoker && !bIsJoker) return -1;
+      if (!aIsJoker && bIsJoker) return 1;
+      if (aIsJoker && bIsJoker) return 0;
+
+      // Primary filter: rank
       if (a.rank !== b.rank) {
-        return a.rank - b.rank;
+        return direction === 'desc' ? b.rank - a.rank : a.rank - b.rank;
       }
-      const aSuitOrder = a.suit ? SUIT_ORDER[a.suit] : 0;
-      const bSuitOrder = b.suit ? SUIT_ORDER[b.suit] : 0;
+
+      // Secondary filter: suit order
+      const aSuitOrder = a.suit ? (SUIT_ORDER[a.suit] ?? 99) : 0;
+      const bSuitOrder = b.suit ? (SUIT_ORDER[b.suit] ?? 99) : 0;
       return aSuitOrder - bSuitOrder;
     });
   } catch (err) {
@@ -74,7 +89,10 @@ export interface PlayerHandProps {
   className?: string;
   sortMode?: SortMode;
   onSortChange?: (mode: SortMode) => void;
+  sortDirection?: SortDirection;
+  onSortDirectionChange?: (direction: SortDirection) => void;
   initialSort?: SortMode;
+  initialSortDirection?: SortDirection;
   isRippling?: boolean;
 }
 
@@ -93,11 +111,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   className = '',
   sortMode: controlledSortMode,
   onSortChange,
+  sortDirection: controlledSortDirection,
+  onSortDirectionChange,
   initialSort = 'none',
+  initialSortDirection = 'desc',
   isRippling = false,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
+  const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(initialSortDirection);
+
   const activeSortMode = controlledSortMode !== undefined ? controlledSortMode : internalSortMode;
+  const activeSortDirection = controlledSortDirection !== undefined ? controlledSortDirection : internalSortDirection;
 
   const handleSetSort = (mode: SortMode) => {
     try {
@@ -110,21 +134,35 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
   };
 
-  // Sort cards based on activeSortMode
+  const handleSetDirection = (direction: SortDirection) => {
+    try {
+      if (controlledSortDirection === undefined) {
+        setInternalSortDirection(direction);
+      }
+      onSortDirectionChange?.(direction);
+      if (activeSortMode === 'none') {
+        handleSetSort('suit');
+      }
+    } catch (err) {
+      console.error('Error in handleSetDirection:', err);
+    }
+  };
+
+  // Sort cards based on activeSortMode and activeSortDirection (Dual Filter)
   const displayCards = useMemo(() => {
     try {
       if (activeSortMode === 'suit') {
-        return sortCardsBySuit(cards);
+        return sortCardsBySuit(cards, activeSortDirection);
       }
       if (activeSortMode === 'rank') {
-        return sortCardsByRank(cards);
+        return sortCardsByRank(cards, activeSortDirection);
       }
       return cards;
     } catch (err) {
       console.error('Error calculating displayCards in PlayerHand:', err);
       return cards;
     }
-  }, [cards, activeSortMode]);
+  }, [cards, activeSortMode, activeSortDirection]);
 
   const selectedSet = useMemo(() => new Set(selectedCardIds), [selectedCardIds]);
   const newCardSet = useMemo(() => new Set(newCardIds), [newCardIds]);
@@ -190,9 +228,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         </div>
 
         {/* SORT CONTROLS & SELECTION ACTIONS */}
-        <div className="flex items-center gap-2">
-          {/* SORT BUTTONS */}
-          <div className="flex items-center rounded-xl bg-slate-800/80 p-0.5 border border-slate-700">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* PRIMARY SORT BUTTONS (Suit vs Rank) */}
+          <div className="flex items-center rounded-xl bg-slate-800/80 p-0.5 border border-slate-700 shadow-sm">
             <button
               type="button"
               aria-label="Sort by Suit"
@@ -202,6 +240,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
               }`}
+              title="Primary: Group by Suit (♠ ♥ ♣ ♦), Secondary: Rank"
             >
               <Sparkles className="w-3.5 h-3.5" />
               <span>Sort by Suit</span>
@@ -215,9 +254,55 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
               }`}
+              title="Primary: Group by Rank, Secondary: Suit"
             >
               <ArrowDownUp className="w-3.5 h-3.5" />
               <span>Sort by Rank</span>
+            </button>
+          </div>
+
+          {/* SECONDARY ORDER TOGGLE (Dual Filter: High → Low vs Low → High) */}
+          <div
+            data-testid="sort-direction-controls"
+            className="flex items-center rounded-xl bg-slate-800/80 p-0.5 border border-slate-700 shadow-sm"
+          >
+            <button
+              type="button"
+              aria-label="Sort High to Low"
+              data-testid="btn-sort-desc"
+              onClick={() => handleSetDirection('desc')}
+              className={`px-2 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 ${
+                activeSortDirection === 'desc'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+              }`}
+              title={
+                activeSortMode === 'suit'
+                  ? 'Secondary filter: Highest card first, lowest card last (A → 2)'
+                  : 'Primary filter: High to low (A → 2), secondary by suit'
+              }
+            >
+              <ArrowDown className="w-3 h-3" />
+              <span>High → Low</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Sort Low to High"
+              data-testid="btn-sort-asc"
+              onClick={() => handleSetDirection('asc')}
+              className={`px-2 py-1 text-xs font-semibold rounded-lg transition-all flex items-center gap-1 ${
+                activeSortDirection === 'asc'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/60'
+              }`}
+              title={
+                activeSortMode === 'suit'
+                  ? 'Secondary filter: Lowest card first, highest card last (2 → A)'
+                  : 'Primary filter: Low to high (2 → A), secondary by suit'
+              }
+            >
+              <ArrowUp className="w-3 h-3" />
+              <span>Low → High</span>
             </button>
           </div>
 

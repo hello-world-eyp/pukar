@@ -125,7 +125,7 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
    * ======================================================================== */
   describe('PlayerHand & Sorting', () => {
     describe('sortCardsBySuit', () => {
-      it('places Natural Jokers first, then groups by suit, and sorts by rank ascending', () => {
+      it('places Natural Jokers first, then groups by suit, and secondary sorts by rank high to low (desc) by default', () => {
         const unsorted: Card[] = [
           { id: 'h10', suit: 'HEARTS', rank: 10 },
           { id: 's5', suit: 'SPADES', rank: 5 },
@@ -137,6 +137,30 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         const sorted = sortCardsBySuit(unsorted);
 
         expect(sorted[0].id).toBe('jk'); // Joker first
+        // SPADES: 14 then 5 (high to low)
+        expect(sorted[1].suit).toBe('SPADES');
+        expect(sorted[1].rank).toBe(14);
+        expect(sorted[2].suit).toBe('SPADES');
+        expect(sorted[2].rank).toBe(5);
+        // HEARTS: 10 then 4 (high to low)
+        expect(sorted[3].suit).toBe('HEARTS');
+        expect(sorted[3].rank).toBe(10);
+        expect(sorted[4].suit).toBe('HEARTS');
+        expect(sorted[4].rank).toBe(4);
+      });
+
+      it('supports ascending secondary rank sorting when direction is asc', () => {
+        const unsorted: Card[] = [
+          { id: 'h10', suit: 'HEARTS', rank: 10 },
+          { id: 's5', suit: 'SPADES', rank: 5 },
+          joker,
+          { id: 's14', suit: 'SPADES', rank: 14 },
+          { id: 'h4', suit: 'HEARTS', rank: 4 },
+        ];
+
+        const sorted = sortCardsBySuit(unsorted, 'asc');
+
+        expect(sorted[0].id).toBe('jk');
         expect(sorted[1].suit).toBe('SPADES');
         expect(sorted[1].rank).toBe(5);
         expect(sorted[2].suit).toBe('SPADES');
@@ -149,7 +173,7 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
     });
 
     describe('sortCardsByRank', () => {
-      it('sorts by rank ascending (Joker 0 first, then 2..14), breaking ties by suit', () => {
+      it('sorts by rank high to low (desc) by default (Joker first, then 14..2), secondary by suit', () => {
         const unsorted: Card[] = [
           { id: 'h14', suit: 'HEARTS', rank: 14 },
           { id: 's9', suit: 'SPADES', rank: 9 },
@@ -160,10 +184,30 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
 
         const sorted = sortCardsByRank(unsorted);
 
-        expect(sorted[0].id).toBe('jk'); // Rank 0
-        expect(sorted[1].rank).toBe(2);
+        expect(sorted[0].id).toBe('jk'); // Joker first as universal wildcard
+        expect(sorted[1].rank).toBe(14); // Ace
         expect(sorted[2].rank).toBe(9);
         expect(sorted[2].suit).toBe('SPADES'); // Suit tie-break SPADES before HEARTS
+        expect(sorted[3].rank).toBe(9);
+        expect(sorted[3].suit).toBe('HEARTS');
+        expect(sorted[4].rank).toBe(2);
+      });
+
+      it('supports ascending primary rank sorting when direction is asc', () => {
+        const unsorted: Card[] = [
+          { id: 'h14', suit: 'HEARTS', rank: 14 },
+          { id: 's9', suit: 'SPADES', rank: 9 },
+          joker,
+          { id: 'h9', suit: 'HEARTS', rank: 9 },
+          { id: 'c2', suit: 'CLUBS', rank: 2 },
+        ];
+
+        const sorted = sortCardsByRank(unsorted, 'asc');
+
+        expect(sorted[0].id).toBe('jk');
+        expect(sorted[1].rank).toBe(2);
+        expect(sorted[2].rank).toBe(9);
+        expect(sorted[2].suit).toBe('SPADES');
         expect(sorted[3].rank).toBe(9);
         expect(sorted[3].suit).toBe('HEARTS');
         expect(sorted[4].rank).toBe(14);
@@ -188,6 +232,8 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         expect(html).toContain('1 selected');
         expect(html).toContain('Sort by Suit');
         expect(html).toContain('Sort by Rank');
+        expect(html).toContain('High → Low');
+        expect(html).toContain('Low → High');
         expect(html).toContain('Clear');
         // Check cards rendered
         expect(html).toContain('7 of SPADES');
@@ -216,13 +262,21 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         const heartIdx = htmlSuit.indexOf('9 of HEARTS');
         expect(spadeIdx).toBeLessThan(heartIdx);
 
+        // Rank sort (descending by default): rank 9 comes before rank 7
         const htmlRank = renderToString(
           <PlayerHand cards={[heart9, spade7, club9]} sortMode="rank" />
         );
-        // Rank 7 before rank 9
         const rank7Idx = htmlRank.indexOf('7 of SPADES');
         const rank9Idx = htmlRank.indexOf('9 of HEARTS');
-        expect(rank7Idx).toBeLessThan(rank9Idx);
+        expect(rank9Idx).toBeLessThan(rank7Idx);
+
+        // With sortDirection="asc": rank 7 comes before rank 9
+        const htmlRankAsc = renderToString(
+          <PlayerHand cards={[heart9, spade7, club9]} sortMode="rank" sortDirection="asc" />
+        );
+        const rank7IdxAsc = htmlRankAsc.indexOf('7 of SPADES');
+        const rank9IdxAsc = htmlRankAsc.indexOf('9 of HEARTS');
+        expect(rank7IdxAsc).toBeLessThan(rank9IdxAsc);
       });
     });
   });
