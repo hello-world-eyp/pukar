@@ -363,10 +363,17 @@
 
 /* Card Realistic Drop Shadow & Felt Elevation */
 .card-elevation-shadow {
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.38), 0 1px 3px rgba(0, 0, 0, 0.2);
+  --tw-shadow: 0 4px 10px rgba(0, 0, 0, 0.38), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 .card-elevation-hover {
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.3);
+  --tw-shadow: 0 12px 24px rgba(0, 0, 0, 0.55), 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+/* Card Selection Golden Highlight Glow */
+.card-selected-glow {
+  box-shadow: 0 0 0 3px #facc15, 0 0 20px rgba(250, 204, 21, 0.75), 0 8px 16px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Modern Light Cream Arena Mat & Ambient Tabletop */

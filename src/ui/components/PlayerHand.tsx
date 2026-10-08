@@ -557,6 +557,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                       ? 'opacity-40 scale-95 cursor-grabbing z-30'
                       : isDropTarget
                       ? 'scale-105 z-20 cursor-grabbing'
+                      : isSelected
+                      ? '-translate-y-3.5 z-20'
                       : isNew
                       ? '-translate-y-1 hover:-translate-y-2 cursor-grab'
                       : 'hover:-translate-y-1 cursor-grab'

@@ -243,6 +243,25 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         expect(html).toContain('-translate-y-2.5');
       });
 
+      it('renders yellow highlights, card-selected-glow, and slot elevation when multiple cards are selected', () => {
+        const handCards = [spade7, spade8, spade9];
+        const html = renderToString(
+          <PlayerHand
+            playerName="P1"
+            cards={handCards}
+            selectedCardIds={['s7', 's8']}
+          />
+        );
+
+        expect(html).toContain('2 selected');
+        // Slot elevation lift and z-20 on selected card slots
+        expect(html).toContain('-translate-y-3.5 z-20');
+        // Golden yellow card border and glow
+        expect(html).toContain('border-2 border-yellow-400');
+        expect(html).toContain('card-selected-glow');
+        expect(html).toContain('ring-4 ring-amber-400');
+      });
+
       it('renders empty hand placeholder when cards array is empty', () => {
         const html = renderToString(
           <PlayerHand playerName="P1" cards={[]} />

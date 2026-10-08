@@ -145,7 +145,13 @@ describe('Comprehensive PlayingCard Component (src/ui/components/PlayingCard.tsx
       const selectedHtml = renderToString(<PlayingCard card={card} isSelected={true} />);
 
       expect(unselectedHtml).not.toContain('ring-4 ring-amber-400');
+      expect(unselectedHtml).not.toContain('border-yellow-400');
+      expect(unselectedHtml).not.toContain('card-selected-glow');
+
       expect(selectedHtml).toContain('ring-4 ring-amber-400');
+      expect(selectedHtml).toContain('border-2 border-yellow-400');
+      expect(selectedHtml).toContain('card-selected-glow');
+      expect(selectedHtml).toContain('-translate-y-2.5');
     });
 
     it('supports size variations: sm, md, and lg', () => {

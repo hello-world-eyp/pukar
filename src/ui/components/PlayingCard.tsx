@@ -218,7 +218,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         data-is-new={isCardNew ? 'true' : undefined}
         className={`relative select-none flex-shrink-0 transition-transform duration-150 card-elevation-shadow ${sizeStyles.card} ${
           isClickable ? 'cursor-pointer hover:-translate-y-1.5 hover:shadow-xl' : ''
-        } ${isSelected ? 'ring-4 ring-amber-400 -translate-y-2.5' : ''} ${className}`}
+        } ${isSelected ? 'ring-4 ring-amber-400 border-2 border-yellow-400 -translate-y-2.5 card-selected-glow' : ''} ${className}`}
       >
         <img
           src="/cards/card_back.png"
@@ -244,8 +244,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const borderAndEffectClasses = isSelected
     ? isCardNew
-      ? 'border-2 border-emerald-400 ring-4 ring-amber-400 ring-offset-2 ring-offset-slate-900 border-amber-500 -translate-y-2.5 shadow-xl shadow-emerald-500/30'
-      : 'ring-4 ring-amber-400 ring-offset-2 ring-offset-slate-900 border-amber-500 -translate-y-2.5 shadow-xl shadow-amber-500/20'
+      ? 'border-2 border-emerald-400 ring-4 ring-amber-400 border-amber-500 -translate-y-2.5 shadow-xl shadow-emerald-500/30 card-selected-glow'
+      : 'border-2 border-yellow-400 ring-4 ring-amber-400 -translate-y-2.5 shadow-xl shadow-yellow-400/50 card-selected-glow'
     : isCardNew
     ? 'border-2 border-emerald-400 ring-2 ring-emerald-400/80 shadow-lg shadow-emerald-500/30'
     : actingAsWild

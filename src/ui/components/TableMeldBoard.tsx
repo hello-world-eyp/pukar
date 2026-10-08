@@ -499,7 +499,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   };
 
   const containerClasses = isEligibleToAutoAdd
-    ? 'border-2 border-yellow-500 ring-4 ring-yellow-400/70 shadow-xl bg-yellow-50/80 cursor-pointer hover:scale-[1.015] hover:border-yellow-400 hover:ring-yellow-300 transition-all'
+    ? 'border-2 border-yellow-400 ring-4 ring-yellow-400/70 shadow-2xl shadow-yellow-500/30 bg-yellow-50/90 cursor-pointer hover:scale-[1.015] hover:border-yellow-300 hover:ring-yellow-300 transition-all'
     : isSelected
     ? 'bg-amber-100/80 border-amber-500 ring-2 ring-amber-400/50 shadow-md'
     : 'bg-white/90 border-stone-300/80 hover:border-stone-400 hover:bg-white shadow-sm';
