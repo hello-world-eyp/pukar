@@ -679,7 +679,7 @@ export function App({ initialState }: AppProps = {}) {
                   canAdd={gameState.phase === 'MELD' && isViewingActivePlayer}
                   onAddToMeld={handleAddToMeld}
                   isRippling={isTableRippling}
-                  cardSize="sm"
+                  cardSize="md"
                 />
               </div>
             </div>

@@ -50,7 +50,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   onAddToMeld,
   className = '',
   defaultSortDirection = 'desc',
-  cardSize = 'sm',
+  cardSize = 'md',
   isRippling = false,
 }) => {
   const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
