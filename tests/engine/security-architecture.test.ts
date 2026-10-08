@@ -142,8 +142,9 @@ describe('Security & Architecture Audit Test Suite', () => {
       const sanitized = sanitizeStateForPlayer(state, 'p1');
 
       if (sanitized.discardPile.length > 0) {
-        sanitized.discardPile[0].rank = 0;
-        expect(state.discardPile[0].rank).not.toBe(0);
+        const originalRank = state.discardPile[0].rank;
+        sanitized.discardPile[0].rank = (originalRank + 1) as any;
+        expect(state.discardPile[0].rank).toBe(originalRank);
       }
     });
 

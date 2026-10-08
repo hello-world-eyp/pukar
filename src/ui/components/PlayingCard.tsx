@@ -3,7 +3,7 @@ import { Card, Rank, Suit, isWildcard as checkIsWildcard } from '../../engine/ty
 
 export interface PlayingCardProps {
   card: Card;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   isSelected?: boolean;
   isNew?: boolean;
   isHighlighted?: boolean;
@@ -160,6 +160,14 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       centerSuit: 'text-4xl',
       badge: 'text-[10px] px-2 py-0.5',
       paddings: 'p-2',
+    },
+    xl: {
+      card: 'w-36 h-[216px] text-lg rounded-2xl shadow-lg',
+      cornerRank: 'text-xl font-bold',
+      cornerSuit: 'text-base',
+      centerSuit: 'text-5xl',
+      badge: 'text-xs px-2.5 py-0.5',
+      paddings: 'p-2.5',
     },
   }[size];
 

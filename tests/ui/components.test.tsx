@@ -128,6 +128,34 @@ describe('UI Components', () => {
 
       expect(html).toContain('The discard pile is currently empty');
     });
+
+    it('renders spacious max-w-6xl container with card size toggle options', () => {
+      const cards: Card[] = [{ id: 'd1', suit: 'HEARTS', rank: 11 }];
+      const html = renderToString(
+        <DiscardPileModal isOpen={true} onClose={() => {}} cards={cards} />
+      );
+
+      expect(html).toContain('max-w-6xl');
+      expect(html).toContain('data-testid="btn-card-size-lg"');
+      expect(html).toContain('data-testid="btn-card-size-xl"');
+      // Default size is large (w-28)
+      expect(html).toContain('w-28');
+    });
+
+    it('renders extra large cards when defaultCardSize is xl', () => {
+      const cards: Card[] = [{ id: 'd1', suit: 'HEARTS', rank: 11 }];
+      const html = renderToString(
+        <DiscardPileModal
+          isOpen={true}
+          onClose={() => {}}
+          cards={cards}
+          defaultCardSize="xl"
+        />
+      );
+
+      // XL size card width (w-36)
+      expect(html).toContain('w-36');
+    });
   });
 
   describe('CenterTable', () => {
