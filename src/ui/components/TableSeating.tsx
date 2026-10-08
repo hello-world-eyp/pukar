@@ -363,48 +363,42 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
         ))}
       </div>
 
-      {/* 2. EXPANDED MAIN BOARD (LEFT/CENTER) + OPPONENTS RAIL (RIGHT) */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
-        {/* Expanded Main Board Canvas (Decks + Melds) */}
-        <div className="lg:col-span-9 xl:col-span-10 w-full order-1">
+      {/* 2. MIDDLE TABLE SECTION: LEFT OPPONENT WING, MAIN BOARD (FELT), RIGHT OPPONENT WING */}
+      <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[13rem_1fr_13rem] xl:grid-cols-[15rem_1fr_15rem] 2xl:grid-cols-[16.5rem_1fr_16.5rem] gap-3 sm:gap-4 xl:gap-5 items-center">
+        {/* Left Seat (Opponent on Left Wing) */}
+        <div className="w-full order-2 lg:order-1 flex flex-col justify-center">
+          <PlayerSeat
+            player={seats.leftSeat.player}
+            playerIndex={seats.leftSeat.playerIndex}
+            seatPosition={seats.leftSeat.seatPosition}
+            isTurn={seats.leftSeat.isTurn}
+            isViewed={seats.leftSeat.isViewed}
+            isTeammate={seats.leftSeat.isTeammate}
+            onSelectPlayer={onSelectPlayer}
+            data-testid="table-seat-left"
+            isRippling={isRippling}
+          />
+        </div>
+
+        {/* Center Canvas / Table Felt (Holds Center Table + Melds) */}
+        <div className="w-full sm:col-span-2 lg:col-span-1 min-w-0 order-1 lg:order-2">
           {children}
         </div>
 
-        {/* Opponents Rail (Moved to Right Side, Space-Efficient) */}
-        <aside
-          aria-label="Opponent Players"
-          className="lg:col-span-3 xl:col-span-2 w-full flex flex-col sm:flex-row lg:flex-col gap-2.5 order-2"
-        >
-          {/* Opponent 1 */}
-          <div className="w-full">
-            <PlayerSeat
-              player={seats.rightSeat.player}
-              playerIndex={seats.rightSeat.playerIndex}
-              seatPosition={seats.rightSeat.seatPosition}
-              isTurn={seats.rightSeat.isTurn}
-              isViewed={seats.rightSeat.isViewed}
-              isTeammate={seats.rightSeat.isTeammate}
-              onSelectPlayer={onSelectPlayer}
-              data-testid="table-seat-right"
-              isRippling={isRippling}
-            />
-          </div>
-
-          {/* Opponent 2 */}
-          <div className="w-full">
-            <PlayerSeat
-              player={seats.leftSeat.player}
-              playerIndex={seats.leftSeat.playerIndex}
-              seatPosition={seats.leftSeat.seatPosition}
-              isTurn={seats.leftSeat.isTurn}
-              isViewed={seats.leftSeat.isViewed}
-              isTeammate={seats.leftSeat.isTeammate}
-              onSelectPlayer={onSelectPlayer}
-              data-testid="table-seat-left"
-              isRippling={isRippling}
-            />
-          </div>
-        </aside>
+        {/* Right Seat (Opponent on Right Wing) */}
+        <div className="w-full order-3 flex flex-col justify-center">
+          <PlayerSeat
+            player={seats.rightSeat.player}
+            playerIndex={seats.rightSeat.playerIndex}
+            seatPosition={seats.rightSeat.seatPosition}
+            isTurn={seats.rightSeat.isTurn}
+            isViewed={seats.rightSeat.isViewed}
+            isTeammate={seats.rightSeat.isTeammate}
+            onSelectPlayer={onSelectPlayer}
+            data-testid="table-seat-right"
+            isRippling={isRippling}
+          />
+        </div>
       </div>
     </div>
   );

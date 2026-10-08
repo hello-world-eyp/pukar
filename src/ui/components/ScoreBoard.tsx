@@ -100,7 +100,7 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
       data-testid="scoreboard"
       className={`w-full bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-slate-100 px-3 sm:px-6 py-2.5 shadow-md transition-all ${className}`}
     >
-      <div className="max-w-[1680px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-1 sm:px-2 flex flex-wrap items-center justify-between gap-3">
         {/* ===================================================================
             1. LEFT: BRANDING & ROUND STATUS
         ==================================================================== */}

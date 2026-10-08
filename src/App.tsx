@@ -467,7 +467,7 @@ export function App() {
       {/* =====================================================================
           NOTIFICATION & CELEBRATION BANNERS
       ====================================================================== */}
-      <div className="max-w-[1680px] mx-auto w-full px-3 sm:px-6 pt-2 flex flex-col gap-1.5 shrink-0 z-30">
+      <div className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-12 pt-2 flex flex-col gap-1.5 shrink-0 z-30">
         {/* Error Toast */}
         {errorMessage && (
           <div
@@ -585,9 +585,9 @@ export function App() {
       </div>
 
       {/* =====================================================================
-          2. MAIN PLAYING ARENA (NO-SCROLL DESKTOP FIT)
+          2. MAIN PLAYING ARENA (EXPANDED WIDESCREEN FIT)
       ====================================================================== */}
-      <main className="max-w-[1680px] mx-auto w-full px-2 sm:px-4 lg:px-6 py-2 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-0">
+      <main className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-2 flex flex-col gap-2.5 sm:gap-3 flex-1 min-h-0">
         {/* Spatial Seating & Casino Felt Card Table Arena */}
         <section aria-label="Table Arena and Seating" className="w-full flex flex-col justify-start my-auto">
           <TableSeating
