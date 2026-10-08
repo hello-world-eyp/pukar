@@ -58,6 +58,7 @@ export interface JokerOption {
   rank: number;
   suit: Suit;
   label: string;
+  positionLabel?: 'Lowest Card in Sequence' | 'Highest Card in Sequence';
 }
 
 export function getRankDisplayName(rank: number): string {
@@ -118,7 +119,96 @@ export function getRunCandidateOptions(cards: Card[]): JokerOption[] {
     }
   }
 
-  return options.sort((a, b) => a.rank - b.rank);
+  options.sort((a, b) => a.rank - b.rank);
+  if (options.length >= 2) {
+    options[0].positionLabel = 'Lowest Card in Sequence';
+    options[options.length - 1].positionLabel = 'Highest Card in Sequence';
+  }
+
+  return options;
+}
+
+/**
+ * Returns candidate rank options for placing a Normal Joker into an existing RUN meld.
+ * If position is implied (only 1 option), length is 1.
+ * If multiple positions exist (e.g. lowest vs highest), length > 1 with positionLabels.
+ */
+export function getAddToRunCandidateOptions(
+  meld: Meld,
+  cardsToAdd: Card[]
+): JokerOption[] {
+  try {
+    if (!meld || meld.type !== 'RUN' || !cardsToAdd || cardsToAdd.length === 0) {
+      return [];
+    }
+
+    const normalJoker = cardsToAdd.find((c) => isNaturalJoker(c));
+    if (!normalJoker) return [];
+
+    const runSuit =
+      meld.suit ??
+      meld.slots?.find((s) => s.representedSuit)?.representedSuit ??
+      meld.cards?.find((c) => c.suit !== null)?.suit;
+
+    if (!runSuit) return [];
+
+    const meldCards = meld.cards || meld.slots?.map((s) => s.card) || [];
+    const allCards = [...meldCards, ...cardsToAdd];
+
+    const candidates = findRunCandidates(allCards, runSuit);
+    if (candidates.length === 0) return [];
+
+    // Filter out candidates if existing meld has fixed Joker or natural 2
+    const existingNormalJokerSlot = meld.slots?.find(
+      (s) => s.isWildcard && isNaturalJoker(s.card) && s.card.id !== normalJoker.id
+    );
+    let eligible = candidates;
+    if (existingNormalJokerSlot) {
+      eligible = eligible.filter((cand) => {
+        const slot = cand.find((s) => s.card.id === existingNormalJokerSlot.card.id);
+        return slot && slot.representedRank === existingNormalJokerSlot.representedRank;
+      });
+    }
+
+    const existingNatural2Slot = meld.slots?.find(
+      (s) => s.card.rank === 2 && !s.isWildcard && s.representedRank === 2
+    );
+    if (existingNatural2Slot) {
+      const nat2Filtered = eligible.filter((cand) => {
+        const slot = cand.find((s) => s.card.id === existingNatural2Slot.card.id);
+        return slot && slot.representedRank === 2 && !slot.isWildcard;
+      });
+      if (nat2Filtered.length > 0) {
+        eligible = nat2Filtered;
+      }
+    }
+
+    const options: JokerOption[] = [];
+    const seenRanks = new Set<number>();
+
+    for (const cand of eligible) {
+      const jokerSlot = cand.find((s) => s.card.id === normalJoker.id && s.isWildcard);
+      if (jokerSlot && !seenRanks.has(jokerSlot.representedRank)) {
+        seenRanks.add(jokerSlot.representedRank);
+        options.push({
+          rank: jokerSlot.representedRank,
+          suit: runSuit,
+          label: `${getRankDisplayName(jokerSlot.representedRank)} of ${getSuitDisplayName(runSuit)}`,
+        });
+      }
+    }
+
+    options.sort((a, b) => a.rank - b.rank);
+    if (options.length >= 2) {
+      options[0].positionLabel = 'Lowest Card in Sequence';
+      options[options.length - 1].positionLabel = 'Highest Card in Sequence';
+    }
+
+    return options;
+  } catch (err) {
+    console.error('Error in getAddToRunCandidateOptions:', err);
+    return [];
+  }
 }
 
 /**
@@ -463,7 +553,8 @@ export function evaluateMeldScore(meld: Meld): {
  */
 export function canAddCardsToMeld(
   meld: Meld,
-  cardsToAdd: Card[]
+  cardsToAdd: Card[],
+  targetJokerRank?: number
 ): {
   valid: boolean;
   updatedSlots?: MeldSlot[];
@@ -720,6 +811,20 @@ export function canAddCardsToMeld(
       });
       if (sameRankCandidate) {
         return { valid: true, updatedSlots: sameRankCandidate };
+      }
+    }
+
+    // If user specified targetJokerRank for Normal Joker being added:
+    if (targetJokerRank !== undefined) {
+      const normalJoker = cardsToAdd.find((c) => isNaturalJoker(c));
+      if (normalJoker) {
+        const matching = eligibleCandidates.filter((cand) => {
+          const slot = cand.find((s) => s.card.id === normalJoker.id);
+          return slot && slot.representedRank === targetJokerRank;
+        });
+        if (matching.length > 0) {
+          eligibleCandidates = matching;
+        }
       }
     }
 

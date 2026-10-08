@@ -163,7 +163,7 @@ describe('Pukar Claim - Turn Continuation & Drop to End Turn', () => {
     expect(result.state.roundScores?.A).toBe(50);
   });
 
-  it('awards +50 pts (counted as Pukar claim with no cards) when player empties hand during MELD and 0 Pukars remain', () => {
+  it('rejects melding all cards in hand during MELD phase and requires discarding last card to go out (+50 pts) when 0 Pukars remain', () => {
     const state = dealInitialState(4);
     state.phase = 'MELD';
     state.pukarPool = [];
@@ -175,20 +175,39 @@ describe('Pukar Claim - Turn Continuation & Drop to End Turn', () => {
       makeCard('s5', 'SPADES', 5),
       makeCard('s6', 'SPADES', 6),
     ];
+    const extraCard = makeCard('c8', 'CLUBS', 8);
+    // Player has run cards only
     state.players[0].hand = [...runCards];
 
-    const result = pukarReducer(state, {
+    // Attempting to meld all cards without leaving at least 1 card to discard MUST fail
+    const invalidResult = pukarReducer(state, {
       type: 'PLAY_NEW_MELD',
       cardIds: runCards.map((c) => c.id),
     });
+    expect(invalidResult.error).toBe(
+      'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
+    );
 
-    expect(result.error).toBeUndefined();
-    expect(result.state.isRoundOver).toBe(true);
-    expect(result.state.roundStatus).toBe('ROUND_OVER');
-    expect(result.state.players[0].hand).toHaveLength(0); // No cards dealt since all Pukars ran out
-    expect(result.state.pukarsClaimed?.A).toBe(1); // Counted as claiming a Pukar!
-    expect(result.state.scores.A).toBe(50); // Gets 50 points!
-    expect(result.state.roundScores?.A).toBe(50);
+    // Give player the extra card so 1 card remains to discard
+    state.players[0].hand = [...runCards, extraCard];
+    const validMeldResult = pukarReducer(state, {
+      type: 'PLAY_NEW_MELD',
+      cardIds: runCards.map((c) => c.id),
+    });
+    expect(validMeldResult.error).toBeUndefined();
+    expect(validMeldResult.state.players[0].hand).toHaveLength(1);
+
+    // Now discard the final card to the discard pile to end the round!
+    const discardResult = pukarReducer(validMeldResult.state, {
+      type: 'DISCARD_CARD',
+      cardId: extraCard.id,
+    });
+    expect(discardResult.error).toBeUndefined();
+    expect(discardResult.state.isRoundOver).toBe(true);
+    expect(discardResult.state.roundStatus).toBe('ROUND_OVER');
+    expect(discardResult.state.players[0].hand).toHaveLength(0);
+    expect(discardResult.state.pukarsClaimed?.A).toBe(1);
+    expect(discardResult.state.scores.A).toBe(50);
   });
 
   it('does not prematurely end FINAL_TURN when player claims a Pukar on discard', () => {

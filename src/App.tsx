@@ -4,10 +4,15 @@ import {
   GameAction,
   Meld,
   Card,
+  isNaturalJoker,
 } from './engine/types';
 import { dealInitialState } from './engine/deck';
 import { pukarReducer } from './engine/reducer';
-import { getRunCandidateOptions, JokerOption } from './engine/meld-validator';
+import {
+  getRunCandidateOptions,
+  getAddToRunCandidateOptions,
+  JokerOption,
+} from './engine/meld-validator';
 import { ScoreBoard } from './ui/components/ScoreBoard';
 import { TableMeldBoard } from './ui/components/TableMeldBoard';
 import { CenterTable } from './ui/components/CenterTable';
@@ -82,6 +87,7 @@ export function App() {
     isOpen: boolean;
     options: JokerOption[];
     cardIds: string[];
+    targetMeldId?: string;
   } | null>(null);
 
   // Auto-dismiss error message after 4.5 seconds
@@ -327,6 +333,55 @@ export function App() {
       }
     },
     [gameState.players, gameState.currentPlayerIndex, handleAction]
+  );
+
+  // ---------------------------------------------------------------------------
+  // Add Cards to Meld Handler with Joker Position Prompt (Highest vs Lowest)
+  // ---------------------------------------------------------------------------
+  const handleAddToMeld = useCallback(
+    (meldId: string, cardIds: string[], jokerRepresentedRank?: number) => {
+      try {
+        const activeHand = gameState.players[gameState.currentPlayerIndex]?.hand ?? [];
+        const cardsToAdd = cardIds
+          .map((id) => activeHand.find((c) => c.id === id))
+          .filter((c): c is Card => c !== undefined);
+
+        const allMelds = [...gameState.melds.A, ...gameState.melds.B];
+        const targetMeld = allMelds.find((m) => m.id === meldId);
+
+        // If adding a Normal Joker to a RUN sequence and rank is not specified:
+        if (
+          targetMeld &&
+          targetMeld.type === 'RUN' &&
+          cardsToAdd.some((c) => isNaturalJoker(c)) &&
+          jokerRepresentedRank === undefined
+        ) {
+          const candidateOptions = getAddToRunCandidateOptions(targetMeld, cardsToAdd);
+          if (candidateOptions.length > 1) {
+            setJokerPromptData({
+              isOpen: true,
+              options: candidateOptions,
+              cardIds,
+              targetMeldId: meldId,
+            });
+            return;
+          }
+          if (candidateOptions.length === 1) {
+            jokerRepresentedRank = candidateOptions[0].rank;
+          }
+        }
+
+        handleAction({
+          type: 'ADD_TO_MELD',
+          meldId,
+          cardIds,
+          jokerRepresentedRank,
+        });
+      } catch (err) {
+        console.error('Error in handleAddToMeld:', err);
+      }
+    },
+    [gameState.players, gameState.currentPlayerIndex, gameState.melds, handleAction]
   );
 
   // ---------------------------------------------------------------------------
@@ -679,10 +734,9 @@ export function App() {
                   }}
                   onZoomMeld={(meld) => setZoomedMeld(meld)}
                   selectedCards={selectedCards}
+                  allHandCards={viewingPlayer.hand}
                   canAdd={gameState.phase === 'MELD' && isViewingActivePlayer}
-                  onAddToMeld={(meldId, cardIds) =>
-                    handleAction({ type: 'ADD_TO_MELD', meldId, cardIds })
-                  }
+                  onAddToMeld={handleAddToMeld}
                   isRippling={isTableRippling}
                 />
               </div>
@@ -713,9 +767,7 @@ export function App() {
             onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
             onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
             onPlayMeld={handlePlayMeld}
-            onAddToMeld={(meldId, cardIds) =>
-              handleAction({ type: 'ADD_TO_MELD', meldId, cardIds })
-            }
+            onAddToMeld={handleAddToMeld}
             onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
             disabled={!isViewingActivePlayer || gameState.roundStatus === 'ROUND_OVER'}
           />
@@ -870,11 +922,20 @@ export function App() {
         options={jokerPromptData?.options ?? []}
         onSelect={(rank) => {
           if (jokerPromptData) {
-            handleAction({
-              type: 'PLAY_NEW_MELD',
-              cardIds: jokerPromptData.cardIds,
-              jokerRepresentedRank: rank,
-            });
+            if (jokerPromptData.targetMeldId) {
+              handleAction({
+                type: 'ADD_TO_MELD',
+                meldId: jokerPromptData.targetMeldId,
+                cardIds: jokerPromptData.cardIds,
+                jokerRepresentedRank: rank,
+              });
+            } else {
+              handleAction({
+                type: 'PLAY_NEW_MELD',
+                cardIds: jokerPromptData.cardIds,
+                jokerRepresentedRank: rank,
+              });
+            }
             setJokerPromptData(null);
           }
         }}

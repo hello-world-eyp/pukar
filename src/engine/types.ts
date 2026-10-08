@@ -107,7 +107,7 @@ export type GameAction =
   | { type: 'TAKE_DISCARD' }
   | { type: 'DRAW_CARD'; source?: 'DECK' | 'STOCK' | 'BOTTOM' | 'DISCARD' }
   | { type: 'PLAY_NEW_MELD'; cardIds: string[]; jokerRepresentedRank?: number }
-  | { type: 'ADD_TO_MELD'; meldId: string; cardIds: string[] }
+  | { type: 'ADD_TO_MELD'; meldId: string; cardIds: string[]; jokerRepresentedRank?: number }
   | { type: 'DISCARD_CARD'; cardId: string }
   | { type: 'START_NEXT_ROUND' }
   | { type: 'RESET_GAME'; playerCount?: 4 | 6 };

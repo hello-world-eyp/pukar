@@ -108,7 +108,12 @@ export function pukarReducer(
       }
 
       case 'ADD_TO_MELD': {
-        return handleAddToMeld(state, action.meldId, action.cardIds);
+        return handleAddToMeld(
+          state,
+          action.meldId,
+          action.cardIds,
+          action.jokerRepresentedRank
+        );
       }
 
       case 'DISCARD_CARD': {
@@ -282,6 +287,13 @@ function handlePlayNewMeld(
   const cardIdSet = new Set(cardIds);
   const remainingHand = activePlayer.hand.filter((c) => !cardIdSet.has(c.id));
 
+  if (remainingHand.length === 0) {
+    return {
+      state,
+      error: 'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile',
+    };
+  }
+
   const team = activePlayer.team;
   const meldId = `meld-r${state.round}-${team}-${(state.melds[team]?.length || 0) + 1}`;
   const scoreInfo = evaluateMeldScore({
@@ -314,7 +326,8 @@ function handlePlayNewMeld(
 function handleAddToMeld(
   state: GameState,
   meldId: string,
-  cardIds: string[]
+  cardIds: string[],
+  jokerRepresentedRank?: number
 ): { state: GameState; error?: string } {
   if (state.roundStatus === 'ROUND_OVER' || state.roundStatus === 'GAME_OVER') {
     return { state, error: 'Cannot meld: round is already over' };
@@ -357,7 +370,7 @@ function handleAddToMeld(
     cardsToAdd.push(card);
   }
 
-  const validation = canAddCardsToMeld(existingMeld, cardsToAdd);
+  const validation = canAddCardsToMeld(existingMeld, cardsToAdd, jokerRepresentedRank);
   if (!validation.valid || !validation.updatedSlots) {
     return { state, error: validation.error || 'Cannot add cards to meld' };
   }
@@ -368,6 +381,13 @@ function handleAddToMeld(
   // If a Normal Joker was replaced in the meld, it is auto picked up into player's hand!
   if (validation.pickedUpCard) {
     remainingHand = [...remainingHand, validation.pickedUpCard];
+  }
+
+  if (remainingHand.length === 0) {
+    return {
+      state,
+      error: 'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile',
+    };
   }
 
   const meldCardsWithoutPickedUp = validation.pickedUpCard
@@ -401,96 +421,27 @@ function handleAddToMeld(
 }
 
 /**
- * Handles post-meld transitions: Pukar claims (+50 pts) or going out.
+ * Handles post-meld transitions: updates player hand and melds on the table.
+ * Note: Pukar claims can ONLY occur when a player discards their last card to the discard pile.
  */
 function handlePostMeldState(
   state: GameState,
   remainingHand: Card[],
   updatedMelds: { A: Meld[]; B: Meld[] }
 ): { state: GameState; error?: string } {
-  const activePlayer = state.players[state.currentPlayerIndex];
-  const team = activePlayer.team;
-  let pukarPool = [...state.pukarPool];
-  let scores = { ...state.scores };
-  let roundScores = {
-    A: state.roundScores?.A ?? 0,
-    B: state.roundScores?.B ?? 0,
-  };
-  let totalScores = state.totalScores ? { ...state.totalScores } : undefined;
-  let pukarsClaimed = {
-    A: state.pukarsClaimed?.A ?? 0,
-    B: state.pukarsClaimed?.B ?? 0,
-  };
-
-  let updatedHand = remainingHand;
-  let roundStatus: RoundStatus = state.roundStatus;
-  let isRoundOver = state.isRoundOver ?? false;
-  let newlyPickedUpCardIds = (state.newlyPickedUpCardIds ?? []).filter((id) =>
-    updatedHand.some((c) => c.id === id)
-  );
-
-  // Check if active player's hand reached 0
-  if (remainingHand.length === 0) {
-    if (pukarPool.length >= 1) {
-      // Immediate Pukar claim into hand (+50 pts, keep in MELD phase)
-      const claimedPukar = pukarPool[0];
-      pukarPool = pukarPool.slice(1);
-      updatedHand = [...claimedPukar];
-      newlyPickedUpCardIds = claimedPukar.map((c) => c.id);
-
-      scores[team] += 50;
-      roundScores[team] += 50;
-      if (totalScores) {
-        totalScores[team] += 50;
-      }
-      pukarsClaimed[team] += 1;
-    } else {
-      // Hand emptied with 0 Pukars remaining: Player went out!
-      // Counted as claiming a Pukar (+50 pts), but no cards since all Pukars ran out.
-      scores[team] += 50;
-      roundScores[team] += 50;
-      if (totalScores) {
-        totalScores[team] += 50;
-      }
-      pukarsClaimed[team] += 1;
-      roundStatus = 'ROUND_OVER';
-      isRoundOver = true;
-      newlyPickedUpCardIds = [];
-    }
-  }
-
   const updatedPlayers = state.players.map((p, idx) => {
     if (idx !== state.currentPlayerIndex) return p;
     return {
       ...p,
-      hand: updatedHand,
+      hand: remainingHand,
     };
   });
 
-  let nextState: GameState = {
+  const nextState: GameState = {
     ...state,
     players: updatedPlayers,
     melds: updatedMelds,
-    pukarPool,
-    pukars: pukarPool,
-    scores,
-    roundScores,
-    ...(totalScores ? { totalScores } : {}),
-    pukarsClaimed,
-    roundStatus,
-    isRoundOver,
-    newlyPickedUpCardIds,
   };
-
-  if (isRoundOver) {
-    const finalScores = calculateRoundEndScores(nextState);
-    nextState = {
-      ...nextState,
-      roundScores: finalScores.roundScores,
-      scores: finalScores.totalScores,
-      totalScores: finalScores.totalScores,
-    };
-  }
 
   return { state: nextState };
 }

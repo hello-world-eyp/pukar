@@ -50,10 +50,10 @@ export const JokerPromptModal: React.FC<JokerPromptModalProps> = ({
               id="joker-prompt-title"
               className="text-xl font-bold text-white tracking-wide flex items-center gap-2"
             >
-              Designate Joker Card
+              Designate Joker Position
             </h2>
             <p className="text-xs text-amber-300/80 font-medium">
-              Choose the card this Joker represents in your new meld
+              Choose whether you want this Joker to be the highest card or the lowest card in the sequence
             </p>
           </div>
         </div>
@@ -93,9 +93,23 @@ export const JokerPromptModal: React.FC<JokerPromptModalProps> = ({
                     <span className="text-xs">{symbol}</span>
                   </div>
                   <div>
-                    <span className="text-sm font-semibold text-white group-hover:text-amber-300 transition">
-                      {option.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-white group-hover:text-amber-300 transition">
+                        {option.label}
+                      </span>
+                      {option.positionLabel && (
+                        <span
+                          data-testid={option.positionLabel.includes('Highest') ? 'badge-highest-card' : 'badge-lowest-card'}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            option.positionLabel.includes('Highest')
+                              ? 'bg-amber-400 text-slate-950 font-extrabold'
+                              : 'bg-emerald-400 text-slate-950 font-extrabold'
+                          }`}
+                        >
+                          {option.positionLabel}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-slate-400">
                       {`Plays as ${rankLabel} of ${option.suit.toLowerCase()}`}
                     </div>

@@ -198,26 +198,47 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState).toBe(state);
     });
 
-    it('emptying hand during meld immediately claims next 13-card Pukar (+50 pts) and keeps turn in MELD phase', () => {
+    it('rejects melding all cards in hand and claims next 13-card Pukar (+50 pts) upon discarding final card', () => {
       const state = dealInitialState(4);
       state.phase = 'MELD';
       const initialPukarCount = state.pukarPool.length;
       expect(initialPukarCount).toBeGreaterThanOrEqual(1);
       const expectedPukarCards = state.pukarPool[0];
 
-      state.players[0].hand = [
+      const runCards = [
         createCard('c1', 'SPADES', 7),
         createCard('c2', 'SPADES', 8),
         createCard('c3', 'SPADES', 9),
       ];
+      const discardCard = createCard('c4', 'HEARTS', 5);
 
-      const initialScoreA = state.scores.A;
-      const { state: nextState, error } = pukarReducer(state, {
+      state.players[0].hand = [...runCards];
+
+      // Melding all cards leaving 0 in hand is rejected
+      const invalidResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
         cardIds: ['c1', 'c2', 'c3'],
       });
+      expect(invalidResult.error).toBe(
+        'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
+      );
 
-      expect(error).toBeUndefined();
+      // Give player the extra card so they can meld and discard
+      state.players[0].hand = [...runCards, discardCard];
+      const initialScoreA = state.scores.A;
+      const { state: meldedState, error: meldError } = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['c1', 'c2', 'c3'],
+      });
+      expect(meldError).toBeUndefined();
+      expect(meldedState.players[0].hand).toHaveLength(1);
+
+      // Discarding the last card claims the 13-card Pukar deck (+50 pts) and continues in MELD phase
+      const { state: nextState, error: discardError } = pukarReducer(meldedState, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
+      });
+      expect(discardError).toBeUndefined();
       expect(nextState.phase).toBe('MELD'); // Still in MELD phase to continue turn!
       expect(nextState.pukarPool.length).toBe(initialPukarCount - 1);
       expect(nextState.players[0].hand.length).toBe(13);
@@ -226,24 +247,42 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.pukarsClaimed?.A).toBe(1);
     });
 
-    it('emptying hand during meld with 0 Pukars remaining triggers immediate round completion (going out)', () => {
+    it('rejects melding all cards and requires discarding final card to go out with 0 Pukars remaining', () => {
       const state = dealInitialState(4);
       state.phase = 'MELD';
       state.pukarPool = [];
       if (state.pukars) state.pukars = [];
 
-      state.players[0].hand = [
+      const runCards = [
         createCard('c1', 'SPADES', 7),
         createCard('c2', 'SPADES', 8),
         createCard('c3', 'SPADES', 9),
       ];
+      const discardCard = createCard('c4', 'HEARTS', 5);
 
-      const { state: nextState, error } = pukarReducer(state, {
+      state.players[0].hand = [...runCards];
+
+      const invalidResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
         cardIds: ['c1', 'c2', 'c3'],
       });
+      expect(invalidResult.error).toBe(
+        'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
+      );
 
-      expect(error).toBeUndefined();
+      state.players[0].hand = [...runCards, discardCard];
+      const { state: meldedState, error: meldError } = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['c1', 'c2', 'c3'],
+      });
+      expect(meldError).toBeUndefined();
+      expect(meldedState.players[0].hand).toHaveLength(1);
+
+      const { state: nextState, error: discardError } = pukarReducer(meldedState, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
+      });
+      expect(discardError).toBeUndefined();
       expect(nextState.players[0].hand.length).toBe(0);
       expect(nextState.roundStatus).toBe('ROUND_OVER');
       expect(nextState.isRoundOver).toBe(true);

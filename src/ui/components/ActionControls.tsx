@@ -84,12 +84,18 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
           error: selectedCardCount === 0 ? 'Select cards to form sequence' : `Need at least 3 cards (${selectedCardCount}/3)`,
         };
       }
+      if (allHandCards && allHandCards.length > 0 && selectedCardCount >= allHandCards.length) {
+        return {
+          valid: false,
+          error: 'Must keep at least 1 card in hand to discard',
+        };
+      }
       return validateNewMeld(selectedCards);
     } catch (err) {
       console.error('Error during meld validation preview:', err);
       return { valid: false, error: 'Validation preview error' };
     }
-  }, [selectedCards, selectedCardCount]);
+  }, [selectedCards, selectedCardCount, allHandCards]);
 
   const canPlayNewMeld = !disabled && isMeldPhase && meldValidation.valid;
 

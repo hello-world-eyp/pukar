@@ -148,7 +148,7 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
       expect(next.players[0].hand).toHaveLength(1); // Only 'other' card remains
     });
 
-    it('claims a 13-card Pukar deck and awards +50 pts when player empties hand during MELD, keeping phase in MELD', () => {
+    it('rejects melding all cards and claims a 13-card Pukar deck (+50 pts) upon discarding final card, keeping phase in MELD', () => {
       const state = dealInitialState(4);
       state.phase = 'MELD';
       expect(state.pukarPool).toHaveLength(2);
@@ -158,12 +158,30 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
         makeCard('SPADES', 5, 'c-5s'),
         makeCard('SPADES', 6, 'c-6s'),
       ];
+      const discardCard = makeCard('HEARTS', 9, 'c-9h');
       // Hand consists ONLY of these 3 cards
       state.players[0].hand = [...runCards];
 
-      const result = pukarReducer(state, {
+      const invalidResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
         cardIds: runCards.map((c) => c.id),
+      });
+      expect(invalidResult.error).toBe(
+        'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
+      );
+
+      // Player has an extra card to discard
+      state.players[0].hand = [...runCards, discardCard];
+      const meldResult = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: runCards.map((c) => c.id),
+      });
+      expect(meldResult.error).toBeUndefined();
+
+      // Discarding the last card claims the 13-card Pukar deck
+      const result = pukarReducer(meldResult.state, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
       });
 
       expect(result.error).toBeUndefined();
@@ -180,7 +198,7 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
       expect(next.roundStatus).toBe('PLAYING');
     });
 
-    it('terminates round immediately (going out) when player empties hand during MELD with 0 Pukars remaining', () => {
+    it('rejects melding all cards and terminates round immediately (going out) upon discarding final card with 0 Pukars remaining', () => {
       const state = dealInitialState(4);
       state.phase = 'MELD';
       state.pukarPool = []; // No pukars left to claim!
@@ -190,11 +208,27 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
         makeCard('SPADES', 5, 'c-5s'),
         makeCard('SPADES', 6, 'c-6s'),
       ];
+      const discardCard = makeCard('HEARTS', 9, 'c-9h');
       state.players[0].hand = [...runCards];
 
-      const result = pukarReducer(state, {
+      const invalidResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
         cardIds: runCards.map((c) => c.id),
+      });
+      expect(invalidResult.error).toBe(
+        'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
+      );
+
+      state.players[0].hand = [...runCards, discardCard];
+      const meldResult = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: runCards.map((c) => c.id),
+      });
+      expect(meldResult.error).toBeUndefined();
+
+      const result = pukarReducer(meldResult.state, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
       });
 
       expect(result.error).toBeUndefined();

@@ -200,7 +200,7 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
    * 3. Pukar Claim (+50 pts) Flow
    * ======================================================================== */
   describe('Pukar Claim Flow', () => {
-    it('claims a 13-card Pukar deck and awards +50 pts when player empties hand during MELD', () => {
+    it('rejects melding all cards and claims a 13-card Pukar deck (+50 pts) upon discarding final card to the pile', () => {
       let state = dealInitialState(4);
       expect(state.pukarPool).toHaveLength(2);
       expect(state.pukarsClaimed?.A ?? 0).toBe(0);
@@ -209,16 +209,36 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       const c1 = makeCard('h5-1', 'HEARTS', 5);
       const c2 = makeCard('d5-1', 'DIAMONDS', 5);
       const c3 = makeCard('s5-1', 'SPADES', 5);
+      const discardCard = makeCard('extra-1', 'CLUBS', 9);
       state.players[0].hand = [c1, c2, c3];
       state.phase = 'MELD';
 
-      // Melding all 3 cards empties hand
+      // Attempting to meld all 3 cards without keeping at least 1 card to discard must fail
+      const invalidResult = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['h5-1', 'd5-1', 's5-1'],
+      });
+      expect(invalidResult.error).toBe(
+        'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
+      );
+
+      // Give Player 1 an extra card so 1 card remains to discard
+      state.players[0].hand = [c1, c2, c3, discardCard];
       const meldResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
         cardIds: ['h5-1', 'd5-1', 's5-1'],
       });
       expect(meldResult.error).toBeUndefined();
       state = meldResult.state;
+      expect(state.players[0].hand).toHaveLength(1);
+
+      // Discarding the last card claims the 13-card Pukar deck into hand
+      const discardResult = pukarReducer(state, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
+      });
+      expect(discardResult.error).toBeUndefined();
+      state = discardResult.state;
 
       // Player 1 claims 1st Pukar deck (13 cards) into hand
       expect(state.players[0].hand).toHaveLength(13);

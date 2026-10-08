@@ -129,6 +129,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           sortDirection={sortDirection}
           cardSize={cardSize}
           selectedCards={effectiveSelectedCards}
+          allHandCards={allHandCards}
           canAdd={canAdd}
           onAddToMeld={onAddToMeld}
           isRippling={isRippling}
@@ -148,6 +149,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           sortDirection={sortDirection}
           cardSize={cardSize}
           selectedCards={effectiveSelectedCards}
+          allHandCards={allHandCards}
           canAdd={canAdd}
           onAddToMeld={onAddToMeld}
           isRippling={isRippling}
@@ -170,6 +172,7 @@ interface TeamMeldColumnProps {
   sortDirection: MeldSortDirection;
   cardSize?: 'sm' | 'md';
   selectedCards?: Card[];
+  allHandCards?: Card[];
   canAdd?: boolean;
   onAddToMeld?: (meldId: string, cardIds: string[]) => void;
   isRippling?: boolean;
@@ -249,6 +252,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   sortDirection,
   cardSize = 'md',
   selectedCards,
+  allHandCards,
   canAdd = true,
   onAddToMeld,
   isRippling = false,
@@ -312,11 +316,18 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
 
             // Check if all selected cards can be added to this sequence
             const isOwnTeam = isActive;
+            const willLeaveEmptyHand = Boolean(
+              allHandCards &&
+                allHandCards.length > 0 &&
+                selectedCards &&
+                selectedCards.length >= allHandCards.length
+            );
             const canAttemptAdd = Boolean(
               canAdd &&
                 isOwnTeam &&
                 selectedCards &&
-                selectedCards.length > 0
+                selectedCards.length > 0 &&
+                !willLeaveEmptyHand
             );
             const addValidation = canAttemptAdd
               ? canAddCardsToMeld(meld, selectedCards!)

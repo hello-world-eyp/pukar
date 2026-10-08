@@ -56,7 +56,7 @@ describe('JokerPromptModal & UI Integration for Normal Joker', () => {
     );
 
     expect(html).toContain('data-testid="joker-prompt-modal"');
-    expect(html).toContain('Designate Joker Card');
+    expect(html).toContain('Designate Joker Position');
     expect(html).toContain('data-testid="joker-option-3"');
     expect(html).toContain('data-testid="joker-option-6"');
     expect(html).toContain('3 of Spades');
@@ -64,6 +64,26 @@ describe('JokerPromptModal & UI Integration for Normal Joker', () => {
     expect(html).toContain('Plays as 3 of spades');
     expect(html).toContain('Plays as 6 of spades');
     expect(html).toContain('Cancel');
+  });
+
+  it('renders positionLabel badges when options specify lowest and highest positions', () => {
+    const positionedOptions = [
+      { rank: 3, suit: 'SPADES' as const, label: '3 of Spades', positionLabel: 'Lowest Card in Sequence' as const },
+      { rank: 6, suit: 'SPADES' as const, label: '6 of Spades', positionLabel: 'Highest Card in Sequence' as const },
+    ];
+    const html = renderToString(
+      <JokerPromptModal
+        isOpen={true}
+        options={positionedOptions}
+        onSelect={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(html).toContain('data-testid="badge-lowest-card"');
+    expect(html).toContain('Lowest Card in Sequence');
+    expect(html).toContain('data-testid="badge-highest-card"');
+    expect(html).toContain('Highest Card in Sequence');
   });
 
   it('displays "🃏 Picks up Joker!" badge on sequence item when adding natural replacement', () => {
