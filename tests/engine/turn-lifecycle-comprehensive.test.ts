@@ -296,7 +296,7 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
       expect(next.roundStatus).toBe('PLAYING');
     });
 
-    it('claims a Pukar when hand reaches 0 upon discard and advances turn to next player', () => {
+    it('claims a Pukar when hand reaches 0 upon discard and keeps turn with player in MELD phase', () => {
       const state = dealInitialState(4);
       state.phase = 'MELD';
       expect(state.pukarPool).toHaveLength(2);
@@ -315,9 +315,17 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
       expect(next.players[0].hand).toHaveLength(13);
       expect(next.pukarPool).toHaveLength(1);
       expect(next.scores.A).toBe(50);
-      // Turn advances to Player 2
-      expect(next.currentPlayerIndex).toBe(1);
-      expect(next.phase).toBe('DRAW');
+      // Turn does not end: player stays active in MELD phase
+      expect(next.currentPlayerIndex).toBe(0);
+      expect(next.phase).toBe('MELD');
+
+      // Player drops another card to end their turn
+      const secondDiscard = pukarReducer(next, {
+        type: 'DISCARD_CARD',
+        cardId: next.players[0].hand[0].id,
+      });
+      expect(secondDiscard.state.currentPlayerIndex).toBe(1);
+      expect(secondDiscard.state.phase).toBe('DRAW');
     });
 
     it('concludes the round when final turn player completes their discard', () => {

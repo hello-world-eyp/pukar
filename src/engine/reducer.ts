@@ -537,9 +537,10 @@ function handleDiscardCard(
   let newlyPickedUpCardIds: string[] = [];
 
   // Check if hand reaches 0 upon discard
+  let claimedPukarMidDiscard = false;
   if (remainingHand.length === 0) {
     if (pukarPool.length >= 1) {
-      // Claim Pukar into hand (+50 pts) for next turn
+      // Claim Pukar into hand (+50 pts). Turn DOES NOT END!
       const claimedPukar = pukarPool[0];
       pukarPool = pukarPool.slice(1);
       remainingHand = [...claimedPukar];
@@ -551,6 +552,7 @@ function handleDiscardCard(
         totalScores[team] += 50;
       }
       pukarsClaimed[team] += 1;
+      claimedPukarMidDiscard = true;
     } else {
       // Hand emptied with 0 Pukars remaining: Player went out!
       roundStatus = 'ROUND_OVER';
@@ -558,8 +560,8 @@ function handleDiscardCard(
     }
   }
 
-  // Check final turn completion
-  if (!isRoundOver && state.roundStatus === 'FINAL_TURN') {
+  // Check final turn completion (only if player didn't claim a Pukar to continue)
+  if (!isRoundOver && state.roundStatus === 'FINAL_TURN' && !claimedPukarMidDiscard) {
     roundStatus = 'ROUND_OVER';
     isRoundOver = true;
   }
@@ -569,12 +571,20 @@ function handleDiscardCard(
   let finalTurnPlayerIndex = state.finalTurnPlayerIndex ?? null;
 
   if (!isRoundOver) {
-    nextPlayerIndex = (state.currentPlayerIndex + 1) % state.playerCount;
-    nextPhase = 'DRAW';
+    if (claimedPukarMidDiscard) {
+      // Turn DOES NOT END when claiming a Pukar.
+      // The player receives 13 cards and continues playing in MELD phase (no need to draw).
+      // They must drop another card to finish their turn.
+      nextPlayerIndex = state.currentPlayerIndex;
+      nextPhase = 'MELD';
+    } else {
+      nextPlayerIndex = (state.currentPlayerIndex + 1) % state.playerCount;
+      nextPhase = 'DRAW';
 
-    if (state.lastTurnTriggeredByDeckExhaust && roundStatus === 'PLAYING') {
-      roundStatus = 'FINAL_TURN';
-      finalTurnPlayerIndex = nextPlayerIndex;
+      if (state.lastTurnTriggeredByDeckExhaust && roundStatus === 'PLAYING') {
+        roundStatus = 'FINAL_TURN';
+        finalTurnPlayerIndex = nextPlayerIndex;
+      }
     }
   }
 

@@ -532,7 +532,7 @@ export function App() {
                   </span>
                 </div>
                 <div className="text-xs text-amber-300/90">
-                  {`${pukarBanner.playerName} (Team ${pukarBanner.team}) emptied their hand and claimed a 13-card Pukar deck!`}
+                  {`${pukarBanner.playerName} (Team ${pukarBanner.team}) emptied their hand and claimed a 13-card Pukar deck! Turn continues — play sequences or drop a card to end your turn.`}
                 </div>
               </div>
             </div>
@@ -959,8 +959,9 @@ export function App() {
                     and score an immediate <strong>+50 points</strong>!
                   </li>
                   <li>
-                    During the MELD phase, the player picks up the Pukar immediately and may continue
-                    melding!
+                    When claiming a Pukar (by melding or discarding), your turn does not end! You immediately
+                    receive the 13 cards, continue in Sequence phase without needing to draw, and only end your
+                    turn by dropping another card.
                   </li>
                   <li>
                     A round concludes when a player empties their hand with 0 Pukars in pool, or after

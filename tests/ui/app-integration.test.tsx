@@ -231,7 +231,7 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(state.roundStatus).toBe('PLAYING');
     });
 
-    it('claims a Pukar deck upon discard when hand reaches 0', () => {
+    it('claims a Pukar deck upon discard when hand reaches 0 without ending turn', () => {
       let state = dealInitialState(4);
       // Give Player 1 exactly 1 card
       const soloCard = makeCard('solo-1', 'CLUBS', 4);
@@ -245,14 +245,22 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(discardResult.error).toBeUndefined();
       state = discardResult.state;
 
-      // Hand is refilled with 13 cards from Pukar for next turn
+      // Hand is refilled with 13 cards from Pukar
       expect(state.players[0].hand).toHaveLength(13);
       expect(state.pukarPool).toHaveLength(1);
       expect(state.pukarsClaimed?.A).toBe(1);
       expect(state.scores.A).toBe(50);
-      // Turn advances to Player 2
-      expect(state.currentPlayerIndex).toBe(1);
-      expect(state.phase).toBe('DRAW');
+      // Turn does not end: stays with Player 1 in MELD phase
+      expect(state.currentPlayerIndex).toBe(0);
+      expect(state.phase).toBe('MELD');
+
+      // Dropping another card ends the turn
+      const secondDiscard = pukarReducer(state, {
+        type: 'DISCARD_CARD',
+        cardId: state.players[0].hand[0].id,
+      });
+      expect(secondDiscard.state.currentPlayerIndex).toBe(1);
+      expect(secondDiscard.state.phase).toBe('DRAW');
     });
   });
 

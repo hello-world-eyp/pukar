@@ -275,7 +275,7 @@ describe('Turn Lifecycle & Game Reducer', () => {
       expect(nextState.phase).toBe('DRAW');
     });
 
-    it('emptying hand upon discard when Pukars remain claims Pukar (+50 pts) and advances turn', () => {
+    it('emptying hand upon discard when Pukars remain claims Pukar (+50 pts) and continues turn in MELD phase', () => {
       const state = dealInitialState(4);
       state.phase = 'MELD';
       state.currentPlayerIndex = 0;
@@ -291,10 +291,21 @@ describe('Turn Lifecycle & Game Reducer', () => {
 
       expect(error).toBeUndefined();
       expect(nextState.pukarPool.length).toBe(initialPukarCount - 1);
-      expect(nextState.players[0].hand.length).toBe(13); // Received pukar for next turn
+      expect(nextState.players[0].hand.length).toBe(13); // Received 13 cards from Pukar
       expect(nextState.scores.A).toBe(initialScoreA + 50);
-      expect(nextState.currentPlayerIndex).toBe(1);
-      expect(nextState.phase).toBe('DRAW');
+      expect(nextState.currentPlayerIndex).toBe(0); // Turn DOES NOT END!
+      expect(nextState.phase).toBe('MELD'); // Continues in MELD phase without drawing
+
+      // Player then drops another card after claiming Pukar to end their turn
+      const cardToDrop = nextState.players[0].hand[0];
+      const { state: turnEndedState } = pukarReducer(nextState, {
+        type: 'DISCARD_CARD',
+        cardId: cardToDrop.id,
+      });
+
+      expect(turnEndedState.players[0].hand.length).toBe(12);
+      expect(turnEndedState.currentPlayerIndex).toBe(1); // Now advances to next player
+      expect(turnEndedState.phase).toBe('DRAW');
     });
 
     it('emptying hand upon discard with 0 Pukars remaining triggers immediate round completion', () => {
