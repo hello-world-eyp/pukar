@@ -110,7 +110,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   playerTeam,
   isCurrentPlayer = true,
   disabled = false,
-  cardSize = 'lg',
+  cardSize = 'md',
   className = '',
   sortMode: controlledSortMode,
   onSortChange,

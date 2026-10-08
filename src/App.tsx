@@ -708,7 +708,7 @@ export function App({ initialState }: AppProps = {}) {
           >
             <PlayerHand
               cards={viewingPlayer.hand}
-              cardSize="lg"
+              cardSize="md"
               selectedCardIds={selectedCardIds}
               newCardIds={
                 isViewingActivePlayer
@@ -779,7 +779,7 @@ export function App({ initialState }: AppProps = {}) {
           <div
             aria-hidden="true"
             data-testid="hand-dock-spacer"
-            className="w-full shrink-0 h-[280px] sm:h-[320px] pointer-events-none"
+            className="w-full shrink-0 h-[230px] sm:h-[260px] pointer-events-none"
           />
         )}
       </main>

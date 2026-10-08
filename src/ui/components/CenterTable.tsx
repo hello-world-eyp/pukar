@@ -96,7 +96,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 items-stretch">
           {/* 1. STOCK DECK (LEFT) */}
-          <div className="flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-2xl table-well-light min-h-[145px]">
+          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[220px] sm:min-h-[240px]">
             <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-stone-800 mb-0.5">
               <Layers className="w-3.5 h-3.5 text-sky-600" />
               <span>Stock Deck</span>
@@ -110,19 +110,19 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                   {actualStockCount > 1 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-lg sm:rounded-xl bg-[#0c1836] border border-amber-500/40 shadow-sm pointer-events-none"
+                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-xl bg-[#0c1836] border border-amber-500/40 shadow-sm pointer-events-none"
                     />
                   )}
                   {actualStockCount > 2 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-lg sm:rounded-xl bg-[#081024] border border-amber-500/30 shadow-md pointer-events-none"
+                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-xl bg-[#081024] border border-amber-500/30 shadow-md pointer-events-none"
                     />
                   )}
                   {actualStockCount > 10 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-lg sm:rounded-xl bg-[#040814] border border-amber-500/20 shadow-lg pointer-events-none"
+                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-xl bg-[#040814] border border-amber-500/20 shadow-lg pointer-events-none"
                     />
                   )}
 
@@ -133,18 +133,18 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                       isRippling ? 'animate-card-ripple' : ''
                     } ${
                       drawStockAllowed
-                        ? 'cursor-pointer hover:scale-105 active:scale-95 ring-4 ring-sky-500 ring-offset-2 ring-offset-amber-50 rounded-lg sm:rounded-xl shadow-xl'
+                        ? 'cursor-pointer hover:scale-105 active:scale-95 ring-4 ring-sky-500 ring-offset-2 ring-offset-amber-50 rounded-xl shadow-xl'
                         : ''
                     }`}
                     style={isRippling ? { animationDelay: '60ms' } : undefined}
                   >
-                    <PlayingCard card={dummyStockCard} faceDown size="sm" />
+                    <PlayingCard card={dummyStockCard} faceDown size="md" />
                   </div>
                 </div>
               ) : (
-                <div className="w-12 h-[72px] sm:w-16 sm:h-[96px] rounded-lg sm:rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-1 text-center text-stone-500 text-xs bg-stone-100/60">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 mb-0.5" />
-                  <span className="font-bold text-[11px] sm:text-xs">Exhausted</span>
+                <div className="w-20 h-[120px] sm:w-24 sm:h-[144px] rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-xs sm:text-sm bg-stone-100/60">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 mb-1" />
+                  <span className="font-bold">Exhausted</span>
                 </div>
               )}
             </div>
@@ -171,7 +171,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           </div>
 
           {/* 2. DISCARD PILE (MIDDLE) */}
-          <div className="flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-2xl table-well-light min-h-[145px]">
+          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[220px] sm:min-h-[240px]">
             <div className="flex items-center justify-between w-full mb-0.5 gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
                 <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
@@ -212,26 +212,26 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                   {discardPile.length > 1 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-lg sm:rounded-xl bg-stone-200 border border-stone-300 shadow-sm pointer-events-none"
+                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-xl bg-stone-200 border border-stone-300 shadow-sm pointer-events-none"
                     />
                   )}
                   {discardPile.length > 2 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-lg sm:rounded-xl bg-stone-300 border border-stone-400 shadow-md pointer-events-none"
+                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-xl bg-stone-300 border border-stone-400 shadow-md pointer-events-none"
                     />
                   )}
                   {discardPile.length > 8 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-lg sm:rounded-xl bg-stone-400 border border-stone-500 shadow-lg pointer-events-none"
+                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-xl bg-stone-400 border border-stone-500 shadow-lg pointer-events-none"
                     />
                   )}
 
                   {/* Top face-up card */}
                   <div
                     key={topDiscardCard.id}
-                    className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-lg sm:rounded-xl shadow-xl ${
+                    className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-xl shadow-xl ${
                       isRippling ? 'animate-card-ripple' : 'animate-discard-landing'
                     } ${
                       drawDiscardAllowed
@@ -240,16 +240,16 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                     }`}
                     style={isRippling ? { animationDelay: '80ms' } : undefined}
                   >
-                    <PlayingCard card={topDiscardCard} size="sm" />
-                    <div className="absolute inset-0 bg-stone-900/60 rounded-lg sm:rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
+                    <PlayingCard card={topDiscardCard} size="md" />
+                    <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
                       <ZoomIn className="w-3.5 h-3.5" />
                       <span>Zoom</span>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="w-12 h-[72px] sm:w-16 sm:h-[96px] rounded-lg sm:rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-1 text-center text-stone-500 text-xs bg-stone-100/60">
-                  <span className="font-bold text-[11px] sm:text-xs">Empty Pile</span>
+                <div className="w-20 h-[120px] sm:w-24 sm:h-[144px] rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-xs sm:text-sm bg-stone-100/60">
+                  <span className="font-bold">Empty Pile</span>
                 </div>
               )}
             </div>
@@ -276,7 +276,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           </div>
 
           {/* 3. PUKAR POOL (RIGHT) */}
-          <div className="flex flex-col items-center justify-between p-2 sm:p-2.5 rounded-2xl table-well-light min-h-[145px]">
+          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[220px] sm:min-h-[240px]">
             <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-900 mb-0.5">
               <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
               <span>Pukar Pool (Reserve)</span>
@@ -285,28 +285,28 @@ export const CenterTable: React.FC<CenterTableProps> = ({
             {/* Pukar Stack Visual Graphic */}
             <div className="my-1 flex flex-col items-center justify-center">
               {actualPukarCount > 0 ? (
-                <div className="relative flex items-center justify-center w-24 h-24 sm:w-26 sm:h-26">
+                <div className="relative flex items-center justify-center w-28 h-32 sm:w-32 sm:h-36">
                   {/* Subtle pedestal platter */}
                   <div className="absolute inset-x-0 bottom-0 h-8 rounded-full bg-stone-300/60 border border-stone-400/40 shadow-inner" />
                   {Array.from({ length: Math.min(actualPukarCount, 4) }).map((_, i) => (
                     <div
                       key={i}
                       style={{
-                        transform: `translate(${i * 5 - 6}px, ${-i * 4 + 3}px)`,
+                        transform: `translate(${i * 6 - 8}px, ${-i * 5 + 4}px)`,
                       }}
-                      className="absolute w-18 h-22 sm:w-20 sm:h-24 rounded-xl bg-gradient-to-br from-emerald-800 to-teal-900 border-2 border-emerald-400 shadow-lg flex items-center justify-center text-center p-1.5"
+                      className="absolute w-20 h-[120px] sm:w-24 sm:h-[144px] rounded-xl bg-gradient-to-br from-emerald-800 to-teal-900 border-2 border-emerald-400 shadow-lg flex items-center justify-center text-center p-2"
                     >
-                      <div className="w-full h-full border border-emerald-300/40 rounded-lg border-dashed flex flex-col items-center justify-center text-[11px] text-emerald-100">
-                        <span className="font-black uppercase tracking-wider text-amber-300 text-xs">Pukar</span>
-                        <span className="text-[10px] font-bold opacity-95">13 Cards</span>
+                      <div className="w-full h-full border border-emerald-300/40 rounded-lg border-dashed flex flex-col items-center justify-center text-xs text-emerald-100">
+                        <span className="font-black uppercase tracking-wider text-amber-300 text-sm">Pukar</span>
+                        <span className="text-xs font-bold opacity-95">13 Cards</span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="w-20 h-22 sm:w-22 sm:h-24 rounded-xl border-2 border-dashed border-red-400 bg-red-50 flex flex-col items-center justify-center p-2 text-center text-red-600 text-xs">
-                  <span className="font-black text-xs sm:text-sm">0 Pukars</span>
-                  <span className="text-[10px] font-semibold text-stone-500 mt-0.5">
+                <div className="w-20 h-[120px] sm:w-24 sm:h-[144px] rounded-xl border-2 border-dashed border-red-400 bg-red-50 flex flex-col items-center justify-center p-2 text-center text-red-600 text-xs">
+                  <span className="font-black text-sm">0 Pukars</span>
+                  <span className="text-xs font-semibold text-stone-500 mt-0.5">
                     Exhaust rule active
                   </span>
                 </div>
