@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   GameState,
+  SanitizedGameState,
   GameAction,
   Meld,
   Card,
@@ -26,6 +27,11 @@ import { TableSeating } from './ui/components/TableSeating';
 import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
 import { GameSetupModal } from './ui/components/GameSetupModal';
+import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
+import { MultiplayerHub } from './ui/components/multiplayer/MultiplayerHub';
+import { MultiplayerStatusBar } from './ui/components/multiplayer/MultiplayerStatusBar';
+import { useMultiplayerGame } from './network/useMultiplayerGame';
+import { UseMultiplayerGameReturn } from './network/types';
 import { playSound, setSoundEnabled } from './ui/sound';
 import {
   HelpCircle,
@@ -39,11 +45,29 @@ import {
 
 export interface AppProps {
   initialState?: GameState;
+  initialMode?: 'LOCAL' | 'MULTIPLAYER';
+  multiplayerGameHook?: UseMultiplayerGameReturn;
 }
 
-export function App({ initialState }: AppProps = {}) {
+export function App({
+  initialState,
+  initialMode = 'LOCAL',
+  multiplayerGameHook,
+}: AppProps = {}) {
   // ---------------------------------------------------------------------------
-  // Core Game State
+  // Application Mode State: LOCAL (Pass & Play hotseat) or MULTIPLAYER (online/LAN)
+  // ---------------------------------------------------------------------------
+  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(initialMode);
+  const [isModeModalOpen, setIsModeModalOpen] = useState(false);
+
+  // Hook for multiplayer game lifecycle
+  const defaultMultiplayerHook = useMultiplayerGame({
+    autoConnect: !multiplayerGameHook && appMode === 'MULTIPLAYER',
+  });
+  const multiplayerHook = multiplayerGameHook ?? defaultMultiplayerHook;
+
+  // ---------------------------------------------------------------------------
+  // Core Local Game State
   // ---------------------------------------------------------------------------
   const [gameState, setGameState] = useState<GameState>(() => initialState ?? dealInitialState(4));
 
@@ -51,7 +75,7 @@ export function App({ initialState }: AppProps = {}) {
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
   const [selectedMeldId, setSelectedMeldId] = useState<string | null>(null);
 
-  // Perspective / Hot-seat view state (null = follow active turn)
+  // Perspective / Hot-seat view state (null = follow active turn) for LOCAL mode
   const [viewedPlayerIndex, setViewedPlayerIndex] = useState<number | null>(null);
 
   // UI Modals & Panels
@@ -66,6 +90,7 @@ export function App({ initialState }: AppProps = {}) {
 
   // Notifications & Feedback
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [disconnectToast, setDisconnectToast] = useState<string | null>(null);
   const [pukarBanner, setPukarBanner] = useState<{
     team: 'A' | 'B';
     playerName: string;
@@ -99,6 +124,47 @@ export function App({ initialState }: AppProps = {}) {
     return () => clearTimeout(timer);
   }, [errorMessage]);
 
+  // Sync multiplayer hook errors into UI error banner
+  useEffect(() => {
+    if (appMode === 'MULTIPLAYER' && multiplayerHook.errorMessage) {
+      setErrorMessage(multiplayerHook.errorMessage);
+    }
+  }, [appMode, multiplayerHook.errorMessage]);
+
+  // Auto-dismiss disconnect notification after 5 seconds
+  useEffect(() => {
+    if (!disconnectToast) return;
+    const timer = setTimeout(() => {
+      setDisconnectToast(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [disconnectToast]);
+
+  // Track player disconnections in multiplayer mode
+  const prevSeatsConnRef = useRef<Map<number, boolean>>(new Map());
+  useEffect(() => {
+    if (appMode !== 'MULTIPLAYER' || !multiplayerHook.isInGame) {
+      prevSeatsConnRef.current.clear();
+      return;
+    }
+
+    multiplayerHook.lobbySeats.forEach((seat) => {
+      // Skip self
+      if (seat.seatIndex === multiplayerHook.mySeatIndex) return;
+
+      const prevConn = prevSeatsConnRef.current.get(seat.seatIndex);
+      const displayName = seat.playerName?.trim() || `Player ${seat.seatIndex + 1}`;
+      if (prevConn === true && !seat.isConnected) {
+        setDisconnectToast(
+          `${displayName} (${seat.team ? `Team ${seat.team}` : `Seat ${seat.seatIndex + 1}`}) disconnected. Waiting for reconnect...`
+        );
+      } else if (prevConn === false && seat.isConnected) {
+        setDisconnectToast(`${displayName} reconnected to the game.`);
+      }
+      prevSeatsConnRef.current.set(seat.seatIndex, seat.isConnected);
+    });
+  }, [appMode, multiplayerHook.isInGame, multiplayerHook.lobbySeats, multiplayerHook.mySeatIndex]);
+
   // Sync audio toggle with sound utility
   const toggleMute = useCallback(() => {
     setIsMuted((prev) => {
@@ -109,15 +175,32 @@ export function App({ initialState }: AppProps = {}) {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Active vs Viewed Player Resolution
+  // Active vs Viewed Player Resolution & State Source
   // ---------------------------------------------------------------------------
-  const activeTurnIndex = gameState.currentPlayerIndex;
-  const activePlayer = gameState.players[activeTurnIndex];
+  const isMultiplayerActive =
+    appMode === 'MULTIPLAYER' && multiplayerHook.isInGame && !!multiplayerHook.gameState;
 
-  // The player whose hand is currently rendered on screen
-  const currentViewIndex = viewedPlayerIndex ?? activeTurnIndex;
-  const viewingPlayer = gameState.players[currentViewIndex] ?? activePlayer;
-  const isViewingActivePlayer = currentViewIndex === activeTurnIndex;
+  const activeGameState: GameState | SanitizedGameState = isMultiplayerActive
+    ? multiplayerHook.gameState!
+    : gameState;
+
+  const activeTurnIndex = activeGameState.currentPlayerIndex;
+  const activePlayer = activeGameState.players[activeTurnIndex];
+
+  // In multiplayer: perspective is strictly locked to mySeatIndex
+  // In local mode: perspective can switch via hotseat controls
+  const currentViewIndex = isMultiplayerActive
+    ? (multiplayerHook.mySeatIndex ?? 0)
+    : (viewedPlayerIndex ?? activeTurnIndex);
+
+  const viewingPlayer =
+    isMultiplayerActive && multiplayerHook.mySeatIndex === null
+      ? { id: '', name: 'Spectator', team: 'A' as const, hand: [], cardCount: 0 }
+      : (activeGameState.players[currentViewIndex] ?? activePlayer);
+
+  const isViewingActivePlayer = isMultiplayerActive
+    ? multiplayerHook.mySeatIndex !== null && activeTurnIndex === multiplayerHook.mySeatIndex
+    : currentViewIndex === activeTurnIndex;
 
   // Selected cards in current hand
   const selectedCards: Card[] = useMemo(() => {
@@ -134,19 +217,23 @@ export function App({ initialState }: AppProps = {}) {
   const selectedMeld: Meld | null = useMemo(() => {
     try {
       if (!selectedMeldId) return null;
-      const allMelds = [...(gameState.melds?.A ?? []), ...(gameState.melds?.B ?? [])];
+      const allMelds = [
+        ...(activeGameState.melds?.A ?? []),
+        ...(activeGameState.melds?.B ?? []),
+      ];
       return allMelds.find((m) => m.id === selectedMeldId) ?? null;
     } catch (err) {
       console.error('Error resolving selected meld:', err);
       return null;
     }
-  }, [selectedMeldId, gameState.melds]);
+  }, [selectedMeldId, activeGameState.melds]);
 
   // Track screen width for responsive 2nd-row threshold (<768px uses 1 column per team, >=768px uses 2 columns)
   const [isCompactScreen, setIsCompactScreen] = useState(false);
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const checkScreen = () => {
-      setIsCompactScreen(typeof window !== 'undefined' && window.innerWidth < 768);
+      setIsCompactScreen(window.innerWidth < 768);
     };
     checkScreen();
     window.addEventListener('resize', checkScreen);
@@ -154,13 +241,57 @@ export function App({ initialState }: AppProps = {}) {
   }, []);
 
   // Determine if either team has a second row of sequences
-  // In TableMeldBoard, desktop displays 2 columns per team (>= 3 melds = 2nd row); compact displays 1 column (>= 2 melds = 2nd row)
-  const teamAMeldCount = gameState.melds?.A?.length ?? 0;
-  const teamBMeldCount = gameState.melds?.B?.length ?? 0;
+  const teamAMeldCount = activeGameState.melds?.A?.length ?? 0;
+  const teamBMeldCount = activeGameState.melds?.B?.length ?? 0;
   const hasSecondRow =
     teamAMeldCount >= 3 ||
     teamBMeldCount >= 3 ||
     (isCompactScreen && (teamAMeldCount >= 2 || teamBMeldCount >= 2));
+
+  // Multiplayer sound & celebration state tracker
+  const prevMultiplayerStateRef = useRef<SanitizedGameState | null>(null);
+  useEffect(() => {
+    if (!isMultiplayerActive || !multiplayerHook.gameState) return;
+    const current = multiplayerHook.gameState;
+    const prev = prevMultiplayerStateRef.current;
+    prevMultiplayerStateRef.current = current;
+
+    if (!prev) return;
+
+    // Detect Pukar claim (+50 pts) in multiplayer
+    const prevPukarsA = prev.pukarsClaimed?.A ?? 0;
+    const prevPukarsB = prev.pukarsClaimed?.B ?? 0;
+    const nextPukarsA = current.pukarsClaimed?.A ?? 0;
+    const nextPukarsB = current.pukarsClaimed?.B ?? 0;
+    if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
+      const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
+      const actor = current.players[prev.currentPlayerIndex];
+      const pukarInfo = {
+        team: claimingTeam,
+        playerName: actor?.name ?? `Player ${prev.currentPlayerIndex + 1}`,
+        points: 50,
+      };
+      setPukarBanner(pukarInfo);
+      setPukarSlamEvent(pukarInfo);
+      setIsTableRippling(true);
+      setTimeout(() => setIsTableRippling(false), 1400);
+      try {
+        playSound('pukar');
+      } catch {}
+    } else if (current.roundStatus === 'ROUND_OVER' && prev.roundStatus !== 'ROUND_OVER') {
+      try {
+        playSound('roundOver');
+      } catch {}
+    } else if (current.lastPickedUpCard && !prev.lastPickedUpCard) {
+      const actor = current.players[current.currentPlayerIndex];
+      setJokerPickupBanner({
+        playerName: actor?.name ?? `Player ${current.currentPlayerIndex + 1}`,
+      });
+      try {
+        playSound('pukar');
+      } catch {}
+    }
+  }, [isMultiplayerActive, multiplayerHook.gameState]);
 
   // ---------------------------------------------------------------------------
   // Action Dispatcher with Feedback & Audio Cues
@@ -168,6 +299,62 @@ export function App({ initialState }: AppProps = {}) {
   const handleAction = useCallback(
     (action: GameAction): boolean => {
       try {
+        // Route actions through authoritative multiplayer server when in active online game
+        if (isMultiplayerActive) {
+          // Client-side guard: enforce turn order unless round advancement
+          if (
+            action.type !== 'START_NEXT_ROUND' &&
+            action.type !== 'RESET_GAME' &&
+            !isViewingActivePlayer
+          ) {
+            setErrorMessage('Not your turn to play');
+            try {
+              playSound('error');
+            } catch {}
+            return false;
+          }
+
+          multiplayerHook.dispatchAction(action);
+
+          // Immediate responsive audio cues for player's own actions
+          if (
+            action.type === 'DRAW_FROM_STOCK' ||
+            action.type === 'TAKE_DISCARD' ||
+            action.type === 'DRAW_CARD'
+          ) {
+            try {
+              playSound('draw');
+            } catch {}
+          } else if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
+            try {
+              playSound('meld');
+            } catch {}
+          } else if (action.type === 'DISCARD_CARD') {
+            try {
+              playSound('discard');
+            } catch {}
+          }
+
+          // Clean up selection state
+          if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
+            setSelectedCardIds([]);
+          } else if (action.type === 'DISCARD_CARD') {
+            setSelectedCardIds([]);
+            setSelectedMeldId(null);
+            setJokerPickupBanner(null);
+          } else if (action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME') {
+            setSelectedCardIds([]);
+            setSelectedMeldId(null);
+            setPukarBanner(null);
+            setPukarSlamEvent(null);
+            setIsTableRippling(false);
+            setExhaustNotification(null);
+            setJokerPickupBanner(null);
+          }
+          return true;
+        }
+
+        // Local Pass & Play Reducer Logic
         const prevPukarsA = gameState.pukarsClaimed?.A ?? 0;
         const prevPukarsB = gameState.pukarsClaimed?.B ?? 0;
         const prevStockCount = gameState.stockDeck?.length ?? 0;
@@ -296,7 +483,7 @@ export function App({ initialState }: AppProps = {}) {
         return false;
       }
     },
-    [gameState]
+    [isMultiplayerActive, multiplayerHook, gameState]
   );
 
   // ---------------------------------------------------------------------------
@@ -325,6 +512,15 @@ export function App({ initialState }: AppProps = {}) {
   // ---------------------------------------------------------------------------
   const handleReorderHand = useCallback(
     (newHand: Card[]) => {
+      if (isMultiplayerActive) {
+        // In multiplayer, reorder locally for client's viewing hand
+        if (multiplayerHook.gameState && multiplayerHook.mySeatIndex !== null) {
+          const mySeat = multiplayerHook.mySeatIndex;
+          multiplayerHook.gameState.players[mySeat].hand = newHand;
+        }
+        return;
+      }
+
       setGameState((prev) => {
         const pIdx = currentViewIndex;
         if (pIdx < 0 || pIdx >= prev.players.length) return prev;
@@ -340,7 +536,7 @@ export function App({ initialState }: AppProps = {}) {
         };
       });
     },
-    [currentViewIndex]
+    [isMultiplayerActive, multiplayerHook.gameState, multiplayerHook.mySeatIndex, currentViewIndex]
   );
 
   // ---------------------------------------------------------------------------
@@ -349,7 +545,7 @@ export function App({ initialState }: AppProps = {}) {
   const handlePlayMeld = useCallback(
     (cardIds: string[], jokerRepresentedRank?: number) => {
       try {
-        const activeHand = gameState.players[gameState.currentPlayerIndex]?.hand ?? [];
+        const activeHand = viewingPlayer.hand ?? [];
         const cardsToMeld = cardIds
           .map((id) => activeHand.find((c) => c.id === id))
           .filter((c): c is Card => c !== undefined);
@@ -375,7 +571,7 @@ export function App({ initialState }: AppProps = {}) {
         console.error('Error in handlePlayMeld:', err);
       }
     },
-    [gameState.players, gameState.currentPlayerIndex, handleAction]
+    [viewingPlayer.hand, handleAction]
   );
 
   // ---------------------------------------------------------------------------
@@ -384,12 +580,15 @@ export function App({ initialState }: AppProps = {}) {
   const handleAddToMeld = useCallback(
     (meldId: string, cardIds: string[], jokerRepresentedRank?: number) => {
       try {
-        const activeHand = gameState.players[gameState.currentPlayerIndex]?.hand ?? [];
+        const activeHand = viewingPlayer.hand ?? [];
         const cardsToAdd = cardIds
           .map((id) => activeHand.find((c) => c.id === id))
           .filter((c): c is Card => c !== undefined);
 
-        const allMelds = [...gameState.melds.A, ...gameState.melds.B];
+        const allMelds = [
+          ...(activeGameState.melds?.A ?? []),
+          ...(activeGameState.melds?.B ?? []),
+        ];
         const targetMeld = allMelds.find((m) => m.id === meldId);
 
         // If adding a Normal Joker to a RUN sequence and rank is not specified:
@@ -424,27 +623,26 @@ export function App({ initialState }: AppProps = {}) {
         console.error('Error in handleAddToMeld:', err);
       }
     },
-    [gameState.players, gameState.currentPlayerIndex, gameState.melds, handleAction]
+    [viewingPlayer.hand, activeGameState.melds, handleAction]
   );
 
   // ---------------------------------------------------------------------------
-  // Hot-Seat Perspective Switcher
+  // Hot-Seat Perspective Switcher (Local Mode Only)
   // ---------------------------------------------------------------------------
   const handleSwitchPlayer = useCallback((targetIndex: number) => {
     try {
-      // When switching player in hot-seat mode, update viewed player
-      // without mutating gameState.currentPlayerIndex
+      if (appMode !== 'LOCAL') return;
       setViewedPlayerIndex(targetIndex);
       setSelectedCardIds([]);
       setSelectedMeldId(null);
     } catch (err) {
       console.error('Error in handleSwitchPlayer:', err);
     }
-  }, []);
+  }, [appMode]);
 
   const handleForceTurn = useCallback((targetIndex: number) => {
     try {
-      // Explicit dev override: force game turn to the target player
+      if (appMode !== 'LOCAL') return;
       setViewedPlayerIndex(targetIndex);
       setGameState((prev) => ({
         ...prev,
@@ -455,15 +653,16 @@ export function App({ initialState }: AppProps = {}) {
     } catch (err) {
       console.error('Error in handleForceTurn:', err);
     }
-  }, []);
+  }, [appMode]);
 
-  // ---------------------------------------------------------------------------
   // ---------------------------------------------------------------------------
   // Game Setup & Reset Handlers
   // ---------------------------------------------------------------------------
   const handleOpenResetModal = (_count?: 4 | 6) => {
     try {
-      setIsSetupModalOpen(true);
+      if (appMode === 'LOCAL') {
+        setIsSetupModalOpen(true);
+      }
     } catch (err) {
       console.error('Error opening setup modal:', err);
     }
@@ -491,32 +690,62 @@ export function App({ initialState }: AppProps = {}) {
           1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
       ====================================================================== */}
       <ScoreBoard
-        round={gameState.round}
-        roundStatus={gameState.roundStatus}
-        phase={gameState.phase}
-        scores={gameState.scores}
-        roundScores={gameState.roundScores}
-        totalScores={gameState.totalScores}
-        pukarsClaimed={gameState.pukarsClaimed}
+        round={activeGameState.round}
+        roundStatus={activeGameState.roundStatus}
+        phase={activeGameState.phase}
+        scores={activeGameState.scores}
+        roundScores={activeGameState.roundScores}
+        totalScores={activeGameState.totalScores ?? activeGameState.scores}
+        pukarsClaimed={activeGameState.pukarsClaimed}
         currentPlayerIndex={activeTurnIndex}
-        currentPlayerName={activePlayer.name}
-        activeTeam={activePlayer.team}
-        playerCount={gameState.playerCount}
-        onTogglePlayerCount={(count) => {
-          if (gameState.playerCount !== count) handleOpenResetModal(count);
-        }}
+        currentPlayerName={activePlayer?.name}
+        activeTeam={activePlayer?.team}
+        playerCount={activeGameState.playerCount}
+        onTogglePlayerCount={
+          appMode === 'LOCAL'
+            ? (count) => {
+                if (activeGameState.playerCount !== count) handleOpenResetModal(count);
+              }
+            : undefined
+        }
         isMuted={isMuted}
         onToggleMute={toggleMute}
         onOpenRules={() => setIsRulesModalOpen(true)}
-        onRestartGame={() => handleOpenResetModal(gameState.playerCount)}
+        onRestartGame={
+          appMode === 'LOCAL'
+            ? () => handleOpenResetModal(activeGameState.playerCount)
+            : undefined
+        }
+        appMode={appMode}
+        onOpenModeSelector={() => setIsModeModalOpen(true)}
       />
+
+      {/* Persistent Multiplayer Status Bar when inside an active online room */}
+      {isMultiplayerActive && (
+        <MultiplayerStatusBar
+          roomCode={multiplayerHook.roomCode ?? ''}
+          connectionStatus={multiplayerHook.connectionStatus}
+          seatIndex={multiplayerHook.mySeatIndex}
+          onLeave={() => {
+            multiplayerHook.leaveRoom();
+            setSelectedCardIds([]);
+            setSelectedMeldId(null);
+            setDisconnectToast(null);
+            setErrorMessage(null);
+            setPukarBanner(null);
+            setPukarSlamEvent(null);
+            setJokerPickupBanner(null);
+            setExhaustNotification(null);
+          }}
+        />
+      )}
 
       {/* =====================================================================
           NOTIFICATION & CELEBRATION BANNERS
       ====================================================================== */}
       <div className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-12 pt-3 sm:pt-3.5 flex flex-col gap-1.5 shrink-0 z-30">
         {/* Error Toast */}
-        {errorMessage && (
+        {(errorMessage || (appMode === 'MULTIPLAYER' && multiplayerHook.errorMessage)) && (
           <div
             data-testid="error-toast"
             role="alert"
@@ -524,14 +753,40 @@ export function App({ initialState }: AppProps = {}) {
           >
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <span className="font-medium">{errorMessage}</span>
+              <span className="font-medium">{errorMessage ?? multiplayerHook.errorMessage}</span>
             </div>
             <button
               type="button"
               data-testid="btn-dismiss-error"
-              onClick={() => setErrorMessage(null)}
-              className="p-1 rounded-lg hover:bg-red-900/50 text-red-300 hover:text-white transition-colors"
+              onClick={() => {
+                setErrorMessage(null);
+                multiplayerHook.clearError();
+              }}
+              className="p-1 rounded-lg hover:bg-red-900/50 text-red-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Dismiss Error"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Disconnect Toast */}
+        {disconnectToast && (
+          <div
+            data-testid="disconnect-toast"
+            role="alert"
+            className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-amber-950/90 border border-amber-600/70 text-amber-200 shadow-lg text-xs sm:text-sm animate-in fade-in"
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="font-medium">{disconnectToast}</span>
+            </div>
+            <button
+              type="button"
+              data-testid="btn-dismiss-disconnect"
+              onClick={() => setDisconnectToast(null)}
+              className="p-1 rounded-lg hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Dismiss Disconnect Notification"
             >
               <X className="w-4 h-4" />
             </button>
@@ -565,7 +820,7 @@ export function App({ initialState }: AppProps = {}) {
               type="button"
               data-testid="btn-dismiss-pukar"
               onClick={() => setPukarBanner(null)}
-              className="p-1 rounded-xl hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors"
+              className="p-1 rounded-xl hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Dismiss Pukar Announcement"
             >
               <X className="w-4 h-4" />
@@ -600,7 +855,7 @@ export function App({ initialState }: AppProps = {}) {
               type="button"
               data-testid="btn-dismiss-joker-pickup"
               onClick={() => setJokerPickupBanner(null)}
-              className="p-1 rounded-xl hover:bg-purple-900/50 text-purple-300 hover:text-white transition-colors"
+              className="p-1 rounded-xl hover:bg-purple-900/50 text-purple-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Dismiss Joker Pickup Announcement"
             >
               <X className="w-4 h-4" />
@@ -622,7 +877,7 @@ export function App({ initialState }: AppProps = {}) {
             <button
               type="button"
               onClick={() => setExhaustNotification(null)}
-              className="p-1 rounded-lg hover:bg-indigo-900/50 text-indigo-300 hover:text-white"
+              className="p-1 rounded-lg hover:bg-indigo-900/50 text-indigo-300 hover:text-white cursor-pointer"
               aria-label="Dismiss Alert"
             >
               <X className="w-4 h-4" />
@@ -632,170 +887,239 @@ export function App({ initialState }: AppProps = {}) {
       </div>
 
       {/* =====================================================================
-          2. MAIN PLAYING ARENA (EXPANDED WIDESCREEN FIT)
+          2. MULTIPLAYER HUB (WHEN IN MULTIPLAYER MODE BUT NOT IN ACTIVE GAME)
       ====================================================================== */}
-      <main className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-1.5 sm:py-2 flex flex-col gap-2 sm:gap-2.5 flex-1 min-h-0">
-        {/* Spatial Seating & Casino Felt Card Table Arena */}
-        <section aria-label="Table Arena and Seating" className="w-full flex flex-col justify-start my-0.5">
-          <TableSeating
-            players={gameState.players}
-            viewedPlayerIndex={currentViewIndex}
-            activeTurnIndex={activeTurnIndex}
-            onSelectPlayer={handleSwitchPlayer}
-            isRippling={isTableRippling}
-          >
-            {/* The Modern Wood & Cream Table Arena Mat */}
-            <div
-              className={`w-full rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 table-cream-mat flex flex-col gap-2 sm:gap-2.5 shadow-2xl transition-transform ${
-                isTableRippling ? 'animate-table-quake' : ''
-              }`}
-            >
-              {/* Center Decks & Piles */}
-              <div aria-label="Center Table Decks" className="w-full">
-                <CenterTable
-                  stockDeckCount={gameState.stockDeck.length}
-                  discardPile={gameState.discardPile}
-                  pukarPoolCount={gameState.pukarPool.length}
-                  canDraw={gameState.phase === 'DRAW' && isViewingActivePlayer}
-                  onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
-                  onDrawDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
-                  onPeekDiscard={() => setIsDiscardModalOpen(true)}
-                  isRippling={isTableRippling}
-                />
-              </div>
-
-              {/* Table Sequences Board (Team A & Team B) */}
-              <div aria-label="Table Sequences" className="w-full">
-                <TableMeldBoard
-                  melds={gameState.melds}
-                  activeTeam={activePlayer.team}
-                  selectedMeldId={selectedMeldId}
-                  onSelectMeld={(meld) => {
-                    setSelectedMeldId((prev) => (prev === meld.id ? null : meld.id));
-                  }}
-                  onZoomMeld={(meld) => setZoomedMeld(meld)}
-                  selectedCards={selectedCards}
-                  allHandCards={viewingPlayer.hand}
-                  canAdd={gameState.phase === 'MELD' && isViewingActivePlayer}
-                  onAddToMeld={handleAddToMeld}
-                  isRippling={isTableRippling}
-                  cardSize="md"
-                />
-              </div>
-            </div>
-          </TableSeating>
-        </section>
-
-        {/* ===================================================================
-            3. DOCKED UNIFIED PLAYER CONSOLE (HAND + CONTEXTUAL ACTIONS)
-        ==================================================================== */}
-        <section
-          aria-label="Player Hand and Actions"
-          data-has-second-row={hasSecondRow ? 'true' : undefined}
-          data-is-hovering={hasSecondRow ? 'true' : undefined}
-          className={`w-full shrink-0 transition-all duration-300 ${
-            hasSecondRow
-              ? 'fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/80 backdrop-blur-md pt-2 sm:pt-2.5 pb-2 sm:pb-3 border-t border-amber-500/30 drop-shadow-[0_-12px_28px_rgba(0,0,0,0.85)]'
-              : ''
-          }`}
+      {appMode === 'MULTIPLAYER' && !multiplayerHook.isInGame ? (
+        <main
+          data-testid="multiplayer-hub-container"
+          className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col items-center justify-center flex-1 min-h-[550px]"
         >
-          <div
-            className={
-              hasSecondRow
-                ? 'w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12'
-                : 'w-full'
-            }
-          >
-            <PlayerHand
-              cards={viewingPlayer.hand}
-              cardSize="md"
-              selectedCardIds={selectedCardIds}
-              newCardIds={
-                isViewingActivePlayer
-                  ? (gameState.newlyPickedUpCardIds ?? [])
-                  : []
-              }
-              onToggleCardSelection={handleToggleCardSelection}
-              onClearSelection={handleClearSelection}
-              playerName={viewingPlayer.name}
-              playerTeam={viewingPlayer.team}
-              isCurrentPlayer={isViewingActivePlayer}
-              disabled={gameState.roundStatus === 'ROUND_OVER'}
+          <MultiplayerHub
+            onBackToMenu={() => setAppMode('LOCAL')}
+            multiplayerHook={multiplayerHook}
+          />
+        </main>
+      ) : (
+        /* =====================================================================
+            3. MAIN PLAYING ARENA (EXPANDED WIDESCREEN FIT)
+        ====================================================================== */
+        <main className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-1.5 sm:py-2 flex flex-col gap-2 sm:gap-2.5 flex-1 min-h-0">
+          {/* Spatial Seating & Casino Felt Card Table Arena */}
+          <section aria-label="Table Arena and Seating" className="w-full flex flex-col justify-start my-0.5">
+            <TableSeating
+              players={activeGameState.players}
+              viewedPlayerIndex={currentViewIndex}
+              activeTurnIndex={activeTurnIndex}
+              onSelectPlayer={appMode === 'LOCAL' ? handleSwitchPlayer : undefined}
               isRippling={isTableRippling}
-              onReorderCards={handleReorderHand}
-              isHovering={hasSecondRow}
-              actionsSlot={
-                <ActionControls
-                  phase={gameState.phase}
-                  selectedCards={selectedCards}
-                  selectedCardIds={selectedCardIds}
-                  allHandCards={viewingPlayer.hand}
-                  selectedMeld={selectedMeld}
-                  canDrawStock={
-                    gameState.phase === 'DRAW' &&
-                    isViewingActivePlayer &&
-                    gameState.stockDeck.length > 0
-                  }
-                  canTakeDiscard={
-                    gameState.phase === 'DRAW' &&
-                    isViewingActivePlayer &&
-                    gameState.discardPile.length > 0
-                  }
-                  stockCount={gameState.stockDeck.length}
-                  discardCount={gameState.discardPile.length}
-                  onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
-                  onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
-                  onPlayMeld={handlePlayMeld}
-                  onAddToMeld={handleAddToMeld}
-                  onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
-                  disabled={!isViewingActivePlayer || gameState.roundStatus === 'ROUND_OVER'}
-                  unifiedMode={true}
-                  showDrawButtons={false}
-                />
+            >
+              {/* The Modern Wood & Cream Table Arena Mat */}
+              <div
+                className={`w-full rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 table-cream-mat flex flex-col gap-2 sm:gap-2.5 shadow-2xl transition-transform ${
+                  isTableRippling ? 'animate-table-quake' : ''
+                }`}
+              >
+                {/* Center Decks & Piles */}
+                <div aria-label="Center Table Decks" className="w-full">
+                  <CenterTable
+                    stockDeckCount={
+                      isMultiplayerActive
+                        ? (activeGameState as SanitizedGameState).stockDeckCount
+                        : gameState.stockDeck.length
+                    }
+                    discardPile={activeGameState.discardPile}
+                    pukarPoolCount={
+                      isMultiplayerActive
+                        ? (activeGameState as SanitizedGameState).pukarPoolCount
+                        : gameState.pukarPool.length
+                    }
+                    canDraw={activeGameState.phase === 'DRAW' && isViewingActivePlayer}
+                    onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
+                    onDrawDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
+                    onPeekDiscard={() => setIsDiscardModalOpen(true)}
+                    isRippling={isTableRippling}
+                  />
+                </div>
+
+                {/* Table Sequences Board (Team A & Team B) */}
+                <div aria-label="Table Sequences" className="w-full">
+                  <TableMeldBoard
+                    melds={activeGameState.melds}
+                    activeTeam={activePlayer?.team ?? 'A'}
+                    selectedMeldId={selectedMeldId}
+                    onSelectMeld={(meld) => {
+                      setSelectedMeldId((prev) => (prev === meld.id ? null : meld.id));
+                    }}
+                    onZoomMeld={(meld) => setZoomedMeld(meld)}
+                    selectedCards={selectedCards}
+                    allHandCards={viewingPlayer.hand}
+                    canAdd={activeGameState.phase === 'MELD' && isViewingActivePlayer}
+                    onAddToMeld={handleAddToMeld}
+                    isRippling={isTableRippling}
+                    cardSize="md"
+                  />
+                </div>
+              </div>
+            </TableSeating>
+          </section>
+
+          {/* ===================================================================
+              4. DOCKED UNIFIED PLAYER CONSOLE (HAND + CONTEXTUAL ACTIONS)
+          ==================================================================== */}
+          <section
+            aria-label="Player Hand and Actions"
+            data-has-second-row={hasSecondRow ? 'true' : undefined}
+            data-is-hovering={hasSecondRow ? 'true' : undefined}
+            className={`w-full shrink-0 transition-all duration-300 ${
+              hasSecondRow
+                ? 'fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/80 backdrop-blur-md pt-2 sm:pt-2.5 pb-2 sm:pb-3 border-t border-amber-500/30 drop-shadow-[0_-12px_28px_rgba(0,0,0,0.85)]'
+                : ''
+            }`}
+          >
+            <div
+              className={
+                hasSecondRow
+                  ? 'w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12'
+                  : 'w-full'
               }
+            >
+              <PlayerHand
+                cards={viewingPlayer.hand ?? []}
+                cardSize="md"
+                selectedCardIds={selectedCardIds}
+                newCardIds={
+                  isViewingActivePlayer
+                    ? (activeGameState.newlyPickedUpCardIds ?? [])
+                    : []
+                }
+                onToggleCardSelection={handleToggleCardSelection}
+                onClearSelection={handleClearSelection}
+                playerName={viewingPlayer?.name ?? 'Player'}
+                playerTeam={viewingPlayer?.team ?? 'A'}
+                isCurrentPlayer={isViewingActivePlayer}
+                disabled={activeGameState.roundStatus === 'ROUND_OVER'}
+                isRippling={isTableRippling}
+                onReorderCards={handleReorderHand}
+                isHovering={hasSecondRow}
+                actionsSlot={
+                  <ActionControls
+                    phase={activeGameState.phase}
+                    selectedCards={selectedCards}
+                    selectedCardIds={selectedCardIds}
+                    allHandCards={viewingPlayer.hand ?? []}
+                    selectedMeld={selectedMeld}
+                    canDrawStock={
+                      activeGameState.phase === 'DRAW' &&
+                      isViewingActivePlayer &&
+                      (isMultiplayerActive
+                        ? (activeGameState as SanitizedGameState).stockDeckCount > 0
+                        : gameState.stockDeck.length > 0)
+                    }
+                    canTakeDiscard={
+                      activeGameState.phase === 'DRAW' &&
+                      isViewingActivePlayer &&
+                      activeGameState.discardPile.length > 0
+                    }
+                    stockCount={
+                      isMultiplayerActive
+                        ? (activeGameState as SanitizedGameState).stockDeckCount
+                        : gameState.stockDeck.length
+                    }
+                    discardCount={activeGameState.discardPile.length}
+                    onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
+                    onTakeDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
+                    onPlayMeld={handlePlayMeld}
+                    onAddToMeld={handleAddToMeld}
+                    onDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
+                    disabled={!isViewingActivePlayer || activeGameState.roundStatus === 'ROUND_OVER'}
+                    unifiedMode={true}
+                    showDrawButtons={false}
+                  />
+                }
+              />
+            </div>
+          </section>
+
+          {/* 5. Dev Inspector & Hot-Seat Switcher (Hidden in Multiplayer mode for fairness) */}
+          {appMode === 'LOCAL' && (
+            <section aria-label="Hot-Seat Tools & Dev Inspector" className="shrink-0">
+              <DevInspector
+                players={gameState.players}
+                currentPlayerIndex={currentViewIndex}
+                activeTurnIndex={activeTurnIndex}
+                onSwitchPlayer={handleSwitchPlayer}
+                onForceTurn={handleForceTurn}
+                stockDeckCount={gameState.stockDeck.length}
+                discardPileCount={gameState.discardPile.length}
+                pukarPoolCount={gameState.pukarPool.length}
+                isGodModeOpen={isGodModeOpen}
+                onToggleGodMode={() => setIsGodModeOpen((prev) => !prev)}
+                newlyPickedUpCardIds={gameState.newlyPickedUpCardIds}
+              />
+            </section>
+          )}
+
+          {/* Spacer for bottom hover mode when either team has a second row */}
+          {hasSecondRow && (
+            <div
+              aria-hidden="true"
+              data-testid="hand-dock-spacer"
+              className="w-full shrink-0 h-[230px] sm:h-[260px] pointer-events-none"
             />
-          </div>
-        </section>
-
-        {/* 4. Dev Inspector & Hot-Seat Switcher */}
-        <section aria-label="Hot-Seat Tools & Dev Inspector" className="shrink-0">
-          <DevInspector
-            players={gameState.players}
-            currentPlayerIndex={currentViewIndex}
-            activeTurnIndex={activeTurnIndex}
-            onSwitchPlayer={handleSwitchPlayer}
-            onForceTurn={handleForceTurn}
-            stockDeckCount={gameState.stockDeck.length}
-            discardPileCount={gameState.discardPile.length}
-            pukarPoolCount={gameState.pukarPool.length}
-            isGodModeOpen={isGodModeOpen}
-            onToggleGodMode={() => setIsGodModeOpen((prev) => !prev)}
-            newlyPickedUpCardIds={gameState.newlyPickedUpCardIds}
-          />
-        </section>
-
-        {/* Spacer for bottom hover mode when either team has a second row */}
-        {hasSecondRow && (
-          <div
-            aria-hidden="true"
-            data-testid="hand-dock-spacer"
-            className="w-full shrink-0 h-[230px] sm:h-[260px] pointer-events-none"
-          />
-        )}
-      </main>
+          )}
+        </main>
+      )}
 
       {/* =====================================================================
           MODALS
       ====================================================================== */}
+      {/* 0. Mode Selector Modal */}
+      <ModeSelectorModal
+        isOpen={isModeModalOpen}
+        onSelectLocal={() => {
+          setAppMode('LOCAL');
+          setSelectedCardIds([]);
+          setSelectedMeldId(null);
+          setDisconnectToast(null);
+          setErrorMessage(null);
+          setPukarBanner(null);
+          setPukarSlamEvent(null);
+          setJokerPickupBanner(null);
+          setExhaustNotification(null);
+          setIsModeModalOpen(false);
+        }}
+        onSelectMultiplayer={() => {
+          setAppMode('MULTIPLAYER');
+          setSelectedCardIds([]);
+          setSelectedMeldId(null);
+          setDisconnectToast(null);
+          setErrorMessage(null);
+          setPukarBanner(null);
+          setPukarSlamEvent(null);
+          setJokerPickupBanner(null);
+          setExhaustNotification(null);
+          setIsModeModalOpen(false);
+        }}
+        onClose={() => setIsModeModalOpen(false)}
+      />
+
       {/* 1. Round Summary Modal */}
       <RoundSummaryModal
-        isOpen={gameState.roundStatus === 'ROUND_OVER' || Boolean(gameState.isRoundOver)}
-        isRoundOver={gameState.roundStatus === 'ROUND_OVER' || Boolean(gameState.isRoundOver)}
-        round={gameState.round}
-        roundScores={gameState.roundScores}
-        totalScores={gameState.totalScores ?? gameState.scores}
-        melds={gameState.melds}
-        pukarsClaimed={gameState.pukarsClaimed}
+        isOpen={
+          activeGameState.roundStatus === 'ROUND_OVER' ||
+          activeGameState.roundStatus === 'GAME_OVER' ||
+          Boolean(activeGameState.isRoundOver)
+        }
+        isRoundOver={
+          activeGameState.roundStatus === 'ROUND_OVER' ||
+          activeGameState.roundStatus === 'GAME_OVER' ||
+          Boolean(activeGameState.isRoundOver)
+        }
+        round={activeGameState.round}
+        roundScores={activeGameState.roundScores}
+        totalScores={activeGameState.totalScores ?? activeGameState.scores}
+        melds={activeGameState.melds}
+        pukarsClaimed={activeGameState.pukarsClaimed}
         onStartNextRound={() => handleAction({ type: 'START_NEXT_ROUND' })}
       />
 
@@ -803,7 +1127,7 @@ export function App({ initialState }: AppProps = {}) {
       <DiscardPileModal
         isOpen={isDiscardModalOpen}
         onClose={() => setIsDiscardModalOpen(false)}
-        discardPile={gameState.discardPile}
+        discardPile={activeGameState.discardPile}
       />
 
       {/* 3. Sequence Zoom Inspection Modal */}
@@ -813,7 +1137,7 @@ export function App({ initialState }: AppProps = {}) {
         onClose={() => setZoomedMeld(null)}
       />
 
-      {/* 3. Game Setup & New Game Modal */}
+      {/* 4. Game Setup & New Game Modal (Local Mode Only) */}
       <GameSetupModal
         isOpen={isSetupModalOpen}
         onClose={() => setIsSetupModalOpen(false)}
@@ -830,7 +1154,7 @@ export function App({ initialState }: AppProps = {}) {
         }
       />
 
-      {/* 4. Joker Designation Prompt Modal */}
+      {/* 5. Joker Designation Prompt Modal */}
       <JokerPromptModal
         isOpen={Boolean(jokerPromptData?.isOpen)}
         options={jokerPromptData?.options ?? []}
@@ -856,7 +1180,7 @@ export function App({ initialState }: AppProps = {}) {
         onCancel={() => setJokerPromptData(null)}
       />
 
-      {/* 5. Rules & Instructions Modal */}
+      {/* 6. Rules & Instructions Modal */}
       {isRulesModalOpen && (
         <div
           role="dialog"

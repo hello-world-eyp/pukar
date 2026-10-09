@@ -10,6 +10,8 @@ import {
   VolumeX,
   HelpCircle,
   RotateCcw,
+  Wifi,
+  MonitorPlay,
 } from 'lucide-react';
 
 export interface ScoreBoardProps {
@@ -33,6 +35,8 @@ export interface ScoreBoardProps {
   onToggleMute?: () => void;
   onOpenRules?: () => void;
   onRestartGame?: () => void;
+  appMode?: 'LOCAL' | 'MULTIPLAYER';
+  onOpenModeSelector?: () => void;
 }
 
 export const ScoreBoard: React.FC<ScoreBoardProps> = ({
@@ -54,6 +58,8 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   onToggleMute,
   onOpenRules,
   onRestartGame,
+  appMode = 'LOCAL',
+  onOpenModeSelector,
 }) => {
   // Resolve values from props or gameState fallback safely
   let resolvedRound = 1;
@@ -319,6 +325,29 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
                 aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
               >
                 {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            )}
+
+            {/* Mode Switcher Button */}
+            {onOpenModeSelector && (
+              <button
+                type="button"
+                data-testid="btn-mode-selector"
+                onClick={onOpenModeSelector}
+                className={`px-2.5 py-1.5 rounded-xl border text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  appMode === 'MULTIPLAYER'
+                    ? 'bg-emerald-950/60 border-emerald-600/70 text-emerald-300 hover:bg-emerald-900/60'
+                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
+                }`}
+                title={`Current Mode: ${appMode === 'MULTIPLAYER' ? 'Multiplayer' : 'Local Pass & Play'}`}
+                aria-label="Mode"
+              >
+                {appMode === 'MULTIPLAYER' ? (
+                  <Wifi className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <MonitorPlay className="w-4 h-4 text-amber-400" />
+                )}
+                <span>Mode</span>
               </button>
             )}
 
