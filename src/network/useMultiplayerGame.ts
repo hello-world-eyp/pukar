@@ -72,8 +72,21 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
               const foundSeat = msg.seats.find(
                 (s) => s.playerId !== null && s.playerId === currentPid
               );
-              if (foundSeat) {
-                setMySeatIndex(foundSeat.seatIndex);
+              const updatedSeatIndex = foundSeat ? foundSeat.seatIndex : null;
+              setMySeatIndex(updatedSeatIndex);
+
+              // Keep persisted credentials synchronized with active seat assignment
+              const existing = getSessionCredentials();
+              const activeRoom = roomCodeRef.current || msg.roomCode;
+              if (
+                existing &&
+                existing.roomCode === activeRoom &&
+                existing.seatIndex !== updatedSeatIndex
+              ) {
+                saveSessionCredentials({
+                  ...existing,
+                  seatIndex: updatedSeatIndex,
+                });
               }
             }
             break;
@@ -103,6 +116,21 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
             if (msg.lastActionError) {
               setErrorMessage(msg.lastActionError);
             }
+
+            // Synthesize seats if reconnecting mid-game and lobbySeats is empty
+            if (msg.state.players && msg.state.players.length > 0) {
+              setLobbySeats((prev) => {
+                if (prev.length > 0) return prev;
+                return msg.state.players.map((p, idx) => ({
+                  seatIndex: idx,
+                  team: p.team,
+                  playerId: p.id,
+                  playerName: p.name,
+                  isConnected: true,
+                  isHost: false,
+                }));
+              });
+            }
             break;
           }
 
@@ -113,6 +141,14 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
           case 'ERROR': {
             setErrorMessage(msg.message);
+            // Clear stale stored session if server rejected room or token
+            if (
+              msg.code === 'JOIN_FAILED' ||
+              msg.code === 'ROOM_NOT_FOUND' ||
+              msg.code === 'NOT_IN_ROOM'
+            ) {
+              clearSessionCredentials();
+            }
             break;
           }
 
@@ -145,6 +181,7 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
   const createRoom = useCallback((playerName: string, playerCount: 4 | 6) => {
     setErrorMessage(null);
+    clientRef.current?.clearOutbox();
     clientRef.current?.send({
       type: 'CREATE_ROOM',
       playerName,
@@ -154,6 +191,10 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
   const joinRoom = useCallback((roomCodeInput: string, playerName: string) => {
     setErrorMessage(null);
+    if (!roomCodeInput || typeof roomCodeInput !== 'string' || !roomCodeInput.trim()) {
+      setErrorMessage('Room code is required');
+      return;
+    }
     const cleanCode = roomCodeInput.trim().toUpperCase();
     const existing = getSessionCredentials();
     const sessionToken = existing?.roomCode === cleanCode ? existing.sessionToken : undefined;

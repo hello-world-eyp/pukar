@@ -25,7 +25,26 @@ function getStorage(): Storage | null {
  */
 export function saveSessionCredentials(session: StoredSession): void {
   try {
-    const serialized = JSON.stringify(session);
+    if (
+      !session ||
+      typeof session.roomCode !== 'string' ||
+      !session.roomCode.trim() ||
+      typeof session.playerId !== 'string' ||
+      !session.playerId.trim() ||
+      typeof session.sessionToken !== 'string' ||
+      !session.sessionToken.trim()
+    ) {
+      return;
+    }
+
+    const normalizedSession: StoredSession = {
+      roomCode: session.roomCode.trim(),
+      playerId: session.playerId.trim(),
+      sessionToken: session.sessionToken.trim(),
+      seatIndex: typeof session.seatIndex === 'number' ? session.seatIndex : null,
+    };
+
+    const serialized = JSON.stringify(normalizedSession);
     const storage = getStorage();
     if (storage) {
       storage.setItem(STORAGE_KEY, serialized);

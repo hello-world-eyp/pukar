@@ -119,9 +119,21 @@ export class SocketClient {
 
   /**
    * Connects to the WebSocket server.
+   * If already open or connecting, does not tear down socket unless force is true.
+   * Cancels any pending reconnection timer.
    */
-  public connect(): void {
+  public connect(force = false): void {
     this.isManuallyClosed = false;
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    if (!force && this.ws && (this.ws.readyState === WS_OPEN_STATE || this.ws.readyState === 0)) {
+      return;
+    }
+
     this.cleanupSocket();
 
     const statusToNotify: ConnectionStatus =

@@ -319,6 +319,27 @@ describe('Multiplayer Session Storage', () => {
     expect(() => clearSessionCredentials()).not.toThrow();
     warnSpy.mockRestore();
   });
+
+  it('ignores invalid or incomplete credential objects defensively', () => {
+    saveSessionCredentials({} as any);
+    expect(getSessionCredentials()).toBeNull();
+
+    saveSessionCredentials({
+      roomCode: '   ',
+      playerId: 'p1',
+      sessionToken: 'tok1',
+      seatIndex: 0,
+    } as any);
+    expect(getSessionCredentials()).toBeNull();
+
+    saveSessionCredentials({
+      roomCode: 'VALID',
+      playerId: '',
+      sessionToken: 'tok1',
+      seatIndex: 0,
+    } as any);
+    expect(getSessionCredentials()).toBeNull();
+  });
 });
 
 /* ========================================================================
@@ -651,6 +672,55 @@ describe('SocketClient', () => {
       // Advance time - no new socket should be created
       vi.advanceTimersByTime(60000);
       expect(MockWebSocket.instances).toHaveLength(1);
+    });
+
+    it('manual connect() cancels pending reconnectTimer and prevents dangling reconnection attempt', () => {
+      const client = new SocketClient({ WebSocketClass: MockWebSocket });
+      client.connect();
+
+      const ws1 = MockWebSocket.instances[0];
+      ws1.triggerOpen();
+
+      // Unexpected drop triggers 1000ms timer
+      ws1.triggerClose(1006);
+      expect(client.getStatus()).toBe('RECONNECTING');
+
+      // Manual connect called at 500ms
+      vi.advanceTimersByTime(500);
+      client.connect();
+      expect(MockWebSocket.instances).toHaveLength(2);
+
+      const ws2 = MockWebSocket.instances[1];
+      ws2.triggerOpen();
+      expect(client.getStatus()).toBe('CONNECTED');
+
+      // Advance past the original 1000ms mark: no 3rd socket should be spawned
+      vi.advanceTimersByTime(1000);
+      expect(MockWebSocket.instances).toHaveLength(2);
+      expect(client.isConnected()).toBe(true);
+
+      client.close();
+    });
+
+    it('connect() is idempotent and does not recreate socket if already OPEN or CONNECTING', () => {
+      const client = new SocketClient({ WebSocketClass: MockWebSocket });
+      client.connect();
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      // Calling connect while CONNECTING does not recreate
+      client.connect();
+      expect(MockWebSocket.instances).toHaveLength(1);
+
+      const ws = MockWebSocket.instances[0];
+      ws.triggerOpen();
+      expect(client.isConnected()).toBe(true);
+
+      // Calling connect while OPEN does not recreate
+      client.connect();
+      expect(MockWebSocket.instances).toHaveLength(1);
+      expect(client.isConnected()).toBe(true);
+
+      client.close();
     });
   });
 });
@@ -1078,6 +1148,176 @@ describe('useMultiplayerGame Hook', () => {
 
     unmount();
   });
+
+  it('processes LOBBY_UPDATE: updates seat credentials in sessionStorage and resets mySeatIndex to null if kicked or unseated', () => {
+    saveSessionCredentials({
+      roomCode: 'SYNC',
+      playerId: 'p_bob',
+      sessionToken: 'tok_bob',
+      seatIndex: null,
+    });
+
+    const client = new SocketClient({ WebSocketClass: MockWebSocket });
+    client.connect();
+    const mockWs = MockWebSocket.instances[0];
+    mockWs.triggerOpen();
+
+    const { result, unmount } = renderHook(() => useMultiplayerGame({ client }));
+
+    // Initial ROOM_JOINED with seatIndex: null
+    act(() => {
+      mockWs.triggerMessage(
+        JSON.stringify({
+          type: 'ROOM_JOINED',
+          roomCode: 'SYNC',
+          playerId: 'p_bob',
+          sessionToken: 'tok_bob',
+          isHost: false,
+          seatIndex: null,
+        })
+      );
+    });
+    expect(result.current.mySeatIndex).toBeNull();
+    expect(getSessionCredentials()?.seatIndex).toBeNull();
+
+    // 1. Bob claims seat 1 -> LOBBY_UPDATE assigns seat 1 and synchronizes sessionStorage
+    act(() => {
+      mockWs.triggerMessage(
+        JSON.stringify({
+          type: 'LOBBY_UPDATE',
+          roomCode: 'SYNC',
+          playerCount: 4,
+          hostPlayerId: 'p_host',
+          seats: [
+            { seatIndex: 0, playerId: 'p_host', playerName: 'Host', team: 'A', isConnected: true, isHost: true },
+            { seatIndex: 1, playerId: 'p_bob', playerName: 'Bob', team: 'B', isConnected: true, isHost: false },
+          ],
+        })
+      );
+    });
+    expect(result.current.mySeatIndex).toBe(1);
+    expect(getSessionCredentials()?.seatIndex).toBe(1);
+
+    // 2. Bob is kicked from seat 1 -> LOBBY_UPDATE vacates seat 1, mySeatIndex resets to null, sessionStorage resets
+    act(() => {
+      mockWs.triggerMessage(
+        JSON.stringify({
+          type: 'LOBBY_UPDATE',
+          roomCode: 'SYNC',
+          playerCount: 4,
+          hostPlayerId: 'p_host',
+          seats: [
+            { seatIndex: 0, playerId: 'p_host', playerName: 'Host', team: 'A', isConnected: true, isHost: true },
+            { seatIndex: 1, playerId: null, playerName: null, team: 'B', isConnected: false, isHost: false },
+          ],
+        })
+      );
+    });
+    expect(result.current.mySeatIndex).toBeNull();
+    expect(getSessionCredentials()?.seatIndex).toBeNull();
+
+    unmount();
+  });
+
+  it('processes STATE_UPDATE: synthesizes lobbySeats if empty upon mid-game reconnect', () => {
+    const client = new SocketClient({ WebSocketClass: MockWebSocket });
+    client.connect();
+    const mockWs = MockWebSocket.instances[0];
+    mockWs.triggerOpen();
+
+    const { result, unmount } = renderHook(() => useMultiplayerGame({ client }));
+
+    // Reconnecting directly mid-game without prior LOBBY_UPDATE
+    act(() => {
+      mockWs.triggerMessage(
+        JSON.stringify({
+          type: 'ROOM_JOINED',
+          roomCode: 'MIDG',
+          playerId: 'p2',
+          sessionToken: 'tok2',
+          isHost: false,
+          seatIndex: 1,
+        })
+      );
+    });
+    expect(result.current.lobbySeats).toEqual([]);
+
+    act(() => {
+      mockWs.triggerMessage(
+        JSON.stringify({
+          type: 'STATE_UPDATE',
+          state: {
+            playerCount: 4,
+            players: [
+              { id: 'p1', name: 'Alice', team: 'A', cardCount: 10 },
+              { id: 'p2', name: 'Bob', team: 'B', cardCount: 10 },
+            ],
+            currentPlayerIndex: 0,
+            phase: 'DRAW',
+            stockDeckCount: 30,
+            discardPile: [],
+            pukarPoolCount: 0,
+            melds: { A: [], B: [] },
+            scores: { A: 0, B: 0 },
+          },
+        })
+      );
+    });
+
+    expect(result.current.isInGame).toBe(true);
+    expect(result.current.lobbySeats).toHaveLength(2);
+    expect(result.current.lobbySeats[0].playerName).toBe('Alice');
+    expect(result.current.lobbySeats[1].playerName).toBe('Bob');
+
+    unmount();
+  });
+
+  it('processes ERROR: clears session credentials on JOIN_FAILED or ROOM_NOT_FOUND', () => {
+    saveSessionCredentials({
+      roomCode: 'DEAD',
+      playerId: 'p_old',
+      sessionToken: 'tok_old',
+      seatIndex: 0,
+    });
+
+    const client = new SocketClient({ WebSocketClass: MockWebSocket });
+    client.connect();
+    const mockWs = MockWebSocket.instances[0];
+    mockWs.triggerOpen();
+
+    const { result, unmount } = renderHook(() => useMultiplayerGame({ client }));
+
+    act(() => {
+      mockWs.triggerMessage(
+        JSON.stringify({
+          type: 'ERROR',
+          message: 'Room not found',
+          code: 'JOIN_FAILED',
+        })
+      );
+    });
+
+    expect(result.current.errorMessage).toBe('Room not found');
+    expect(getSessionCredentials()).toBeNull();
+
+    unmount();
+  });
+
+  it('joinRoom: rejects empty or blank room code with clear error message', () => {
+    const client = new SocketClient({ WebSocketClass: MockWebSocket });
+    const { result, unmount } = renderHook(() =>
+      useMultiplayerGame({ client, autoConnect: false })
+    );
+
+    act(() => {
+      result.current.joinRoom('   ', 'Bob');
+    });
+
+    expect(result.current.errorMessage).toBe('Room code is required');
+    expect(client.getOutboxCount()).toBe(0);
+
+    unmount();
+  });
 });
 
 /* ========================================================================
@@ -1102,6 +1342,14 @@ describe('useMultiplayerGame with Authoritative Server E2E', () => {
   });
 
   it('executes a real end-to-end create room, join room, and leave room lifecycle over real WebSockets', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      const msg = args.join(' ');
+      if (msg.includes('was not wrapped in act') || msg.includes('act scope')) {
+        return;
+      }
+      console.warn(...args);
+    });
+
     const port = serverInstance.port;
 
     // 1. Host hook
@@ -1109,10 +1357,6 @@ describe('useMultiplayerGame with Authoritative Server E2E', () => {
       url: `ws://127.0.0.1:${port}`,
       WebSocketClass: NodeWebSocket,
     });
-    const origHostOnMsg = hostClient.onMessage.bind(hostClient);
-    hostClient.onMessage = (fn) => origHostOnMsg((m) => act(() => fn(m)));
-    const origHostOnStatus = hostClient.onStatus.bind(hostClient);
-    hostClient.onStatus = (fn) => origHostOnStatus((s) => act(() => fn(s)));
 
     const host = renderHook(() => useMultiplayerGame({ client: hostClient }));
 
@@ -1140,10 +1384,6 @@ describe('useMultiplayerGame with Authoritative Server E2E', () => {
       url: `ws://127.0.0.1:${port}`,
       WebSocketClass: NodeWebSocket,
     });
-    const origBobOnMsg = bobClient.onMessage.bind(bobClient);
-    bobClient.onMessage = (fn) => origBobOnMsg((m) => act(() => fn(m)));
-    const origBobOnStatus = bobClient.onStatus.bind(bobClient);
-    bobClient.onStatus = (fn) => origBobOnStatus((s) => act(() => fn(s)));
 
     const bob = renderHook(() => useMultiplayerGame({ client: bobClient }));
 
@@ -1185,5 +1425,6 @@ describe('useMultiplayerGame with Authoritative Server E2E', () => {
     bob.unmount();
     hostClient.close();
     bobClient.close();
+    errorSpy.mockRestore();
   });
 });
