@@ -187,5 +187,35 @@ describe('Comprehensive PlayingCard Component (src/ui/components/PlayingCard.tsx
       expect(html).not.toContain('role="button"');
       expect(html).not.toContain('cursor-pointer');
     });
+
+    it('renders King court card with royal crown emblem in fallback layout and image candidates', () => {
+      const kingCard = makeCard('CLUBS', 13);
+      const html = renderToString(<PlayingCard card={kingCard} />);
+
+      expect(html).toContain('K');
+      expect(html).toContain('♣');
+      expect(html).toContain('♔');
+      expect(html).toContain('src="/cards/Clubs/K.png"');
+    });
+
+    it('renders Queen and Jack court cards with respective royalty emblems', () => {
+      const queenCard = makeCard('SPADES', 12);
+      const queenHtml = renderToString(<PlayingCard card={queenCard} />);
+      expect(queenHtml).toContain('♕');
+
+      const jackCard = makeCard('HEARTS', 11);
+      const jackHtml = renderToString(<PlayingCard card={jackCard} />);
+      expect(jackHtml).toContain('⚔');
+    });
+
+    it('renders Joker with candidate image source pointing to /cards/joker.png', () => {
+      const jokerCard = makeCard(null, 0);
+      const html = renderToString(<PlayingCard card={jokerCard} />);
+
+      expect(html).toContain('src="/cards/joker.png"');
+      expect(html).toContain('Joker');
+      expect(html).toContain('★');
+    });
   });
 });
+

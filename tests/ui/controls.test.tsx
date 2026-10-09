@@ -477,6 +477,28 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
 
       expect(html).toContain('Valid RUN');
     });
+
+    it('renders YOUR TURN: DRAW banner when active in unified mode, but hides it and shows Waiting indicator when disabled', () => {
+      const activeHtml = renderToString(
+        <ActionControls
+          phase="DRAW"
+          unifiedMode={true}
+          disabled={false}
+        />
+      );
+      expect(activeHtml).toContain('YOUR TURN: DRAW');
+      expect(activeHtml).not.toContain('Waiting for turn...');
+
+      const inactiveHtml = renderToString(
+        <ActionControls
+          phase="DRAW"
+          unifiedMode={true}
+          disabled={true}
+        />
+      );
+      expect(inactiveHtml).not.toContain('YOUR TURN: DRAW');
+      expect(inactiveHtml).toContain('Waiting for turn...');
+    });
   });
 
   /* ========================================================================

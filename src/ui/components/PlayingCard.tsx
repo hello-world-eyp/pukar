@@ -96,14 +96,24 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
   const candidateSources = React.useMemo(() => {
     if (isJoker) {
-      return ['/cards/joker.png', '/cards/natural_joker.png', '/cards/joker.svg'];
+      return [
+        '/cards/joker.png',
+        '/cards/natural_joker.png',
+        '/cards/joker.jpg',
+        '/cards/joker.svg',
+        '/cards/natural_joker.svg',
+      ];
     }
     if (!card.suit) return [];
     return [
       `/cards/${suitCapitalized}/${rankStr}.png`,
       `/cards/${suitCapitalized}/${suitLower}_${rankStr}.png`,
       `/cards/${suitLower}_${rankStr}.png`,
+      `/cards/${suitCapitalized}/${suitLower}_${rankStr}.svg`,
+      `/cards/${suitCapitalized}/${rankStr}.svg`,
       `/cards/${suitLower}_${rankStr}.svg`,
+      `/cards/${suitCapitalized}/${suitLower}_${rankStr}.jpg`,
+      `/cards/${suitCapitalized}/${rankStr}.jpg`,
     ];
   }, [isJoker, card.suit, suitCapitalized, suitLower, rankStr]);
 
@@ -134,6 +144,13 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       // ignore
     }
   };
+
+  const handleImageRef = (imgElement: HTMLImageElement | null) => {
+    if (imgElement && imgElement.complete && imgElement.naturalWidth > 0 && !imgLoaded) {
+      setImgLoaded(true);
+    }
+  };
+
 
   // Size specific styles with precise 2:3 aspect ratio and enlarged high-legibility fonts (min 10pt / 14px)
   const sizeStyles = {
@@ -272,6 +289,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       {/* Card Illustration Asset */}
       {currentSrc && !imgError && (
         <img
+          key={currentSrc}
+          ref={handleImageRef}
           src={currentSrc}
           alt=""
           aria-hidden="true"
@@ -319,18 +338,34 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         }`}
       >
         {isJoker ? (
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center justify-center">
             <span className={sizeStyles.centerSuit}>★</span>
             {size !== 'sm' && (
-              <span className="text-sm tracking-tight font-extrabold uppercase text-amber-700">
+              <span className="text-[11px] sm:text-xs tracking-wider font-black uppercase text-amber-700">
                 Joker
               </span>
             )}
+          </div>
+        ) : card.rank === 13 ? (
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-xl sm:text-2xl leading-none opacity-90 select-none">♔</span>
+            <span className={`${sizeStyles.centerSuit} -mt-1 sm:-mt-1.5`}>{suitSymbol}</span>
+          </div>
+        ) : card.rank === 12 ? (
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-xl sm:text-2xl leading-none opacity-90 select-none">♕</span>
+            <span className={`${sizeStyles.centerSuit} -mt-1 sm:-mt-1.5`}>{suitSymbol}</span>
+          </div>
+        ) : card.rank === 11 ? (
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-xl sm:text-2xl leading-none opacity-90 select-none">⚔</span>
+            <span className={`${sizeStyles.centerSuit} -mt-1 sm:-mt-1.5`}>{suitSymbol}</span>
           </div>
         ) : (
           <span className={sizeStyles.centerSuit}>{suitSymbol}</span>
         )}
       </div>
+
 
       {/* Bottom-Right Corner Index (Inverted) */}
       <div

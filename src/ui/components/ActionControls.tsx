@@ -148,12 +148,23 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
         className={`flex items-center gap-2 flex-wrap sm:flex-nowrap ${className}`}
       >
         {/* DRAW PHASE INLINE GUIDANCE */}
-        {isDrawPhase && (
+        {!disabled && isDrawPhase && (
           <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950 text-sm font-black shadow-md animate-pulse">
             <MousePointerClick className="w-4 h-4 text-amber-700 shrink-0" />
             <span>YOUR TURN: DRAW • Click Stock Deck or Discard Pile above</span>
           </div>
         )}
+
+        {disabled && (
+          <div
+            data-testid="waiting-turn-indicator"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-200/80 border border-stone-300 text-stone-600 text-xs font-bold"
+          >
+            <span className="w-2 h-2 rounded-full bg-stone-400 animate-pulse" />
+            <span>Waiting for turn...</span>
+          </div>
+        )}
+
 
         {/* MELD / DISCARD PHASE ACTIONS */}
         {!isDrawPhase && (
@@ -241,14 +252,16 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
           <span
             data-testid="current-phase-badge"
             className={`text-xs font-black px-2 py-0.5 rounded uppercase tracking-wider ${
-              isDrawPhase
+              disabled
+                ? 'bg-slate-700 text-slate-300'
+                : isDrawPhase
                 ? 'bg-amber-500 text-slate-950'
                 : isMeldPhase
                 ? 'bg-emerald-500 text-slate-950'
                 : 'bg-red-500 text-white'
             }`}
           >
-            {phase}
+            {disabled ? 'WAITING' : phase}
           </span>
         </div>
 

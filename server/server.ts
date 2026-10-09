@@ -27,6 +27,39 @@ const MIME_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
+function resolveFilePathCaseInsensitive(baseDir: string, relativePath: string): string | null {
+  try {
+    const segments = relativePath.split(/[/\\]+/).filter(Boolean);
+    let currentDir = baseDir;
+
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      if (!fs.existsSync(currentDir) || !fs.statSync(currentDir).isDirectory()) {
+        return null;
+      }
+
+      const exactPath = path.join(currentDir, segment);
+      if (fs.existsSync(exactPath)) {
+        currentDir = exactPath;
+        continue;
+      }
+
+      // Try case-insensitive match
+      const entries = fs.readdirSync(currentDir);
+      const match = entries.find((e) => e.toLowerCase() === segment.toLowerCase());
+      if (match) {
+        currentDir = path.join(currentDir, match);
+      } else {
+        return null;
+      }
+    }
+
+    return currentDir;
+  } catch {
+    return null;
+  }
+}
+
 function serveStaticFile(reqPath: string, res: http.ServerResponse): boolean {
   try {
     if (!fs.existsSync(distDir)) return false;
@@ -39,6 +72,18 @@ function serveStaticFile(reqPath: string, res: http.ServerResponse): boolean {
     }
 
     if (!fs.existsSync(targetPath)) {
+      const resolved = resolveFilePathCaseInsensitive(distDir, safePath);
+      if (resolved) {
+        targetPath = resolved;
+      }
+    }
+
+    if (!fs.existsSync(targetPath)) {
+      if (reqPath.startsWith('/cards/') || reqPath.startsWith('/assets/')) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Not found');
+        return true;
+      }
       targetPath = path.join(distDir, 'index.html');
     }
 
@@ -46,7 +91,11 @@ function serveStaticFile(reqPath: string, res: http.ServerResponse): boolean {
       const ext = path.extname(targetPath).toLowerCase();
       const contentType = MIME_TYPES[ext] || 'application/octet-stream';
       const content = fs.readFileSync(targetPath);
-      res.writeHead(200, { 'Content-Type': contentType });
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Content-Length': content.length,
+        'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000, immutable',
+      });
       res.end(content);
       return true;
     }
@@ -55,6 +104,7 @@ function serveStaticFile(reqPath: string, res: http.ServerResponse): boolean {
   }
   return false;
 }
+
 
 interface ExtWebSocket extends WebSocket {
   isAlive: boolean;
