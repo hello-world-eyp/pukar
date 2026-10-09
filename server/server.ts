@@ -1,10 +1,60 @@
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import crypto from 'crypto';
 import { RoomManager } from './room-manager';
 import { GameCoordinator } from './game-coordinator';
 import { serverLogger } from './logger';
 import { ClientMessage, ServerMessage, Room } from './types';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distDir = path.resolve(__dirname, '../dist');
+
+const MIME_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+};
+
+function serveStaticFile(reqPath: string, res: http.ServerResponse): boolean {
+  try {
+    if (!fs.existsSync(distDir)) return false;
+
+    const safePath = path.normalize(decodeURIComponent(reqPath)).replace(/^(\.\.[\/\\])+/, '');
+    let targetPath = path.join(distDir, safePath);
+
+    if (fs.existsSync(targetPath) && fs.statSync(targetPath).isDirectory()) {
+      targetPath = path.join(targetPath, 'index.html');
+    }
+
+    if (!fs.existsSync(targetPath)) {
+      targetPath = path.join(distDir, 'index.html');
+    }
+
+    if (fs.existsSync(targetPath) && fs.statSync(targetPath).isFile()) {
+      const ext = path.extname(targetPath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+      const content = fs.readFileSync(targetPath);
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(content);
+      return true;
+    }
+  } catch (err) {
+    serverLogger.error('Error serving static file', { error: err });
+  }
+  return false;
+}
 
 interface ExtWebSocket extends WebSocket {
   isAlive: boolean;
@@ -22,6 +72,7 @@ export interface ServerInstance {
 export interface ServerOptions {
   heartbeatIntervalMs?: number;
   roomManager?: RoomManager;
+  serveStatic?: boolean;
 }
 
 /**
@@ -129,6 +180,14 @@ export function startServer(
             res.end(JSON.stringify({ status: 'ok', timestamp: Date.now() }));
             return;
           }
+
+          if (options?.serveStatic) {
+            const urlPath = req.url?.split('?')[0] || '/';
+            if (serveStaticFile(urlPath, res)) {
+              return;
+            }
+          }
+
           res.writeHead(404, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Not found' }));
         } catch (httpErr) {
@@ -661,9 +720,9 @@ if (
   (process.argv[1].endsWith('server.ts') || process.argv[1].endsWith('server.js'))
 ) {
   const port = Number(process.env.PORT) || 3001;
-  startServer(port)
+  startServer(port, { serveStatic: true })
     .then(({ port: actualPort }) => {
-      serverLogger.info(`Pukar WebSocket Server running standalone on port ${actualPort}`);
+      serverLogger.info(`Pukar Web & WebSocket Server running on port ${actualPort}`);
     })
     .catch((err) => {
       serverLogger.error('Failed to start standalone server', { error: err });
