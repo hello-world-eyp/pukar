@@ -596,7 +596,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       <div
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center overflow-x-auto py-2.5 px-1 scrollbar-thin"
+        className="flex items-center overflow-x-auto pt-3.5 pb-2.5 px-2 scrollbar-thin"
       >
         {sortedSlots.map((slot, index) => {
           const card = slot.card;
@@ -606,7 +606,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
           if (isSlotWild) {
             const repRank = getRankLabel(slot.representedRank);
             const repSuit = getSuitSymbol(slot.representedSuit ?? meld.suit ?? card.suit);
-            wildLabel = `Wild (${repRank}${repSuit})`;
+            wildLabel = cardSize === 'sm' ? `W (${repRank}${repSuit})` : `Wild (${repRank}${repSuit})`;
           } else if (isSlotWild === false) {
             // Natural 2 that slid down
             wildLabel = undefined;
@@ -616,7 +616,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
             <div
               key={`${card.id}-${slot.representedRank}-${index}`}
               style={{
-                marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-30px' : '-18px',
+                marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-16px' : '-10px',
                 zIndex: index + 1,
                 animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
               }}

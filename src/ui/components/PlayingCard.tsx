@@ -98,10 +98,10 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
     if (isJoker) {
       return [
         '/cards/joker.png',
-        '/cards/natural_joker.png',
-        '/cards/joker.jpg',
         '/cards/joker.svg',
+        '/cards/natural_joker.png',
         '/cards/natural_joker.svg',
+        '/cards/joker.jpg',
       ];
     }
     if (!card.suit) return [];
@@ -109,8 +109,8 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       `/cards/${suitCapitalized}/${rankStr}.png`,
       `/cards/${suitCapitalized}/${suitLower}_${rankStr}.png`,
       `/cards/${suitLower}_${rankStr}.png`,
-      `/cards/${suitCapitalized}/${suitLower}_${rankStr}.svg`,
       `/cards/${suitCapitalized}/${rankStr}.svg`,
+      `/cards/${suitCapitalized}/${suitLower}_${rankStr}.svg`,
       `/cards/${suitLower}_${rankStr}.svg`,
       `/cards/${suitCapitalized}/${suitLower}_${rankStr}.jpg`,
       `/cards/${suitCapitalized}/${rankStr}.jpg`,
@@ -159,7 +159,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       cornerRank: 'text-sm font-black tracking-tight',
       cornerSuit: 'text-sm font-bold leading-none',
       centerSuit: 'text-2xl font-bold',
-      badge: 'text-sm font-black px-2 py-0.5',
+      badge: 'text-[9px] font-black px-1.5 py-px tracking-normal',
       paddings: 'p-1',
     },
     md: {
@@ -167,7 +167,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       cornerRank: 'text-base sm:text-lg font-black tracking-tight',
       cornerSuit: 'text-sm sm:text-base font-bold leading-none',
       centerSuit: 'text-4xl font-bold',
-      badge: 'text-sm font-black px-2 py-0.5',
+      badge: 'text-[10px] sm:text-[11px] font-black px-1.5 sm:px-2 py-0.5 tracking-tight',
       paddings: 'p-1.5',
     },
     lg: {
@@ -175,7 +175,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       cornerRank: 'text-xl sm:text-2xl font-black tracking-tight',
       cornerSuit: 'text-base sm:text-lg font-bold leading-none',
       centerSuit: 'text-5xl sm:text-6xl font-bold',
-      badge: 'text-sm font-black px-2.5 py-0.5',
+      badge: 'text-xs font-black px-2.5 py-0.5 tracking-wide',
       paddings: 'p-2',
     },
     xl: {
@@ -183,10 +183,11 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       cornerRank: 'text-2xl sm:text-3xl font-black tracking-tight',
       cornerSuit: 'text-lg sm:text-xl font-bold leading-none',
       centerSuit: 'text-6xl sm:text-7xl font-bold',
-      badge: 'text-sm font-black px-3 py-1',
+      badge: 'text-sm font-black px-3 py-1 tracking-wider',
       paddings: 'p-2.5',
     },
   }[size];
+
 
   // Suit / Rank Color - high contrast for accessibility
   const colorClass = isJoker
@@ -305,7 +306,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       {/* Wildcard Badge */}
       {wildBadgeText && (
         <span
-          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-md whitespace-nowrap z-20 ${sizeStyles.badge}`}
+          className={`absolute -top-2.5 left-1/2 -translate-x-1/2 font-bold uppercase rounded-full tracking-wider bg-amber-400 text-amber-950 border border-amber-300 shadow-md whitespace-nowrap z-30 max-w-[95%] truncate ${sizeStyles.badge}`}
         >
           {wildBadgeText}
         </span>
@@ -315,7 +316,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
       {isCardNew && showNewBadge && !wildBadgeText && (
         <span
           data-testid="new-card-badge"
-          className={`absolute -top-2 left-1/2 -translate-x-1/2 font-extrabold uppercase rounded-full tracking-wider bg-emerald-500 text-slate-950 border border-emerald-300 shadow-md whitespace-nowrap z-20 ${sizeStyles.badge}`}
+          className={`absolute -top-2.5 left-1/2 -translate-x-1/2 font-extrabold uppercase rounded-full tracking-wider bg-emerald-500 text-slate-950 border border-emerald-300 shadow-md whitespace-nowrap z-30 max-w-[95%] truncate ${sizeStyles.badge}`}
         >
           New
         </span>
@@ -323,7 +324,7 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
 
       {/* Top-Left Corner Index */}
       <div
-        className={`relative z-10 flex flex-col items-center leading-none ${colorClass} ${
+        className={`relative z-10 self-start flex flex-col items-center leading-none pl-0.5 pt-0.5 ${colorClass} ${
           isImageActive ? 'opacity-0 pointer-events-none select-none' : ''
         }`}
       >
@@ -366,10 +367,9 @@ export const PlayingCard: React.FC<PlayingCardProps> = ({
         )}
       </div>
 
-
       {/* Bottom-Right Corner Index (Inverted) */}
       <div
-        className={`flex flex-col items-center leading-none rotate-180 ${colorClass} ${
+        className={`relative z-10 self-end flex flex-col items-center leading-none rotate-180 pr-0.5 pb-0.5 ${colorClass} ${
           isImageActive ? 'opacity-0 pointer-events-none select-none' : ''
         }`}
       >

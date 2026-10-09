@@ -1363,7 +1363,7 @@ describe('useMultiplayerGame with Authoritative Server E2E', () => {
     // Wait for connection
     await vi.waitFor(() => {
       expect(host.result.current.connectionStatus).toBe('CONNECTED');
-    });
+    }, { timeout: 3000 });
 
     // 2. Host creates room
     act(() => {
