@@ -8,7 +8,9 @@ import { Card, GameAction, SanitizedGameState } from '../src/engine/types';
 export class GameCoordinator {
   /**
    * Validates if a room can start a game.
-   * Requires room status to be 'LOBBY' and all seats (4 or 6) to have a valid playerId.
+   * Requires room status to be 'LOBBY', seat count to match playerCount (4 or 6),
+   * all seatIndices 0..(playerCount-1) present and unique,
+   * all seats to have a valid non-empty playerId, and no duplicate playerIds.
    */
   public static canStartGame(room: Room): { canStart: boolean; reason?: string } {
     try {
@@ -18,7 +20,7 @@ export class GameCoordinator {
       if (room.status !== 'LOBBY') {
         return { canStart: false, reason: 'Game is already in progress' };
       }
-      if (!room.seats || room.seats.length === 0) {
+      if (!Array.isArray(room.seats) || room.seats.length === 0) {
         return { canStart: false, reason: 'No seats configured in room' };
       }
       if (room.playerCount !== 4 && room.playerCount !== 6) {
@@ -30,13 +32,43 @@ export class GameCoordinator {
           reason: `Invalid seats count (${room.seats.length} configured, expected ${room.playerCount})`,
         };
       }
-      const emptySeats = room.seats.filter((s) => !s.playerId || s.playerId.trim() === '');
+
+      // Validate all seats are defined and seat indices form 0..(playerCount-1)
+      const seatIndices = new Set<number>();
+      for (const seat of room.seats) {
+        if (!seat || typeof seat.seatIndex !== 'number' || seat.seatIndex < 0 || seat.seatIndex >= room.playerCount) {
+          return { canStart: false, reason: 'Invalid seat configuration in room' };
+        }
+        if (seatIndices.has(seat.seatIndex)) {
+          return { canStart: false, reason: `Duplicate seat index ${seat.seatIndex}` };
+        }
+        seatIndices.add(seat.seatIndex);
+      }
+      if (seatIndices.size !== room.playerCount) {
+        return { canStart: false, reason: 'Missing seat positions in room' };
+      }
+
+      // Check empty or invalid playerIds
+      const emptySeats = room.seats.filter(
+        (s) => !s.playerId || typeof s.playerId !== 'string' || s.playerId.trim() === ''
+      );
       if (emptySeats.length > 0) {
         return {
           canStart: false,
           reason: `Not all seats are filled (${emptySeats.length} empty)`,
         };
       }
+
+      // Check for duplicate playerIds across seats
+      const playerIds = room.seats.map((s) => s.playerId!.trim());
+      const uniquePlayerIds = new Set(playerIds);
+      if (uniquePlayerIds.size !== room.playerCount) {
+        return {
+          canStart: false,
+          reason: 'Duplicate player IDs found across seats',
+        };
+      }
+
       return { canStart: true };
     } catch (err) {
       let roomCode: string | undefined;
@@ -52,7 +84,8 @@ export class GameCoordinator {
 
   /**
    * Initializes and deals a new game for the given room.
-   * Remaps dealt player IDs to match seated session playerIds so state sanitization maps correctly.
+   * Sorts seats by seatIndex so player mapping aligns with game engine seats.
+   * Remaps dealt player IDs and names to match seated session players so state sanitization maps correctly.
    */
   public static startGame(room: Room, customDeck?: Card[]): boolean {
     try {
@@ -66,21 +99,29 @@ export class GameCoordinator {
         return false;
       }
 
-      const playerNames = room.seats.map((s) => s.playerName?.trim() || `Player ${s.seatIndex + 1}`);
+      // Sort seats strictly by seatIndex so player mapping aligns predictably
+      const sortedSeats = [...room.seats].sort((a, b) => a.seatIndex - b.seatIndex);
+      const playerNames = sortedSeats.map((s) => s.playerName?.trim() || `Player ${s.seatIndex + 1}`);
       const initialState = dealInitialState(room.playerCount, customDeck, playerNames);
 
-      // Re-map internal player IDs to seated session player IDs so sanitizeStateForPlayer matches
+      // Re-map internal player IDs and names to seated session players so sanitizeStateForPlayer matches
       initialState.players.forEach((p, idx) => {
-        const seatPlayerId = room.seats[idx]?.playerId;
-        if (seatPlayerId) {
-          p.id = seatPlayerId;
+        const seat = sortedSeats[idx];
+        if (seat?.playerId) {
+          p.id = seat.playerId;
+        }
+        if (seat?.playerName?.trim()) {
+          p.name = seat.playerName.trim();
         }
       });
 
       room.gameState = initialState;
       room.status = 'IN_GAME';
 
-      serverLogger.info('Game started successfully', { roomCode: room.roomCode });
+      serverLogger.info('Game started successfully', {
+        roomCode: room.roomCode,
+        playerId: room.hostPlayerId,
+      });
       return true;
     } catch (err) {
       let roomCode: string | undefined;
@@ -120,7 +161,23 @@ export class GameCoordinator {
         return { success: false, error: 'Game is not currently active' };
       }
 
-      const isRoundAdvance = action?.type === 'START_NEXT_ROUND' || action?.type === 'RESET_GAME';
+      if (!action || typeof action !== 'object' || typeof action.type !== 'string' || !action.type.trim()) {
+        serverLogger.warn('Action rejected: Invalid action payload', {
+          roomCode: room.roomCode,
+          playerId,
+        });
+        return { success: false, error: 'Invalid action payload' };
+      }
+
+      if (!playerId || typeof playerId !== 'string' || playerId.trim() === '') {
+        serverLogger.warn('Action rejected: Invalid player ID', {
+          roomCode: room.roomCode,
+          actionType: action.type,
+        });
+        return { success: false, error: 'Invalid player ID' };
+      }
+
+      const isRoundAdvance = action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME';
       const isGameActive =
         room.status === 'IN_GAME' ||
         (isRoundAdvance && (room.status === 'ROUND_OVER' || room.status === 'GAME_OVER'));
@@ -129,7 +186,7 @@ export class GameCoordinator {
         serverLogger.warn('Action rejected: Game is not currently active', {
           roomCode: room.roomCode,
           playerId,
-          actionType: action?.type,
+          actionType: action.type,
         });
         return { success: false, error: 'Game is not currently active' };
       }
@@ -141,9 +198,50 @@ export class GameCoordinator {
           serverLogger.warn('Action rejected: Player is not seated in this room', {
             roomCode: room.roomCode,
             playerId,
-            actionType: action?.type,
+            actionType: action.type,
           });
           return { success: false, error: 'Player is not seated in this room' };
+        }
+      }
+
+      // Disallow START_NEXT_ROUND if game has completed (GAME_OVER)
+      if (action.type === 'START_NEXT_ROUND') {
+        if (room.status === 'GAME_OVER' || room.gameState.roundStatus === 'GAME_OVER') {
+          serverLogger.warn('Action rejected: Cannot start next round when game is already over', {
+            roomCode: room.roomCode,
+            playerId,
+            actionType: action.type,
+          });
+          return { success: false, error: 'Cannot start next round: game is already over' };
+        }
+      }
+
+      // Disallow non-host player from resetting an active in-progress game
+      if (action.type === 'RESET_GAME') {
+        if (
+          room.status === 'IN_GAME' &&
+          room.gameState.roundStatus === 'PLAYING' &&
+          room.hostPlayerId &&
+          playerId !== room.hostPlayerId
+        ) {
+          serverLogger.warn('Action rejected: Only host can reset active game in progress', {
+            roomCode: room.roomCode,
+            playerId,
+            actionType: action.type,
+          });
+          return { success: false, error: 'Only the host can reset an active game in progress' };
+        }
+
+        if (action.playerCount && action.playerCount !== room.playerCount) {
+          serverLogger.warn('Action rejected: Cannot change player count on reset', {
+            roomCode: room.roomCode,
+            playerId,
+            actionType: action.type,
+          });
+          return {
+            success: false,
+            error: `Cannot change room player count from ${room.playerCount} to ${action.playerCount}`,
+          };
         }
       }
 
@@ -154,29 +252,45 @@ export class GameCoordinator {
           serverLogger.warn('Action rejected: Not your turn to play', {
             roomCode: room.roomCode,
             playerId,
-            actionType: action?.type,
+            actionType: action.type,
           });
           return { success: false, error: 'Not your turn to play' };
         }
       }
 
+      // Prepare seats sorted by seatIndex to maintain correct mapping
+      const sortedSeats = [...(room.seats || [])].sort((a, b) => a.seatIndex - b.seatIndex);
+
+      // Normalize RESET_GAME so player names and count from the authoritative room are preserved
+      const effectiveAction: GameAction =
+        action.type === 'RESET_GAME'
+          ? {
+              ...action,
+              playerCount: room.playerCount,
+              playerNames: sortedSeats.map((s) => s.playerName?.trim() || `Player ${s.seatIndex + 1}`),
+            }
+          : action;
+
       // Execute action via authoritative rules engine reducer
-      const { state: nextState, error } = pukarReducer(room.gameState, action);
+      const { state: nextState, error } = pukarReducer(room.gameState, effectiveAction);
       if (error) {
         serverLogger.warn(`Action rejected by rules engine: ${error}`, {
           roomCode: room.roomCode,
           playerId,
-          actionType: action?.type,
+          actionType: action.type,
         });
         return { success: false, error };
       }
 
-      // Re-map internal player IDs to seated session player IDs on round advance/reset
+      // Re-map internal player IDs and names to seated session player IDs on round advance/reset
       if (isRoundAdvance && nextState.players) {
         nextState.players.forEach((p, idx) => {
-          const seatPlayerId = room.seats?.[idx]?.playerId;
-          if (seatPlayerId) {
-            p.id = seatPlayerId;
+          const seat = sortedSeats[idx];
+          if (seat?.playerId) {
+            p.id = seat.playerId;
+          }
+          if (seat?.playerName?.trim()) {
+            p.name = seat.playerName.trim();
           }
         });
       }
@@ -226,7 +340,10 @@ export class GameCoordinator {
     playerId: string
   ): SanitizedGameState | null {
     try {
-      if (!room || !room.gameState) {
+      if (!room || !room.gameState || room.status === 'LOBBY') {
+        return null;
+      }
+      if (!playerId || typeof playerId !== 'string' || !playerId.trim()) {
         return null;
       }
       return sanitizeStateForPlayer(room.gameState, playerId);

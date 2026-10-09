@@ -112,6 +112,38 @@ describe('GameCoordinator', () => {
       room.status = 'GAME_OVER';
       expect(GameCoordinator.canStartGame(room).canStart).toBe(false);
     });
+
+    it('prevents starting if duplicate playerIds are assigned to different seats', () => {
+      const { room } = manager.createRoom('Host', 4, 's1');
+      for (let i = 1; i <= 3; i++) {
+        const join = manager.joinRoom(room.roomCode, `P${i + 1}`, `s${i + 1}`);
+        if (join.success) manager.claimSeat(room.roomCode, join.session.playerId, i);
+      }
+      // Assign seat 1 the same playerId as seat 0
+      room.seats[1].playerId = room.seats[0].playerId;
+      const check = GameCoordinator.canStartGame(room);
+      expect(check.canStart).toBe(false);
+      expect(check.reason).toContain('Duplicate player IDs found across seats');
+    });
+
+    it('prevents starting if seatIndex configuration is invalid or has duplicates', () => {
+      const { room } = manager.createRoom('Host', 4, 's1');
+      for (let i = 1; i <= 3; i++) {
+        const join = manager.joinRoom(room.roomCode, `P${i + 1}`, `s${i + 1}`);
+        if (join.success) manager.claimSeat(room.roomCode, join.session.playerId, i);
+      }
+      // Duplicate seatIndex 0
+      room.seats[1].seatIndex = 0;
+      const check = GameCoordinator.canStartGame(room);
+      expect(check.canStart).toBe(false);
+      expect(check.reason).toContain('Duplicate seat index');
+
+      // Out-of-bounds seatIndex
+      room.seats[1].seatIndex = 99;
+      const check2 = GameCoordinator.canStartGame(room);
+      expect(check2.canStart).toBe(false);
+      expect(check2.reason).toContain('Invalid seat configuration');
+    });
   });
 
   describe('startGame', () => {
@@ -227,6 +259,40 @@ describe('GameCoordinator', () => {
       GameCoordinator.startGame(room);
       expect(room.gameState?.players[0].name).toBe('Player 1');
       expect(room.gameState?.players[1].name).toBe('Player 2');
+    });
+
+    it('properly maps player seats and names even if room.seats array is not sorted by seatIndex', () => {
+      const { room, session: hostSession } = manager.createRoom('Alice', 4, 's1');
+      const playerSessions = [hostSession];
+
+      for (let i = 1; i <= 3; i++) {
+        const join = manager.joinRoom(room.roomCode, `Player_${i + 1}`, `s${i + 1}`);
+        if (join.success) {
+          manager.claimSeat(room.roomCode, join.session.playerId, i);
+          playerSessions.push(join.session);
+        }
+      }
+
+      // Reverse seats array in room to simulate unordered seat array
+      room.seats.reverse();
+      expect(room.seats[0].seatIndex).toBe(3);
+      expect(room.seats[3].seatIndex).toBe(0);
+
+      const started = GameCoordinator.startGame(room);
+      expect(started).toBe(true);
+
+      // Verify that player index 0 matches seatIndex 0 (Alice), player 1 matches seatIndex 1, etc.
+      expect(room.gameState?.players[0].id).toBe(playerSessions[0].playerId);
+      expect(room.gameState?.players[0].name).toBe('Alice');
+      expect(room.gameState?.players[0].team).toBe('A');
+
+      expect(room.gameState?.players[1].id).toBe(playerSessions[1].playerId);
+      expect(room.gameState?.players[1].name).toBe('Player_2');
+      expect(room.gameState?.players[1].team).toBe('B');
+
+      expect(room.gameState?.players[3].id).toBe(playerSessions[3].playerId);
+      expect(room.gameState?.players[3].name).toBe('Player_4');
+      expect(room.gameState?.players[3].team).toBe('B');
     });
 
     it('defensively handles unexpected errors in startGame', () => {
@@ -355,6 +421,18 @@ describe('GameCoordinator', () => {
         seatedPlayerIds[1]
       );
       expect(p2Sanitized!.newlyPickedUpCardIds).toEqual([]);
+    });
+
+    it('returns null if room status is LOBBY even when gameState is populated', () => {
+      testRoom.status = 'LOBBY';
+      const result = GameCoordinator.getSanitizedStateForPlayer(testRoom, seatedPlayerIds[0]);
+      expect(result).toBeNull();
+    });
+
+    it('returns null if playerId is empty string, whitespace, or invalid', () => {
+      expect(GameCoordinator.getSanitizedStateForPlayer(testRoom, '')).toBeNull();
+      expect(GameCoordinator.getSanitizedStateForPlayer(testRoom, '   ')).toBeNull();
+      expect(GameCoordinator.getSanitizedStateForPlayer(testRoom, null as any)).toBeNull();
     });
 
     it('defensively catches errors and returns null', () => {
@@ -626,6 +704,20 @@ describe('GameCoordinator', () => {
       expect(res.success).toBe(false);
       expect(res.error).toContain('not currently active');
     });
+
+    it('rejects malformed, null, or empty action payloads', () => {
+      const activeId = seatedPlayerIds[0];
+      expect(GameCoordinator.handleAction(testRoom, activeId, null as any).success).toBe(false);
+      expect(GameCoordinator.handleAction(testRoom, activeId, undefined as any).success).toBe(false);
+      expect(GameCoordinator.handleAction(testRoom, activeId, {} as any).success).toBe(false);
+      expect(GameCoordinator.handleAction(testRoom, activeId, { type: '' } as any).success).toBe(false);
+    });
+
+    it('rejects invalid or whitespace playerIds', () => {
+      expect(GameCoordinator.handleAction(testRoom, '', { type: 'DRAW_CARD' }).success).toBe(false);
+      expect(GameCoordinator.handleAction(testRoom, '   ', { type: 'DRAW_CARD' }).success).toBe(false);
+      expect(GameCoordinator.handleAction(testRoom, null as any, { type: 'DRAW_CARD' }).success).toBe(false);
+    });
   });
 
   describe('Multi-round lifecycle actions', () => {
@@ -739,6 +831,70 @@ describe('GameCoordinator', () => {
       expect(result.success).toBe(true);
       expect(testRoom.gameState!.roundStatus).toBe('ROUND_OVER');
       expect(testRoom.status).toBe('ROUND_OVER');
+    });
+
+    it('rejects START_NEXT_ROUND when game status is GAME_OVER', () => {
+      testRoom.gameState!.roundStatus = 'GAME_OVER';
+      testRoom.status = 'GAME_OVER';
+      testRoom.gameState!.isRoundOver = true;
+
+      const result = GameCoordinator.handleAction(testRoom, seatedPlayerIds[0], {
+        type: 'START_NEXT_ROUND',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('game is already over');
+    });
+
+    it('rejects RESET_GAME from non-host player during active in-progress game', () => {
+      expect(testRoom.status).toBe('IN_GAME');
+      expect(testRoom.gameState!.roundStatus).toBe('PLAYING');
+
+      // Player 2 is not the host
+      const nonHostId = seatedPlayerIds[1];
+      const result = GameCoordinator.handleAction(testRoom, nonHostId, {
+        type: 'RESET_GAME',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Only the host can reset');
+    });
+
+    it('allows RESET_GAME by host during active in-progress game', () => {
+      expect(testRoom.status).toBe('IN_GAME');
+      const hostId = seatedPlayerIds[0];
+
+      const result = GameCoordinator.handleAction(testRoom, hostId, {
+        type: 'RESET_GAME',
+      });
+
+      expect(result.success).toBe(true);
+      expect(testRoom.gameState!.round).toBe(1);
+    });
+
+    it('rejects RESET_GAME attempting to change player count', () => {
+      const hostId = seatedPlayerIds[0];
+      const result = GameCoordinator.handleAction(testRoom, hostId, {
+        type: 'RESET_GAME',
+        playerCount: 6,
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Cannot change room player count');
+    });
+
+    it('preserves player names from room seats across RESET_GAME', () => {
+      const hostId = seatedPlayerIds[0];
+      testRoom.seats[0].playerName = 'CustomAlice';
+      testRoom.seats[1].playerName = 'CustomBob';
+
+      const result = GameCoordinator.handleAction(testRoom, hostId, {
+        type: 'RESET_GAME',
+      });
+
+      expect(result.success).toBe(true);
+      expect(testRoom.gameState!.players[0].name).toBe('CustomAlice');
+      expect(testRoom.gameState!.players[1].name).toBe('CustomBob');
     });
   });
 
