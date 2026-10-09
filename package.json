@@ -11,6 +11,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "server": "tsx server/server.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
