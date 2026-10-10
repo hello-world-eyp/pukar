@@ -400,9 +400,35 @@ describe('Meld Validator', () => {
       expect(score.description).toMatch(/dirty/i);
     });
 
-    it('scores dirty 7-card run containing a 2 as 100 points', () => {
+    it('scores clean 7-card run containing natural 2 in natural position as 200 points', () => {
       const cards = [
         makeCard('c2', 'SPADES', 2),
+        makeCard('c3', 'SPADES', 3),
+        makeCard('c4', 'SPADES', 4),
+        makeCard('c5', 'SPADES', 5),
+        makeCard('c6', 'SPADES', 6),
+        makeCard('c7', 'SPADES', 7),
+        makeCard('c8', 'SPADES', 8),
+      ];
+      const meld: Meld = {
+        id: 'm1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards,
+        slots: [],
+      };
+      const score = evaluateMeldScore(meld);
+      expect(score.points).toBe(200);
+      expect(score.isComplete7).toBe(true);
+      expect(score.isPure13).toBe(false);
+      expect(score.description).toMatch(/clean/i);
+    });
+
+    it('scores dirty 7-card run with 2 acting as a wildcard or different suit as 100 points', () => {
+      // 2 of Diamonds acting as wild in Spades run
+      const cards = [
+        makeCard('c2', 'DIAMONDS', 2),
         makeCard('c3', 'SPADES', 3),
         makeCard('c4', 'SPADES', 4),
         makeCard('c5', 'SPADES', 5),
@@ -422,6 +448,7 @@ describe('Meld Validator', () => {
       expect(score.points).toBe(100);
       expect(score.isComplete7).toBe(true);
       expect(score.isPure13).toBe(false);
+      expect(score.description).toMatch(/dirty/i);
     });
 
     it('scores clean 7-of-a-kind as 200 points', () => {

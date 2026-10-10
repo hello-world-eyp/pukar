@@ -403,10 +403,8 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     badgeClass =
       'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
+    const isClean = evaluation.points === 200;
     if (meld.type === 'RUN') {
-      const isClean = !meld.cards.some(
-        (c) => c.isNaturalJoker || c.rank === 0 || c.rank === 2
-      );
       if (isClean) {
         badgeText = 'Clean Run - 200 pts';
         badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
@@ -415,9 +413,6 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
         badgeClass = 'bg-blue-950/80 text-blue-300 border border-blue-500/50 font-black shadow-sm';
       }
     } else {
-      const isClean = !meld.cards.some(
-        (c) => c.isNaturalJoker || c.rank === 0 || c.rank === 2
-      );
       if (isClean) {
         badgeText = 'Clean 7-of-a-Kind - 200 pts';
         badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';

@@ -412,7 +412,8 @@ export function isPureRun(cards: Card[], slots?: MeldSlot[]): boolean {
     if (!firstSuit) return false;
     for (const slot of slots) {
       if (slot.isWildcard) return false;
-      if (slot.card.suit !== firstSuit || slot.representedSuit !== firstSuit) return false;
+      const slotSuit = slot.representedSuit ?? slot.card.suit;
+      if (slot.card.suit !== firstSuit || slotSuit !== firstSuit) return false;
       if (slot.card.rank === 2) {
         if (slot.representedRank !== 2) return false;
       }
@@ -568,25 +569,28 @@ export function evaluateMeldScore(meld: Meld): {
     }
 
     if (meld.type === 'RUN') {
-      const hasWildcardOr2 = cards.some((c) => isWildcard(c));
-      if (hasWildcardOr2) {
+      const isClean = isPureRun(cards, meld.slots && meld.slots.length > 0 ? meld.slots : undefined);
+      if (isClean) {
         return {
-          points: 100,
-          description: 'Dirty 7-Card Run',
+          points: 200,
+          description: 'Clean 7-Card Run',
           isComplete7: true,
           isPure13: false,
         };
       }
       return {
-        points: 200,
-        description: 'Clean 7-Card Run',
+        points: 100,
+        description: 'Dirty 7-Card Run',
         isComplete7: true,
         isPure13: false,
       };
     }
 
     // SET meld
-    const hasWildcard = cards.some((c) => isWildcard(c));
+    const hasWildcard =
+      meld.slots && meld.slots.length > 0
+        ? meld.slots.some((s) => s.isWildcard)
+        : cards.some((c) => isWildcard(c));
     if (hasWildcard) {
       return {
         points: 100,

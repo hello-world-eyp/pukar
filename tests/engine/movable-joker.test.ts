@@ -3,6 +3,7 @@ import { Card, Meld, Suit } from '../../src/engine/types';
 import {
   canAddCardsToMeld,
   validateRemoveCardFromMeld,
+  evaluateMeldScore,
 } from '../../src/engine/meld-validator';
 
 function makeCard(id: string, suit: Suit | null, rank: number, isNaturalJoker = false): Card {
@@ -257,6 +258,66 @@ describe('Movable "2" Joker Dynamics & Adding Cards to Melds', () => {
       const result = canAddCardsToMeld(meld, [card3]);
       expect(result.valid).toBe(false);
       expect(result.error).toMatch(/already/i);
+    });
+  });
+
+  describe('Score Transition on Movable 2 Natural Slide', () => {
+    it('updates score from 100 pts (Dirty Run) to 200 pts (Clean Run) when natural replacement card is added and 2 slides down to natural 2', () => {
+      // Initially, 2♠ acts as wild substituting for 4♠ in a 7-card run: [3♠, 2♠(as 4), 5♠, 6♠, 7♠, 8♠, 9♠]
+      const card3 = makeCard('c3', 'SPADES', 3);
+      const twoSpades = makeCard('twoSpades', 'SPADES', 2);
+      const card5 = makeCard('c5', 'SPADES', 5);
+      const card6 = makeCard('c6', 'SPADES', 6);
+      const card7 = makeCard('c7', 'SPADES', 7);
+      const card8 = makeCard('c8', 'SPADES', 8);
+      const card9 = makeCard('c9', 'SPADES', 9);
+
+      const initialMeld: Meld = {
+        id: 'meld-dirty-7',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [card3, twoSpades, card5, card6, card7, card8, card9],
+        slots: [
+          { card: card3, representedRank: 3, representedSuit: 'SPADES', isWildcard: false },
+          { card: twoSpades, representedRank: 4, representedSuit: 'SPADES', isWildcard: true },
+          { card: card5, representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+          { card: card6, representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+          { card: card7, representedRank: 7, representedSuit: 'SPADES', isWildcard: false },
+          { card: card8, representedRank: 8, representedSuit: 'SPADES', isWildcard: false },
+          { card: card9, representedRank: 9, representedSuit: 'SPADES', isWildcard: false },
+        ],
+      };
+
+      // Initial score is 100 points (Dirty 7-Card Run)
+      const initialScore = evaluateMeldScore(initialMeld);
+      expect(initialScore.points).toBe(100);
+      expect(initialScore.isComplete7).toBe(true);
+      expect(initialScore.description).toMatch(/dirty/i);
+
+      // Player gets and adds 4♠!
+      const card4 = makeCard('c4', 'SPADES', 4);
+      const addResult = canAddCardsToMeld(initialMeld, [card4]);
+      expect(addResult.valid).toBe(true);
+      expect(addResult.updatedSlots).toBeDefined();
+
+      // 2♠ slides down to natural rank 2 and is no longer a wildcard!
+      const twoSlot = addResult.updatedSlots!.find((s) => s.card.id === 'twoSpades');
+      expect(twoSlot?.representedRank).toBe(2);
+      expect(twoSlot?.isWildcard).toBe(false);
+
+      // Create updated meld with new slots
+      const updatedMeld: Meld = {
+        ...initialMeld,
+        cards: [...initialMeld.cards, card4],
+        slots: addResult.updatedSlots!,
+      };
+
+      // Score MUST change to 200 points (Clean 7-Card Run)!
+      const updatedScore = evaluateMeldScore(updatedMeld);
+      expect(updatedScore.points).toBe(200);
+      expect(updatedScore.isComplete7).toBe(true);
+      expect(updatedScore.description).toMatch(/clean/i);
     });
   });
 });

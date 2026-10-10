@@ -314,7 +314,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
     badgeClass =
       'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
-    const isClean = !meld.cards.some((c) => c.isNaturalJoker || c.rank === 0 || c.rank === 2);
+    const isClean = points === 200;
     if (meld.type === 'RUN') {
       badgeText = isClean ? 'Clean Run (200 pts)' : 'Dirty Run (100 pts)';
       badgeClass = isClean

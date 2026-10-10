@@ -11,6 +11,7 @@ import {
   validateNewMeld,
   canAddCardsToMeld,
   evaluateMeldScore,
+  isPureRun,
 } from './meld-validator';
 
 /**
@@ -405,7 +406,11 @@ function handleAddToMeld(
     cards: [...meldCardsWithoutPickedUp, ...cardsToAdd],
     slots: validation.updatedSlots,
   };
-  updatedMeld.points = evaluateMeldScore(updatedMeld).points;
+  const scoreInfo = evaluateMeldScore(updatedMeld);
+  updatedMeld.points = scoreInfo.points;
+  updatedMeld.isClean = scoreInfo.description.includes('Clean');
+  updatedMeld.isPure = updatedMeld.type === 'RUN' ? isPureRun(updatedMeld.cards, updatedMeld.slots) : false;
+  updatedMeld.isPure13 = scoreInfo.isPure13;
 
   const updatedMelds = {
     ...state.melds,
