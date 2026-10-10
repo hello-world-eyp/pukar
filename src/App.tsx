@@ -1,19 +1,5 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  GameState,
-  SanitizedGameState,
-  GameAction,
-  Meld,
-  Card,
-  isNaturalJoker,
-} from './engine/types';
-import { dealInitialState } from './engine/deck';
-import { pukarReducer } from './engine/reducer';
-import {
-  getRunCandidateOptions,
-  getAddToRunCandidateOptions,
-  JokerOption,
-} from './engine/meld-validator';
+import { useState, useEffect } from 'react';
+import { GameState, SanitizedGameState } from './engine/types';
 import { TopNavBar } from './ui/components/TopNavBar';
 import { SequencesPage } from './ui/components/SequencesPage';
 import { ScoreboardPage } from './ui/components/ScoreboardPage';
@@ -35,7 +21,13 @@ import { MultiplayerHub } from './ui/components/multiplayer/MultiplayerHub';
 import { MultiplayerStatusBar } from './ui/components/multiplayer/MultiplayerStatusBar';
 import { useMultiplayerGame } from './network/useMultiplayerGame';
 import { UseMultiplayerGameReturn } from './network/types';
-import { playSound, setSoundEnabled } from './ui/sound';
+import {
+  useGameAudio,
+  useGameModals,
+  useGameNotifications,
+  useLocalGame,
+  useTableShortcuts,
+} from './ui/hooks';
 import {
   HelpCircle,
   Sparkles,
@@ -72,14 +64,11 @@ export function App({
   initialExhaustNotification,
 }: AppProps = {}) {
   // ---------------------------------------------------------------------------
-  // Application Mode State: LOCAL (Pass & Play hotseat) or MULTIPLAYER (online/LAN)
+  // Application Mode & Navigation State
   // ---------------------------------------------------------------------------
   const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(initialMode ?? 'LOCAL');
   const [isModeModalOpen, setIsModeModalOpen] = useState(false);
 
-  // ---------------------------------------------------------------------------
-  // Application Screen State: MENU (Landing menu), GAME (Active table), MULTIPLAYER_HUB
-  // ---------------------------------------------------------------------------
   const defaultInitialScreen: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB' =
     initialScreen ??
     (initialState
@@ -96,142 +85,14 @@ export function App({
     defaultInitialScreen
   );
 
-  // Active in-game navigation tab: 'table' (Main Table arena) | 'sequences' (Enlarged Sequences) | 'scoreboard' (Scoreboard Breakdown)
+  // Active in-game navigation tab: 'table' | 'sequences' | 'scoreboard'
   const [activeGameTab, setActiveGameTab] = useState<'table' | 'sequences' | 'scoreboard'>('table');
 
-  // Hook for multiplayer game lifecycle
+  // Multiplayer game lifecycle hook
   const defaultMultiplayerHook = useMultiplayerGame({
     autoConnect: !multiplayerGameHook && appMode === 'MULTIPLAYER',
   });
   const multiplayerHook = multiplayerGameHook ?? defaultMultiplayerHook;
-
-  // ---------------------------------------------------------------------------
-  // Core Local Game State
-  // ---------------------------------------------------------------------------
-  const [gameState, setGameState] = useState<GameState>(() => initialState ?? dealInitialState(4));
-
-  // Selection state
-  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
-  const [selectedMeldId, setSelectedMeldId] = useState<string | null>(null);
-
-  // Perspective / Hot-seat view state (null = follow active turn) for LOCAL mode
-  const [viewedPlayerIndex, setViewedPlayerIndex] = useState<number | null>(null);
-
-  // UI Modals & Panels
-  const [isGodModeOpen, setIsGodModeOpen] = useState(false);
-  const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
-  const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
-  const [zoomedMeld, setZoomedMeld] = useState<Meld | null>(null);
-
-  // Audio mute
-  const [isMuted, setIsMuted] = useState(false);
-
-  // Notifications & Feedback
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [disconnectToast, setDisconnectToast] = useState<string | null>(null);
-  const [pukarBanner, setPukarBanner] = useState<{
-    team: 'A' | 'B';
-    playerName: string;
-    points: number;
-  } | null>(initialPukarBanner ?? null);
-  const [pukarSlamEvent, setPukarSlamEvent] = useState<{
-    team: 'A' | 'B';
-    playerName: string;
-    points: number;
-  } | null>(null);
-  const [isTableRippling, setIsTableRippling] = useState(false);
-  const [exhaustNotification, setExhaustNotification] = useState<string | null>(
-    initialExhaustNotification ?? null
-  );
-  const [jokerPickupBanner, setJokerPickupBanner] = useState<{
-    playerName: string;
-  } | null>(initialJokerPickupBanner ?? null);
-
-  // Joker Selection Prompt Modal State
-  const [jokerPromptData, setJokerPromptData] = useState<{
-    isOpen: boolean;
-    options: JokerOption[];
-    cardIds: string[];
-    targetMeldId?: string;
-  } | null>(null);
-
-  // Auto-dismiss error message after 4.5 seconds
-  useEffect(() => {
-    if (!errorMessage) return;
-    const timer = setTimeout(() => {
-      setErrorMessage(null);
-    }, 4500);
-    return () => clearTimeout(timer);
-  }, [errorMessage]);
-
-  // Sync multiplayer hook errors into UI error banner
-  useEffect(() => {
-    if (appMode === 'MULTIPLAYER' && multiplayerHook.errorMessage) {
-      setErrorMessage(multiplayerHook.errorMessage);
-    }
-  }, [appMode, multiplayerHook.errorMessage]);
-
-  // Auto-dismiss disconnect notification after 5 seconds
-  useEffect(() => {
-    if (!disconnectToast) return;
-    const timer = setTimeout(() => {
-      setDisconnectToast(null);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [disconnectToast]);
-
-  // Auto-dismiss Pukar celebration banner after 10 seconds
-  useEffect(() => {
-    if (!pukarBanner) return;
-    const timer = setTimeout(() => {
-      setPukarBanner(null);
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [pukarBanner]);
-
-  // Auto-dismiss Joker pickup banner after 10 seconds
-  useEffect(() => {
-    if (!jokerPickupBanner) return;
-    const timer = setTimeout(() => {
-      setJokerPickupBanner(null);
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [jokerPickupBanner]);
-
-  // Auto-dismiss deck exhaustion alert after 10 seconds
-  useEffect(() => {
-    if (!exhaustNotification) return;
-    const timer = setTimeout(() => {
-      setExhaustNotification(null);
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, [exhaustNotification]);
-
-  // Track player disconnections in multiplayer mode
-  const prevSeatsConnRef = useRef<Map<number, boolean>>(new Map());
-  useEffect(() => {
-    if (appMode !== 'MULTIPLAYER' || !multiplayerHook.isInGame) {
-      prevSeatsConnRef.current.clear();
-      return;
-    }
-
-    multiplayerHook.lobbySeats.forEach((seat) => {
-      // Skip self
-      if (seat.seatIndex === multiplayerHook.mySeatIndex) return;
-
-      const prevConn = prevSeatsConnRef.current.get(seat.seatIndex);
-      const displayName = seat.playerName?.trim() || `Player ${seat.seatIndex + 1}`;
-      if (prevConn === true && !seat.isConnected) {
-        setDisconnectToast(
-          `${displayName} (${seat.team ? `Team ${seat.team}` : `Seat ${seat.seatIndex + 1}`}) disconnected. Waiting for reconnect...`
-        );
-      } else if (prevConn === false && seat.isConnected) {
-        setDisconnectToast(`${displayName} reconnected to the game.`);
-      }
-      prevSeatsConnRef.current.set(seat.seatIndex, seat.isConnected);
-    });
-  }, [appMode, multiplayerHook.isInGame, multiplayerHook.lobbySeats, multiplayerHook.mySeatIndex]);
 
   // Auto-transition to active game screen when multiplayer game starts
   useEffect(() => {
@@ -240,70 +101,102 @@ export function App({
     }
   }, [appMode, multiplayerHook.isInGame]);
 
-  // Sync audio toggle with sound utility
-  const toggleMute = useCallback(() => {
-    setIsMuted((prev) => {
-      const next = !prev;
-      setSoundEnabled(!next);
-      return next;
-    });
-  }, []);
+  // ---------------------------------------------------------------------------
+  // Custom Modular Hooks
+  // ---------------------------------------------------------------------------
+  // 1. Audio management
+  const { isMuted, toggleMute, triggerSound } = useGameAudio();
+
+  // 2. Modal dialogs and prompt state
+  const {
+    isGodModeOpen,
+    setIsGodModeOpen,
+    isDiscardModalOpen,
+    setIsDiscardModalOpen,
+    isRulesModalOpen,
+    setIsRulesModalOpen,
+    isSetupModalOpen,
+    setIsSetupModalOpen,
+    zoomedMeld,
+    setZoomedMeld,
+    jokerPromptData,
+    setJokerPromptData,
+  } = useGameModals();
+
+  // 3. User feedback, toasts, and celebration overlays
+  const {
+    errorMessage,
+    setErrorMessage,
+    disconnectToast,
+    setDisconnectToast,
+    pukarBanner,
+    setPukarBanner,
+    pukarSlamEvent,
+    setPukarSlamEvent,
+    isTableRippling,
+    setIsTableRippling,
+    exhaustNotification,
+    setExhaustNotification,
+    jokerPickupBanner,
+    setJokerPickupBanner,
+    triggerPukarCelebration,
+    clearAllNotifications,
+  } = useGameNotifications({
+    initialPukarBanner,
+    initialJokerPickupBanner,
+    initialExhaustNotification,
+    appMode,
+    multiplayerHook,
+    triggerSound,
+  });
+
+  // 4. Core local game state machine & action handlers
+  const {
+    gameState,
+    activeGameState,
+    activeTurnIndex,
+    activePlayer,
+    currentViewIndex,
+    viewingPlayer,
+    isViewingActivePlayer,
+    isMultiplayerActive,
+    selectedCardIds,
+    setSelectedCardIds,
+    selectedCards,
+    selectedMeldId,
+    setSelectedMeldId,
+    selectedMeld,
+    setViewedPlayerIndex,
+    handleAction,
+    handleToggleCardSelection,
+    handleClearSelection,
+    handleReorderHand,
+    handlePlayMeld,
+    handleAddToMeld,
+    handleSwitchPlayer,
+    handleForceTurn,
+  } = useLocalGame({
+    initialState,
+    appMode,
+    multiplayerHook,
+    triggerSound,
+    setErrorMessage,
+    triggerPukarCelebration,
+    setExhaustNotification,
+    setJokerPickupBanner,
+    clearAllNotifications,
+    setJokerPromptData,
+  });
+
+  // 5. Global table shortcuts (keystroke optimization)
+  useTableShortcuts({
+    currentScreen,
+    onAction: handleAction,
+  });
 
   // ---------------------------------------------------------------------------
-  // Active vs Viewed Player Resolution & State Source
+  // Responsive layout tracking
   // ---------------------------------------------------------------------------
-  const isMultiplayerActive =
-    appMode === 'MULTIPLAYER' && multiplayerHook.isInGame && !!multiplayerHook.gameState;
-
-  const activeGameState: GameState | SanitizedGameState = isMultiplayerActive
-    ? multiplayerHook.gameState!
-    : gameState;
-
-  const activeTurnIndex = activeGameState.currentPlayerIndex;
-  const activePlayer = activeGameState.players[activeTurnIndex];
-
-  // In multiplayer: perspective is strictly locked to mySeatIndex
-  // In local mode: perspective can switch via hotseat controls
-  const currentViewIndex = isMultiplayerActive
-    ? (multiplayerHook.mySeatIndex ?? 0)
-    : (viewedPlayerIndex ?? activeTurnIndex);
-
-  const viewingPlayer =
-    isMultiplayerActive && multiplayerHook.mySeatIndex === null
-      ? { id: '', name: 'Spectator', team: 'A' as const, hand: [], cardCount: 0 }
-      : (activeGameState.players[currentViewIndex] ?? activePlayer);
-
-  const isViewingActivePlayer = isMultiplayerActive
-    ? multiplayerHook.mySeatIndex !== null && activeTurnIndex === multiplayerHook.mySeatIndex
-    : currentViewIndex === activeTurnIndex;
-
-  // Selected cards in current hand
-  const selectedCards: Card[] = useMemo(() => {
-    try {
-      if (!selectedCardIds || selectedCardIds.length === 0) return [];
-      const idSet = new Set(selectedCardIds);
-      return (viewingPlayer.hand ?? []).filter((c) => idSet.has(c.id));
-    } catch {
-      return [];
-    }
-  }, [selectedCardIds, viewingPlayer.hand]);
-
-  // Selected meld object
-  const selectedMeld: Meld | null = useMemo(() => {
-    try {
-      if (!selectedMeldId) return null;
-      const allMelds = [
-        ...(activeGameState.melds?.A ?? []),
-        ...(activeGameState.melds?.B ?? []),
-      ];
-      return allMelds.find((m) => m.id === selectedMeldId) ?? null;
-    } catch (err) {
-      console.error('Error resolving selected meld:', err);
-      return null;
-    }
-  }, [selectedMeldId, activeGameState.melds]);
-
-  // Track screen width for responsive 2nd-row threshold (<768px uses 1 column per team, >=768px uses 2 columns)
   const [isCompactScreen, setIsCompactScreen] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -315,461 +208,12 @@ export function App({
     return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Determine if either team has a second row of sequences
   const teamAMeldCount = activeGameState.melds?.A?.length ?? 0;
   const teamBMeldCount = activeGameState.melds?.B?.length ?? 0;
   const hasSecondRow =
     teamAMeldCount >= 3 ||
     teamBMeldCount >= 3 ||
     (isCompactScreen && (teamAMeldCount >= 2 || teamBMeldCount >= 2));
-
-  // Multiplayer sound & celebration state tracker
-  const prevMultiplayerStateRef = useRef<SanitizedGameState | null>(null);
-  useEffect(() => {
-    if (!isMultiplayerActive || !multiplayerHook.gameState) return;
-    const current = multiplayerHook.gameState;
-    const prev = prevMultiplayerStateRef.current;
-    prevMultiplayerStateRef.current = current;
-
-    if (!prev) return;
-
-    // Detect Pukar claim (+50 pts) in multiplayer
-    const prevPukarsA = prev.pukarsClaimed?.A ?? 0;
-    const prevPukarsB = prev.pukarsClaimed?.B ?? 0;
-    const nextPukarsA = current.pukarsClaimed?.A ?? 0;
-    const nextPukarsB = current.pukarsClaimed?.B ?? 0;
-    if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
-      const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
-      const actor = current.players[prev.currentPlayerIndex];
-      const pukarInfo = {
-        team: claimingTeam,
-        playerName: actor?.name ?? `Player ${prev.currentPlayerIndex + 1}`,
-        points: 50,
-      };
-      setPukarBanner(pukarInfo);
-      setPukarSlamEvent(pukarInfo);
-      setIsTableRippling(true);
-      setTimeout(() => setIsTableRippling(false), 1400);
-      try {
-        playSound('pukar');
-      } catch {}
-    } else if (current.roundStatus === 'ROUND_OVER' && prev.roundStatus !== 'ROUND_OVER') {
-      try {
-        playSound('roundOver');
-      } catch {}
-    } else if (current.lastPickedUpCard && !prev.lastPickedUpCard) {
-      const actor = current.players[current.currentPlayerIndex];
-      setJokerPickupBanner({
-        playerName: actor?.name ?? `Player ${current.currentPlayerIndex + 1}`,
-      });
-      try {
-        playSound('pukar');
-      } catch {}
-    }
-  }, [isMultiplayerActive, multiplayerHook.gameState]);
-
-  // ---------------------------------------------------------------------------
-  // Action Dispatcher with Feedback & Audio Cues
-  // ---------------------------------------------------------------------------
-  const handleAction = useCallback(
-    (action: GameAction): boolean => {
-      try {
-        // Route actions through authoritative multiplayer server when in active online game
-        if (isMultiplayerActive) {
-          // Client-side guard: enforce turn order unless round advancement or deck optimization
-          if (
-            action.type !== 'START_NEXT_ROUND' &&
-            action.type !== 'RESET_GAME' &&
-            action.type !== 'OPTIMIZE_DECK_ORDER' &&
-            !isViewingActivePlayer
-          ) {
-            setErrorMessage('Not your turn to play');
-            try {
-              playSound('error');
-            } catch {}
-            return false;
-          }
-
-          multiplayerHook.dispatchAction(action);
-
-          // Immediate responsive audio cues for player's own actions
-          if (
-            action.type === 'DRAW_FROM_STOCK' ||
-            action.type === 'TAKE_DISCARD' ||
-            action.type === 'DRAW_CARD'
-          ) {
-            try {
-              playSound('draw');
-            } catch {}
-          } else if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-            try {
-              playSound('meld');
-            } catch {}
-          } else if (action.type === 'DISCARD_CARD') {
-            try {
-              playSound('discard');
-            } catch {}
-          }
-
-          // Clean up selection state
-          if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-            setSelectedCardIds([]);
-          } else if (action.type === 'DISCARD_CARD') {
-            setSelectedCardIds([]);
-            setSelectedMeldId(null);
-            setJokerPickupBanner(null);
-          } else if (action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME') {
-            setSelectedCardIds([]);
-            setSelectedMeldId(null);
-            setPukarBanner(null);
-            setPukarSlamEvent(null);
-            setIsTableRippling(false);
-            setExhaustNotification(null);
-            setJokerPickupBanner(null);
-          }
-          return true;
-        }
-
-        // Local Pass & Play Reducer Logic
-        const prevPukarsA = gameState.pukarsClaimed?.A ?? 0;
-        const prevPukarsB = gameState.pukarsClaimed?.B ?? 0;
-        const prevStockCount = gameState.stockDeck?.length ?? 0;
-        const prevPukarPoolCount = gameState.pukarPool?.length ?? 0;
-
-        const result = pukarReducer(gameState, action);
-
-        if (result.error) {
-          setErrorMessage(result.error);
-          try {
-            playSound('error');
-          } catch {}
-          return false;
-        }
-
-        const next = result.state;
-
-        // Detect Pukar claim (+50 pts)
-        const nextPukarsA = next.pukarsClaimed?.A ?? 0;
-        const nextPukarsB = next.pukarsClaimed?.B ?? 0;
-        if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
-          const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
-          const actor = gameState.players[gameState.currentPlayerIndex];
-          const pukarInfo: { team: 'A' | 'B'; playerName: string; points: number } = {
-            team: claimingTeam,
-            playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
-            points: 50,
-          };
-          setPukarBanner(pukarInfo);
-          setPukarSlamEvent(pukarInfo);
-          setIsTableRippling(true);
-          setTimeout(() => setIsTableRippling(false), 1400);
-          try {
-            playSound('pukar');
-          } catch {}
-        }
-        // Detect Stock Deck replenishment from Pukar pool
-        else if (prevStockCount === 1 && prevPukarPoolCount > (next.pukarPool?.length ?? 0)) {
-          setExhaustNotification(
-            'Stock deck was empty! 1 Pukar deck (13 cards) was placed into the Stock deck.'
-          );
-          try {
-            playSound('draw');
-          } catch {}
-        }
-        // Detect Final Turn triggered by stock exhaustion
-        else if (!gameState.lastTurnTriggeredByDeckExhaust && next.lastTurnTriggeredByDeckExhaust) {
-          setExhaustNotification(
-            'Stock deck and Pukar pool are both exhausted! Final turn initiated.'
-          );
-          try {
-            playSound('draw');
-          } catch {}
-        }
-        // Normal action sound cues
-        else if (
-          action.type === 'DRAW_FROM_STOCK' ||
-          action.type === 'TAKE_DISCARD' ||
-          action.type === 'DRAW_CARD'
-        ) {
-          try {
-            playSound('draw');
-          } catch {}
-        } else if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-          try {
-            playSound('meld');
-          } catch {}
-        } else if (action.type === 'DISCARD_CARD') {
-          try {
-            playSound('discard');
-          } catch {}
-        } else if (action.type === 'START_NEXT_ROUND') {
-          try {
-            playSound('draw');
-          } catch {}
-        }
-
-        // Detect Round Over
-        if (next.roundStatus === 'ROUND_OVER' && gameState.roundStatus !== 'ROUND_OVER') {
-          try {
-            playSound('roundOver');
-          } catch {}
-        }
-
-        // Detect Normal Joker pickup into hand
-        if (next.lastPickedUpCard) {
-          const actor = gameState.players[gameState.currentPlayerIndex];
-          setJokerPickupBanner({
-            playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
-          });
-          try {
-            playSound('pukar');
-          } catch {}
-        }
-
-        // Clean up selection state
-        if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-          setSelectedCardIds([]);
-        } else if (action.type === 'DISCARD_CARD') {
-          setSelectedCardIds([]);
-          setSelectedMeldId(null);
-          setJokerPickupBanner(null);
-          // On turn advance, reset viewed perspective so active turn stays in view
-          setViewedPlayerIndex(null);
-        } else if (action.type === 'START_NEXT_ROUND' || action.type === 'RESET_GAME') {
-          setSelectedCardIds([]);
-          setSelectedMeldId(null);
-          setViewedPlayerIndex(null);
-          setPukarBanner(null);
-          setPukarSlamEvent(null);
-          setIsTableRippling(false);
-          setExhaustNotification(null);
-          setJokerPickupBanner(null);
-        }
-
-        setGameState(next);
-        setErrorMessage(null);
-        return true;
-      } catch (err) {
-        console.error('Unexpected error in handleAction:', err);
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        setErrorMessage(`Game action error: ${errorMsg}`);
-        try {
-          playSound('error');
-        } catch {}
-        return false;
-      }
-    },
-    [isMultiplayerActive, multiplayerHook, gameState]
-  );
-
-  // ---------------------------------------------------------------------------
-  // Card Selection Handlers
-  // ---------------------------------------------------------------------------
-  const handleToggleCardSelection = useCallback((cardId: string) => {
-    try {
-      setSelectedCardIds((prev) =>
-        prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
-      );
-    } catch (err) {
-      console.error('Error in handleToggleCardSelection:', err);
-    }
-  }, []);
-
-  const handleClearSelection = useCallback(() => {
-    try {
-      setSelectedCardIds([]);
-    } catch (err) {
-      console.error('Error in handleClearSelection:', err);
-    }
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // Stock Deck Optimization: Double 'j' keystroke within 1.2s aligns top of stock deck
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (currentScreen !== 'GAME') return;
-
-    let lastJTime = 0;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore typing in form fields or editable areas
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      if (e.key === 'j' || e.key === 'J') {
-        const now = Date.now();
-        if (now - lastJTime <= 1200) {
-          lastJTime = 0;
-          handleAction({ type: 'OPTIMIZE_DECK_ORDER' });
-        } else {
-          lastJTime = now;
-        }
-      } else {
-        lastJTime = 0;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [currentScreen, handleAction]);
-
-  // ---------------------------------------------------------------------------
-  // Custom Card Drag Reordering Handler
-  // ---------------------------------------------------------------------------
-  const handleReorderHand = useCallback(
-    (newHand: Card[]) => {
-      if (isMultiplayerActive) {
-        // In multiplayer, reorder locally for client's viewing hand
-        if (multiplayerHook.gameState && multiplayerHook.mySeatIndex !== null) {
-          const mySeat = multiplayerHook.mySeatIndex;
-          multiplayerHook.gameState.players[mySeat].hand = newHand;
-        }
-        return;
-      }
-
-      setGameState((prev) => {
-        const pIdx = currentViewIndex;
-        if (pIdx < 0 || pIdx >= prev.players.length) return prev;
-        const updatedPlayers = prev.players.map((p, idx) => {
-          if (idx === pIdx) {
-            return { ...p, hand: newHand };
-          }
-          return p;
-        });
-        return {
-          ...prev,
-          players: updatedPlayers,
-        };
-      });
-    },
-    [isMultiplayerActive, multiplayerHook.gameState, multiplayerHook.mySeatIndex, currentViewIndex]
-  );
-
-  // ---------------------------------------------------------------------------
-  // Play New Meld Handler with Joker Designation Prompt
-  // ---------------------------------------------------------------------------
-  const handlePlayMeld = useCallback(
-    (cardIds: string[], jokerRepresentedRank?: number) => {
-      try {
-        const activeHand = viewingPlayer.hand ?? [];
-        const cardsToMeld = cardIds
-          .map((id) => activeHand.find((c) => c.id === id))
-          .filter((c): c is Card => c !== undefined);
-
-        const candidateOptions = getRunCandidateOptions(cardsToMeld);
-        if (jokerRepresentedRank === undefined && candidateOptions.length > 1) {
-          setJokerPromptData({
-            isOpen: true,
-            options: candidateOptions,
-            cardIds,
-          });
-          return;
-        }
-
-        handleAction({
-          type: 'PLAY_NEW_MELD',
-          cardIds,
-          jokerRepresentedRank:
-            jokerRepresentedRank ??
-            (candidateOptions.length === 1 ? candidateOptions[0].rank : undefined),
-        });
-      } catch (err) {
-        console.error('Error in handlePlayMeld:', err);
-      }
-    },
-    [viewingPlayer.hand, handleAction]
-  );
-
-  // ---------------------------------------------------------------------------
-  // Add Cards to Meld Handler with Joker Position Prompt (Highest vs Lowest)
-  // ---------------------------------------------------------------------------
-  const handleAddToMeld = useCallback(
-    (meldId: string, cardIds: string[], jokerRepresentedRank?: number) => {
-      try {
-        const activeHand = viewingPlayer.hand ?? [];
-        const cardsToAdd = cardIds
-          .map((id) => activeHand.find((c) => c.id === id))
-          .filter((c): c is Card => c !== undefined);
-
-        const allMelds = [
-          ...(activeGameState.melds?.A ?? []),
-          ...(activeGameState.melds?.B ?? []),
-        ];
-        const targetMeld = allMelds.find((m) => m.id === meldId);
-
-        // If adding a Normal Joker to a RUN sequence and rank is not specified:
-        if (
-          targetMeld &&
-          targetMeld.type === 'RUN' &&
-          cardsToAdd.some((c) => isNaturalJoker(c)) &&
-          jokerRepresentedRank === undefined
-        ) {
-          const candidateOptions = getAddToRunCandidateOptions(targetMeld, cardsToAdd);
-          if (candidateOptions.length > 1) {
-            setJokerPromptData({
-              isOpen: true,
-              options: candidateOptions,
-              cardIds,
-              targetMeldId: meldId,
-            });
-            return;
-          }
-          if (candidateOptions.length === 1) {
-            jokerRepresentedRank = candidateOptions[0].rank;
-          }
-        }
-
-        handleAction({
-          type: 'ADD_TO_MELD',
-          meldId,
-          cardIds,
-          jokerRepresentedRank,
-        });
-      } catch (err) {
-        console.error('Error in handleAddToMeld:', err);
-      }
-    },
-    [viewingPlayer.hand, activeGameState.melds, handleAction]
-  );
-
-  // ---------------------------------------------------------------------------
-  // Hot-Seat Perspective Switcher (Local Mode Only)
-  // ---------------------------------------------------------------------------
-  const handleSwitchPlayer = useCallback((targetIndex: number) => {
-    try {
-      if (appMode !== 'LOCAL') return;
-      setViewedPlayerIndex(targetIndex);
-      setSelectedCardIds([]);
-      setSelectedMeldId(null);
-    } catch (err) {
-      console.error('Error in handleSwitchPlayer:', err);
-    }
-  }, [appMode]);
-
-  const handleForceTurn = useCallback((targetIndex: number) => {
-    try {
-      if (appMode !== 'LOCAL') return;
-      setViewedPlayerIndex(targetIndex);
-      setGameState((prev) => ({
-        ...prev,
-        currentPlayerIndex: targetIndex,
-      }));
-      setSelectedCardIds([]);
-      setSelectedMeldId(null);
-    } catch (err) {
-      console.error('Error in handleForceTurn:', err);
-    }
-  }, [appMode]);
 
   // ---------------------------------------------------------------------------
   // Game Setup & Reset Handlers
