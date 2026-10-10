@@ -268,6 +268,12 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('100');
       expect(html).toContain('Leader');
 
+      // Round by Round Breakdown
+      expect(html).toContain('data-testid="round-by-round-section"');
+      expect(html).toContain('Round by Round Breakdown');
+      expect(html).toContain('data-testid="round-row-1"');
+      expect(html).toContain('data-testid="round-row-2"');
+
       // Round point itemization & Pukars
       expect(html).toContain('data-testid="itemized-team-a"');
       expect(html).toContain('data-testid="itemized-team-b"');

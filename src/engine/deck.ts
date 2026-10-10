@@ -132,6 +132,7 @@ export function dealInitialState(
     },
     round: 1,
     roundStatus: 'PLAYING',
+    roundHistory: [],
     finalTurnPlayerIndex: null,
     newlyPickedUpCardIds: [],
   };

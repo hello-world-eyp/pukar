@@ -186,6 +186,16 @@ describe('UI Pages - SequencesPage & ScoreboardPage Comprehensive Test Suite', (
       expect(html).toContain('Pukars Claimed');
       expect(html).toContain('Scoring Rules Guide');
       expect(html).toContain('Back to Table');
+
+      // Round by Round Breakdown
+      expect(html).toContain('data-testid="round-by-round-section"');
+      expect(html).toContain('Round by Round Breakdown');
+      expect(html).toContain('Match score evolution across all rounds');
+      expect(html).toContain('data-testid="round-row-1"');
+      expect(html).toContain('data-testid="round-row-2"');
+      expect(html).toContain('Completed');
+      expect(html).toContain('In Progress');
+      expect(html).toContain('Match Total');
     });
 
     it('renders leader crown badge for the winning team', () => {

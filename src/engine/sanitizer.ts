@@ -56,6 +56,7 @@ export function sanitizeStateForPlayer(
       pukarsClaimed: state?.pukarsClaimed ? { ...state.pukarsClaimed } : undefined,
       round: state?.round ?? 1,
       roundStatus: state?.roundStatus ?? 'PLAYING',
+      roundHistory: state?.roundHistory ? [...state.roundHistory] : [],
       isRoundOver:
         state?.isRoundOver ??
         (state?.roundStatus === 'ROUND_OVER' || state?.roundStatus === 'GAME_OVER'),

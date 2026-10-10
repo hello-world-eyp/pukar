@@ -97,10 +97,32 @@ export interface GameState {
   round: number;
   roundStatus: RoundStatus;
   isRoundOver?: boolean;
+  roundHistory?: RoundHistoryEntry[];
   finalTurnPlayerIndex?: number | null;
   lastTurnTriggeredByDeckExhaust?: boolean;
   lastPickedUpCard?: Card | null;
   newlyPickedUpCardIds?: string[];
+}
+
+export interface RoundHistoryEntry {
+  round: number;
+  scores: {
+    A: number;
+    B: number;
+  };
+  totalScores: {
+    A: number;
+    B: number;
+  };
+  pukarsClaimed?: {
+    A: number;
+    B: number;
+  };
+  meldsCount?: {
+    A: number;
+    B: number;
+  };
+  winner?: Team | 'TIE';
 }
 
 export type GameAction =
@@ -158,6 +180,7 @@ export interface SanitizedGameState {
   round: number;
   roundStatus: RoundStatus;
   isRoundOver?: boolean;
+  roundHistory?: RoundHistoryEntry[];
   lastPickedUpCard?: Card | null;
   newlyPickedUpCardIds?: string[];
 }

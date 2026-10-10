@@ -1,5 +1,5 @@
 import React from 'react';
-import { GameState, SanitizedGameState, RoundStatus } from '../../engine/types';
+import { GameState, SanitizedGameState, RoundStatus, Team } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
 import {
   Trophy,
@@ -11,6 +11,7 @@ import {
   HelpCircle,
   Award,
   Layers,
+  History,
 } from 'lucide-react';
 
 export interface ScoreboardPageProps {
@@ -83,6 +84,124 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
 
   const teamALeading = totalScores.A > totalScores.B;
   const teamBLeading = totalScores.B > totalScores.A;
+
+  // ---------------------------------------------------------------------------
+  // Build Round-by-Round Breakdown
+  // ---------------------------------------------------------------------------
+  interface RoundRowData {
+    round: number;
+    status: 'COMPLETED' | 'IN_PROGRESS' | 'FINAL_TURN';
+    isCurrent: boolean;
+    scoreA: number;
+    scoreB: number;
+    cumA: number;
+    cumB: number;
+    pukarsA?: number;
+    pukarsB?: number;
+    meldsA?: number;
+    meldsB?: number;
+    winner?: Team | 'TIE' | 'IN_PROGRESS';
+  }
+
+  const roundRows: RoundRowData[] = React.useMemo(() => {
+    const rows: RoundRowData[] = [];
+    const history = gameState.roundHistory ?? [];
+
+    let runningCumA = 0;
+    let runningCumB = 0;
+
+    for (let r = 1; r < round; r++) {
+      const historical = history.find((h) => h.round === r);
+      if (historical) {
+        runningCumA = historical.totalScores.A;
+        runningCumB = historical.totalScores.B;
+        rows.push({
+          round: r,
+          status: 'COMPLETED',
+          isCurrent: false,
+          scoreA: historical.scores.A,
+          scoreB: historical.scores.B,
+          cumA: historical.totalScores.A,
+          cumB: historical.totalScores.B,
+          pukarsA: historical.pukarsClaimed?.A ?? 0,
+          pukarsB: historical.pukarsClaimed?.B ?? 0,
+          meldsA: historical.meldsCount?.A ?? 0,
+          meldsB: historical.meldsCount?.B ?? 0,
+          winner:
+            historical.winner ??
+            (historical.scores.A > historical.scores.B
+              ? 'A'
+              : historical.scores.B > historical.scores.A
+              ? 'B'
+              : 'TIE'),
+        });
+      } else {
+        // Synthesize completed prior round if history is absent
+        // (e.g. from an in-progress round 2 session before roundHistory was recorded)
+        const estScoreA = Math.max(0, totalScores.A - roundScores.A);
+        const estScoreB = Math.max(0, totalScores.B - roundScores.B);
+        runningCumA = estScoreA;
+        runningCumB = estScoreB;
+        rows.push({
+          round: r,
+          status: 'COMPLETED',
+          isCurrent: false,
+          scoreA: estScoreA,
+          scoreB: estScoreB,
+          cumA: runningCumA,
+          cumB: runningCumB,
+          winner: estScoreA > estScoreB ? 'A' : estScoreB > estScoreA ? 'B' : 'TIE',
+        });
+      }
+    }
+
+    // Current Round Row
+    const isCurrentRoundOver = roundStatus === 'ROUND_OVER' || (gameState as any).isRoundOver;
+    const currentScoreA = roundScores.A;
+    const currentScoreB = roundScores.B;
+    const currentCumA = Math.max(totalScores.A, runningCumA + currentScoreA);
+    const currentCumB = Math.max(totalScores.B, runningCumB + currentScoreB);
+
+    rows.push({
+      round,
+      status: isCurrentRoundOver
+        ? 'COMPLETED'
+        : roundStatus === 'FINAL_TURN'
+        ? 'FINAL_TURN'
+        : 'IN_PROGRESS',
+      isCurrent: true,
+      scoreA: currentScoreA,
+      scoreB: currentScoreB,
+      cumA: currentCumA,
+      cumB: currentCumB,
+      pukarsA: pukarsClaimed.A ?? 0,
+      pukarsB: pukarsClaimed.B ?? 0,
+      meldsA: listA.length,
+      meldsB: listB.length,
+      winner: isCurrentRoundOver
+        ? currentScoreA > currentScoreB
+          ? 'A'
+          : currentScoreB > currentScoreA
+          ? 'B'
+          : 'TIE'
+        : 'IN_PROGRESS',
+    });
+
+    return rows;
+  }, [
+    round,
+    roundStatus,
+    gameState.roundHistory,
+    (gameState as any).isRoundOver,
+    roundScores.A,
+    roundScores.B,
+    totalScores.A,
+    totalScores.B,
+    pukarsClaimed.A,
+    pukarsClaimed.B,
+    listA.length,
+    listB.length,
+  ]);
 
   return (
     <div
@@ -288,7 +407,189 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
       </div>
 
       {/* =====================================================================
-          3. CURRENT ROUND DETAILED ITEMIZED BREAKDOWN
+          3. ROUND BY ROUND BREAKDOWN TABLE
+      ====================================================================== */}
+      <div data-testid="round-by-round-section" className="flex flex-col gap-3">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <History className="w-5 h-5 text-amber-400" />
+            <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-wider">
+              Round by Round Breakdown
+            </h2>
+          </div>
+          <span className="text-xs text-slate-400 font-medium">
+            Match score evolution across all rounds
+          </span>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-left text-xs sm:text-sm border-collapse">
+              <thead>
+                <tr className="bg-slate-950/80 text-slate-400 uppercase text-[11px] font-black tracking-wider border-b border-slate-800">
+                  <th className="py-3 px-4">Round</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-blue-300">Team A Score</th>
+                  <th className="py-3 px-4 text-amber-300">Team B Score</th>
+                  <th className="py-3 px-4">Round Result</th>
+                  <th className="py-3 px-4 text-right">Cumulative Standings</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {roundRows.map((r) => (
+                  <tr
+                    key={`round-row-${r.round}`}
+                    data-testid={`round-row-${r.round}`}
+                    className={`transition-colors ${
+                      r.isCurrent
+                        ? 'bg-amber-950/20 hover:bg-amber-950/30'
+                        : 'hover:bg-slate-800/40'
+                    }`}
+                  >
+                    {/* Round Label */}
+                    <td className="py-3 px-4 font-black text-white whitespace-nowrap">
+                      <div className="flex items-center gap-1.5">
+                        <span>{`Round ${r.round}`}</span>
+                        {r.isCurrent && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-400/20 border border-amber-400/40 text-amber-300">
+                            Current
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {r.status === 'COMPLETED' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-950/80 border border-emerald-700/60 text-emerald-300">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Completed</span>
+                        </span>
+                      ) : r.status === 'FINAL_TURN' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-950/80 border border-amber-700/60 text-amber-300 animate-pulse">
+                          <span>Final Turn</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-950/80 border border-sky-700/60 text-sky-300">
+                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                          <span>In Progress</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Team A Score */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="font-mono font-bold text-blue-300 text-sm sm:text-base">
+                          {`+${r.scoreA} pts`}
+                        </span>
+                        {(r.pukarsA !== undefined || r.meldsA !== undefined) && (
+                          <span className="text-[11px] text-slate-400">
+                            {`${r.pukarsA ?? 0} Pukar • ${r.meldsA ?? 0} Melds`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Team B Score */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="font-mono font-bold text-amber-300 text-sm sm:text-base">
+                          {`+${r.scoreB} pts`}
+                        </span>
+                        {(r.pukarsB !== undefined || r.meldsB !== undefined) && (
+                          <span className="text-[11px] text-slate-400">
+                            {`${r.pukarsB ?? 0} Pukar • ${r.meldsB ?? 0} Melds`}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Round Result / Winner */}
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      {r.status !== 'COMPLETED' ? (
+                        <span className="text-slate-400 text-xs italic">
+                          {r.scoreA > r.scoreB
+                            ? 'Team A leading'
+                            : r.scoreB > r.scoreA
+                            ? 'Team B leading'
+                            : 'Tied round'}
+                        </span>
+                      ) : r.winner === 'A' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black bg-blue-900/60 border border-blue-500/50 text-blue-200">
+                          <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                          <span>Team A Won</span>
+                        </span>
+                      ) : r.winner === 'B' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black bg-amber-900/60 border border-amber-500/50 text-amber-200">
+                          <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                          <span>Team B Won</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-slate-800 border border-slate-700 text-slate-300">
+                          <span>Tie</span>
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Cumulative Standings */}
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <div className="font-mono font-bold text-slate-200 text-xs sm:text-sm">
+                        <span className="text-blue-300">{r.cumA}</span>
+                        <span className="text-slate-500 mx-1.5">vs</span>
+                        <span className="text-amber-300">{r.cumB}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400">
+                        {r.cumA === r.cumB
+                          ? 'Tied Match'
+                          : r.cumA > r.cumB
+                          ? `Team A +${r.cumA - r.cumB}`
+                          : `Team B +${r.cumB - r.cumA}`}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-950/90 font-black border-t-2 border-slate-800 text-slate-200">
+                  <td className="py-3 px-4 uppercase text-xs tracking-wider" colSpan={2}>
+                    Match Total
+                  </td>
+                  <td className="py-3 px-4 font-mono text-base text-blue-300">
+                    {totalScores.A} pts
+                  </td>
+                  <td className="py-3 px-4 font-mono text-base text-amber-300">
+                    {totalScores.B} pts
+                  </td>
+                  <td className="py-3 px-4">
+                    {teamALeading ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-blue-300">
+                        <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        Team A Leader
+                      </span>
+                    ) : teamBLeading ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-300">
+                        <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        Team B Leader
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400">Tied Match</span>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-right font-mono text-xs sm:text-sm">
+                    {Math.abs(totalScores.A - totalScores.B) === 0
+                      ? 'Level'
+                      : `Diff: ${Math.abs(totalScores.A - totalScores.B)} pts`}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* =====================================================================
+          4. CURRENT ROUND DETAILED ITEMIZED BREAKDOWN
       ====================================================================== */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2">

@@ -5,6 +5,7 @@ import {
   Meld,
   RoundStatus,
   TurnPhase,
+  RoundHistoryEntry,
 } from './types';
 import { dealInitialState, shuffleDeck } from './deck';
 import {
@@ -621,6 +622,34 @@ function handleStartNextRound(state: GameState): {
   const existingPlayerNames = state.players?.map((p) => p.name);
   const freshState = dealInitialState(state.playerCount, undefined, existingPlayerNames);
 
+  const roundScoresA = state.roundScores?.A ?? 0;
+  const roundScoresB = state.roundScores?.B ?? 0;
+  const finishedRoundHistory: RoundHistoryEntry = {
+    round: state.round,
+    scores: {
+      A: roundScoresA,
+      B: roundScoresB,
+    },
+    totalScores: {
+      A: preservedScores.A ?? 0,
+      B: preservedScores.B ?? 0,
+    },
+    pukarsClaimed: {
+      A: state.pukarsClaimed?.A ?? 0,
+      B: state.pukarsClaimed?.B ?? 0,
+    },
+    meldsCount: {
+      A: state.melds?.A?.length ?? 0,
+      B: state.melds?.B?.length ?? 0,
+    },
+    winner:
+      roundScoresA > roundScoresB
+        ? 'A'
+        : roundScoresB > roundScoresA
+        ? 'B'
+        : 'TIE',
+  };
+
   const nextState: GameState = {
     ...freshState,
     round: state.round + 1,
@@ -628,6 +657,7 @@ function handleStartNextRound(state: GameState): {
     totalScores: preservedScores,
     roundScores: { A: 0, B: 0 },
     pukarsClaimed: { A: 0, B: 0 },
+    roundHistory: [...(state.roundHistory || []), finishedRoundHistory],
     roundStatus: 'PLAYING',
     isRoundOver: false,
     phase: 'DRAW',
@@ -660,6 +690,7 @@ function handleResetGame(
     totalScores: { A: 0, B: 0 },
     roundScores: { A: 0, B: 0 },
     pukarsClaimed: { A: 0, B: 0 },
+    roundHistory: [],
     roundStatus: 'PLAYING',
     isRoundOver: false,
     phase: 'DRAW',
