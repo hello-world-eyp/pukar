@@ -252,6 +252,9 @@ export function generateCardSVG(suit, rank) {
   const accent = isRed ? PALETTE.tealLight : PALETTE.gold;
 
   const rankStr = String(rank);
+  const underline6or9 = (rank === 6 || rank === 9)
+    ? `<line x1="-18" y1="63" x2="18" y2="63" stroke="${color}" stroke-width="5" stroke-linecap="round"/>`
+    : '';
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="600" height="900" viewBox="0 0 600 900">
@@ -279,12 +282,14 @@ export function generateCardSVG(suit, rank) {
   <!-- Top-Left Corner Index -->
   <g transform="translate(68, 62)">
     <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="${rankStr === '10' ? '54' : '62'}" fill="${color}" text-anchor="middle">${rankStr}</text>
+    ${underline6or9}
     ${renderPip(suit, 0, 96, 0.38)}
   </g>
 
   <!-- Bottom-Right Corner Index (Inverted) -->
   <g transform="translate(532, 838) rotate(180)">
     <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="${rankStr === '10' ? '54' : '62'}" fill="${color}" text-anchor="middle">${rankStr}</text>
+    ${underline6or9}
     ${renderPip(suit, 0, 96, 0.38)}
   </g>
 

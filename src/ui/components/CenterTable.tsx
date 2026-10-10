@@ -277,31 +277,37 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                           transform: `translate(calc(-50% + ${transform.translateX}px), calc(-50% + ${transform.translateY}px)) rotate(${transform.rotation}deg)`,
                           transformOrigin: '50% 115%',
                           zIndex: idx + 1,
-                          animationDelay: isRippling ? `${idx * 25 + 60}ms` : undefined,
                         }}
                         className={`absolute transition-transform duration-200 group-hover:scale-[1.02] ${
-                          isTopCard
-                            ? isRippling
-                              ? 'animate-card-ripple'
-                              : 'animate-discard-landing'
-                            : isRippling
-                            ? 'animate-card-ripple'
-                            : ''
-                        } ${
                           isTopCard && drawDiscardAllowed
                             ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-amber-50 rounded-xl'
                             : ''
                         }`}
                       >
-                        <PlayingCard card={card} size="md" />
+                        <div
+                          style={{
+                            animationDelay: isRippling ? `${idx * 25 + 60}ms` : undefined,
+                          }}
+                          className={`relative ${
+                            isTopCard
+                              ? isRippling
+                                ? 'animate-card-ripple'
+                                : 'animate-discard-landing'
+                              : isRippling
+                              ? 'animate-card-ripple'
+                              : ''
+                          }`}
+                        >
+                          <PlayingCard card={card} size="md" />
 
-                        {/* Top card hover zoom affordance */}
-                        {isTopCard && (
-                          <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
-                            <ZoomIn className="w-3.5 h-3.5" />
-                            <span>Zoom</span>
-                          </div>
-                        )}
+                          {/* Top card hover zoom affordance */}
+                          {isTopCard && (
+                            <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
+                              <ZoomIn className="w-3.5 h-3.5" />
+                              <span>Zoom</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

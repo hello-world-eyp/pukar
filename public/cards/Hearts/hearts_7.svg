@@ -63,6 +63,7 @@
   <g transform="translate(68, 62)">
     <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#D03D32" text-anchor="middle">7</text>
     
+    
     <g transform="translate(0, 96) scale(0.38) ">
       <!-- Outer Heart Base with bold outline -->
       <path d="M 0,52 C -5,48 -54,16 -54,-18 C -54,-42 -30,-56 0,-32 C 30,-56 54,-42 54,-18 C 54,16 5,48 0,52 Z"
@@ -87,6 +88,7 @@
   <!-- Bottom-Right Corner Index (Inverted) -->
   <g transform="translate(532, 838) rotate(180)">
     <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#D03D32" text-anchor="middle">7</text>
+    
     
     <g transform="translate(0, 96) scale(0.38) ">
       <!-- Outer Heart Base with bold outline -->

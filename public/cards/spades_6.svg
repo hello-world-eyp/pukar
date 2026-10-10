@@ -56,6 +56,7 @@
   <!-- Top-Left Corner Index -->
   <g transform="translate(68, 62)">
     <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#1A2438" text-anchor="middle">6</text>
+    <line x1="-18" y1="63" x2="18" y2="63" stroke="#1A2438" stroke-width="5" stroke-linecap="round"/>
     
     <g transform="translate(0, 96) scale(0.38) ">
       <!-- Outer Spade Body -->
@@ -78,6 +79,7 @@
   <!-- Bottom-Right Corner Index (Inverted) -->
   <g transform="translate(532, 838) rotate(180)">
     <text x="0" y="52" font-family="-apple-system, system-ui, 'Georgia', serif" font-weight="900" font-size="62" fill="#1A2438" text-anchor="middle">6</text>
+    <line x1="-18" y1="63" x2="18" y2="63" stroke="#1A2438" stroke-width="5" stroke-linecap="round"/>
     
     <g transform="translate(0, 96) scale(0.38) ">
       <!-- Outer Spade Body -->
