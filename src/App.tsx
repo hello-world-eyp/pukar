@@ -984,10 +984,11 @@ export function App({
               activeTurnIndex={activeTurnIndex}
               onSelectPlayer={appMode === 'LOCAL' ? handleSwitchPlayer : undefined}
               isRippling={isTableRippling}
+              hidePerimeterSeats={true}
             >
               {/* The Modern Wood & Cream Table Arena Mat */}
               <div
-                className={`w-full rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 table-cream-mat flex flex-col gap-2 sm:gap-2.5 shadow-2xl transition-transform ${
+                className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-5 table-cream-mat flex flex-col gap-3 sm:gap-3.5 shadow-2xl transition-transform ${
                   isTableRippling ? 'animate-table-quake' : ''
                 }`}
               >

@@ -275,5 +275,18 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('data-testid="nav-player-card-count-0"');
       expect(html).toContain('(13)');
     });
+
+    it('omits perimeter player seats around table in App to maximize table width and height', () => {
+      const html = renderToString(<App initialScreen="GAME" />);
+
+      // Perimeter seats removed from table area
+      expect(html).not.toContain('data-testid="table-seat-top-0"');
+      expect(html).not.toContain('data-testid="table-seat-left"');
+      expect(html).not.toContain('data-testid="table-seat-right"');
+
+      // But players are actively tracked in TopNavBar
+      expect(html).toContain('data-testid="nav-players-roster"');
+      expect(html).toContain('data-testid="nav-player-0"');
+    });
   });
 });

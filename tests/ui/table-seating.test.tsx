@@ -121,5 +121,23 @@ describe('Table Seating & Relative Positioning', () => {
       expect(html).toContain('Player 4');
       expect(html).toContain('Player 2');
     });
+
+    it('omits perimeter seats and expands children when hidePerimeterSeats is true', () => {
+      const html = renderToString(
+        <TableSeating
+          players={players4}
+          viewedPlayerIndex={0}
+          activeTurnIndex={0}
+          hidePerimeterSeats={true}
+        >
+          <div data-testid="expanded-table">Expanded Full Table</div>
+        </TableSeating>
+      );
+
+      expect(html).toContain('data-testid="expanded-table"');
+      expect(html).not.toContain('data-testid="table-seat-top-0"');
+      expect(html).not.toContain('data-testid="table-seat-left"');
+      expect(html).not.toContain('data-testid="table-seat-right"');
+    });
   });
 });

@@ -329,6 +329,7 @@ export interface TableSeatingProps {
   className?: string;
   children?: React.ReactNode;
   isRippling?: boolean;
+  hidePerimeterSeats?: boolean;
 }
 
 export const TableSeating: React.FC<TableSeatingProps> = ({
@@ -339,7 +340,18 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
   className = '',
   children,
   isRippling = false,
+  hidePerimeterSeats = false,
 }) => {
+  if (hidePerimeterSeats) {
+    return (
+      <div className={`relative w-full flex flex-col items-center justify-start ${className}`}>
+        <div className="w-full min-w-0">
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   const seats = getRelativeTableSeats(players, viewedPlayerIndex, activeTurnIndex);
 
   return (
