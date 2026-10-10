@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { CenterTable } from '../../src/ui/components/CenterTable';
+import { CenterTable, getFanCardTransform } from '../../src/ui/components/CenterTable';
 import { TableMeldBoard } from '../../src/ui/components/TableMeldBoard';
 import { PlayerHand } from '../../src/ui/components/PlayerHand';
 import { ActionControls } from '../../src/ui/components/ActionControls';
@@ -90,6 +90,67 @@ describe('Comprehensive UI Game Elements (src/ui/components/)', () => {
       expect(html).toContain('Exhausted');
       expect(html).toContain('Empty Pile');
       expect(html).toContain('0 Pukars');
+    });
+
+    it('calculates consistent fan angles and offsets for up to 6 cards via getFanCardTransform', () => {
+      // For 1 card: no rotation
+      expect(getFanCardTransform(0, 1)).toEqual({ rotation: 0, translateX: 0, translateY: 0 });
+
+      // For 2 cards: symmetrical rotation left and right
+      const t2_0 = getFanCardTransform(0, 2);
+      const t2_1 = getFanCardTransform(1, 2);
+      expect(t2_0.rotation).toBeLessThan(0);
+      expect(t2_1.rotation).toBeGreaterThan(0);
+      expect(t2_0.rotation).toBeCloseTo(-t2_1.rotation, 5);
+
+      // For 6 cards: leftmost card rotates left, rightmost rotates right with consistent angle steps
+      const t6 = Array.from({ length: 6 }, (_, i) => getFanCardTransform(i, 6));
+      expect(t6[0].rotation).toBeLessThan(0);
+      expect(t6[5].rotation).toBeGreaterThan(0);
+      const step1 = t6[1].rotation - t6[0].rotation;
+      const step2 = t6[2].rotation - t6[1].rotation;
+      const step3 = t6[3].rotation - t6[2].rotation;
+      const step4 = t6[4].rotation - t6[3].rotation;
+      const step5 = t6[5].rotation - t6[4].rotation;
+      expect(step1).toBeCloseTo(step2, 5);
+      expect(step2).toBeCloseTo(step3, 5);
+      expect(step3).toBeCloseTo(step4, 5);
+      expect(step4).toBeCloseTo(step5, 5);
+    });
+
+    it('renders a fan of up to 6 recent cards when pile has multiple cards', () => {
+      // 8 cards in pile -> only recent 6 should be rendered in the fan
+      const pile = [
+        makeCard('SPADES', 3, 'c1'),
+        makeCard('HEARTS', 4, 'c2'),
+        makeCard('CLUBS', 5, 'c3'),
+        makeCard('DIAMONDS', 6, 'c4'),
+        makeCard('SPADES', 7, 'c5'),
+        makeCard('HEARTS', 8, 'c6'),
+        makeCard('CLUBS', 9, 'c7'),
+        makeCard('DIAMONDS', 10, 'c8'),
+      ];
+
+      const html = renderToString(
+        <CenterTable
+          stockDeckCount={20}
+          discardPile={pile}
+          pukarPoolCount={2}
+          canDraw={true}
+        />
+      );
+
+      expect(html).toContain('8 cards in pile');
+      expect(html).toContain('data-testid="discard-pile-fan"');
+      // The 6 recent cards (c3 through c8) are rendered, while the oldest cards (c1, c2) are not in the fan
+      expect(html).toContain('10 of DIAMONDS'); // top card
+      expect(html).toContain('9 of CLUBS');
+      expect(html).toContain('8 of HEARTS');
+      expect(html).toContain('7 of SPADES');
+      expect(html).toContain('6 of DIAMONDS');
+      expect(html).toContain('5 of CLUBS');
+      expect(html).not.toContain('3 of SPADES');
+      expect(html).not.toContain('4 of HEARTS');
     });
   });
 

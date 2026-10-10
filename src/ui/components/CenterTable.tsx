@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
 import { DiscardPileModal } from './DiscardPileModal';
@@ -18,6 +18,41 @@ export interface CenterTableProps {
   onPeekDiscard?: () => void;
   className?: string;
   isRippling?: boolean;
+}
+
+/**
+ * Calculates rotation and translation offsets for rendering a fan of up to 6 cards.
+ * Leftmost card slightly rotates to the left, rightmost to the right,
+ * with consistent angle differences across cards in between.
+ */
+export function getFanCardTransform(
+  index: number,
+  totalCards: number
+): { rotation: number; translateX: number; translateY: number } {
+  if (totalCards <= 1) {
+    return { rotation: 0, translateX: 0, translateY: 0 };
+  }
+
+  const centerIndex = (totalCards - 1) / 2;
+  const t = index - centerIndex;
+
+  // Consistent angle step across cards:
+  // For totalCards = 6: angleStep = 4.4deg -> [-11deg, -6.6deg, -2.2deg, +2.2deg, +6.6deg, +11deg]
+  // For totalCards = 2: angleStep = 8deg   -> [-4deg, +4deg]
+  const angleStep =
+    totalCards === 2 ? 8 : totalCards === 3 ? 6.5 : totalCards === 4 ? 5.5 : totalCards === 5 ? 4.8 : 4.4;
+  const rotation = t * angleStep;
+
+  // Horizontal spread: ensures the top-left rank/suit of each previous card is exposed
+  const xStep =
+    totalCards === 2 ? 28 : totalCards === 3 ? 22 : totalCards === 4 ? 18 : totalCards === 5 ? 16 : 14;
+  const translateX = t * xStep;
+
+  // Subtle natural arc: outer cards slightly dip
+  const normalized = Math.abs(t) / centerIndex;
+  const translateY = normalized * 4;
+
+  return { rotation, translateX, translateY };
 }
 
 export const CenterTable: React.FC<CenterTableProps> = ({
@@ -43,8 +78,11 @@ export const CenterTable: React.FC<CenterTableProps> = ({
   const drawDiscardAllowed =
     canDrawDiscard !== undefined ? canDrawDiscard : canDraw && discardPile.length > 0;
 
-  const topDiscardCard =
-    discardPile.length > 0 ? discardPile[discardPile.length - 1] : null;
+  // Recently discarded cards shown as a fan (up to 6 cards)
+  const recentCards = useMemo(() => {
+    if (!discardPile || discardPile.length === 0) return [];
+    return discardPile.slice(-6);
+  }, [discardPile]);
 
   const handleOpenPeek = () => {
     try {
@@ -192,11 +230,12 @@ export const CenterTable: React.FC<CenterTableProps> = ({
               </button>
             </div>
 
-            {/* Visual Top Card - Click to Zoom */}
+            {/* Visual Discard Pile Fan (Up to 6 recently discarded cards) - Click to Zoom */}
             <div
-              className="relative my-1 flex items-center justify-center cursor-pointer group"
+              data-testid="discard-pile-fan"
+              className="relative my-1 w-full h-[140px] sm:h-[160px] flex items-center justify-center cursor-pointer group select-none"
               onClick={handleOpenPeek}
-              title="Click pile to zoom and view all cards"
+              title="Click pile to zoom and view all cards in detail"
               role="button"
               tabIndex={0}
               onKeyDown={(e) => {
@@ -206,46 +245,66 @@ export const CenterTable: React.FC<CenterTableProps> = ({
                 }
               }}
             >
-              {topDiscardCard ? (
-                <div className="relative inline-flex items-center justify-center">
-                  {/* Underneath discard cards creating clean physical depth */}
-                  {discardPile.length > 1 && (
+              {recentCards.length > 0 ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Underneath deck cards creating clean physical depth if more than 6 cards in pile */}
+                  {discardPile.length > 6 && (
                     <div
                       aria-hidden="true"
-                      className="absolute inset-0 translate-x-[2px] translate-y-[2px] rounded-xl bg-stone-200 border border-stone-300 shadow-sm pointer-events-none"
-                    />
-                  )}
-                  {discardPile.length > 2 && (
-                    <div
-                      aria-hidden="true"
-                      className="absolute inset-0 translate-x-[4px] translate-y-[4px] rounded-xl bg-stone-300 border border-stone-400 shadow-md pointer-events-none"
-                    />
-                  )}
-                  {discardPile.length > 8 && (
-                    <div
-                      aria-hidden="true"
-                      className="absolute inset-0 translate-x-[6px] translate-y-[6px] rounded-xl bg-stone-400 border border-stone-500 shadow-lg pointer-events-none"
+                      style={{
+                        left: '50%',
+                        top: '50%',
+                        transform: 'translate(calc(-50% - 42px), calc(-50% + 4px)) rotate(-13deg)',
+                        transformOrigin: '50% 115%',
+                        zIndex: 0,
+                      }}
+                      className="absolute w-20 h-[120px] sm:w-24 sm:h-[144px] rounded-xl bg-stone-300/80 border border-stone-400 shadow-sm pointer-events-none"
                     />
                   )}
 
-                  {/* Top face-up card */}
-                  <div
-                    key={topDiscardCard.id}
-                    className={`relative z-10 transition-transform group-hover:scale-105 active:scale-95 rounded-xl shadow-xl ${
-                      isRippling ? 'animate-card-ripple' : 'animate-discard-landing'
-                    } ${
-                      drawDiscardAllowed
-                        ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-amber-50'
-                        : ''
-                    }`}
-                    style={isRippling ? { animationDelay: '80ms' } : undefined}
-                  >
-                    <PlayingCard card={topDiscardCard} size="md" />
-                    <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
-                      <ZoomIn className="w-3.5 h-3.5" />
-                      <span>Zoom</span>
-                    </div>
-                  </div>
+                  {/* Fanned out cards (up to 6, with consistent angle differences) */}
+                  {recentCards.map((card, idx) => {
+                    const isTopCard = idx === recentCards.length - 1;
+                    const transform = getFanCardTransform(idx, recentCards.length);
+
+                    return (
+                      <div
+                        key={card.id || `discard-fan-${idx}`}
+                        data-testid={isTopCard ? 'top-discard-card' : `discard-fan-card-${idx}`}
+                        style={{
+                          left: '50%',
+                          top: '50%',
+                          transform: `translate(calc(-50% + ${transform.translateX}px), calc(-50% + ${transform.translateY}px)) rotate(${transform.rotation}deg)`,
+                          transformOrigin: '50% 115%',
+                          zIndex: idx + 1,
+                          animationDelay: isRippling ? `${idx * 25 + 60}ms` : undefined,
+                        }}
+                        className={`absolute transition-transform duration-200 group-hover:scale-[1.02] ${
+                          isTopCard
+                            ? isRippling
+                              ? 'animate-card-ripple'
+                              : 'animate-discard-landing'
+                            : isRippling
+                            ? 'animate-card-ripple'
+                            : ''
+                        } ${
+                          isTopCard && drawDiscardAllowed
+                            ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-amber-50 rounded-xl'
+                            : ''
+                        }`}
+                      >
+                        <PlayingCard card={card} size="md" />
+
+                        {/* Top card hover zoom affordance */}
+                        {isTopCard && (
+                          <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-amber-200 font-extrabold text-xs gap-1 backdrop-blur-[1px]">
+                            <ZoomIn className="w-3.5 h-3.5" />
+                            <span>Zoom</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="w-20 h-[120px] sm:w-24 sm:h-[144px] rounded-xl border-2 border-dashed border-stone-300 flex flex-col items-center justify-center p-2 text-center text-stone-500 text-xs sm:text-sm bg-stone-100/60">
