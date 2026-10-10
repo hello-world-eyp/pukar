@@ -31,6 +31,7 @@ export interface ActionControlsProps {
   className?: string;
   showDrawButtons?: boolean;
   unifiedMode?: boolean;
+  requiresPureSequence?: boolean;
 }
 
 export const ActionControls: React.FC<ActionControlsProps> = ({
@@ -51,6 +52,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   className = '',
   showDrawButtons,
   unifiedMode = false,
+  requiresPureSequence = false,
 }) => {
   // Resolve effective selected cards
   const selectedCards: Card[] = useMemo(() => {
@@ -99,12 +101,12 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
           error: 'Must keep at least 1 card in hand to discard',
         };
       }
-      return validateNewMeld(selectedCards);
+      return validateNewMeld(selectedCards, undefined, { requirePure: requiresPureSequence });
     } catch (err) {
       console.error('Error during meld validation preview:', err);
       return { valid: false, error: 'Validation preview error' };
     }
-  }, [selectedCards, selectedCardCount, allHandCards]);
+  }, [selectedCards, selectedCardCount, allHandCards, requiresPureSequence]);
 
   const canPlayNewMeld = !disabled && isMeldPhase && meldValidation.valid;
 

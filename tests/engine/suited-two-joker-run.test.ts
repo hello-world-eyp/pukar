@@ -348,7 +348,7 @@ describe('Suited Rank 2 + Joker Run Validation & Dynamics', () => {
   });
 
   describe('Game Reducer Full Turn Integration', () => {
-    it('executes PLAY_NEW_MELD action with [2♥, 3♥, Joker] successfully', () => {
+    it('rejects [2♥, 3♥, Joker] when team has no pure sequence, and executes successfully after pure sequence is established', () => {
       const initialState = dealInitialState(4);
 
       const twoH = makeCard('card-2h', 'HEARTS', 2);
@@ -365,14 +365,50 @@ describe('Suited Rank 2 + Joker Run Validation & Dynamics', () => {
         ),
       };
 
-      const result = pukarReducer(stateWithCards, {
+      // 1. Attempting to play [2♥, 3♥, Joker] without a prior pure meld on the board is rejected
+      const rejectResult = pukarReducer(stateWithCards, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['card-2h', 'card-3h', 'card-joker'],
+      });
+      expect(rejectResult.error).toBeDefined();
+      expect(rejectResult.error).toContain('First sequence on the board must be pure');
+
+      // 2. Once an initial pure sequence exists on the board for Team A, playing the dirty sequence succeeds
+      const existingPureMeld: Meld = {
+        id: 'meld-r1-A-1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('p-4s', 'SPADES', 4),
+          makeCard('p-5s', 'SPADES', 5),
+          makeCard('p-6s', 'SPADES', 6),
+        ],
+        slots: [
+          { card: makeCard('p-4s', 'SPADES', 4), representedRank: 4, isWildcard: false, representedSuit: 'SPADES' },
+          { card: makeCard('p-5s', 'SPADES', 5), representedRank: 5, isWildcard: false, representedSuit: 'SPADES' },
+          { card: makeCard('p-6s', 'SPADES', 6), representedRank: 6, isWildcard: false, representedSuit: 'SPADES' },
+        ],
+        isClean: true,
+        isPure: true,
+      };
+
+      const stateWithPureMeld = {
+        ...stateWithCards,
+        melds: {
+          ...stateWithCards.melds,
+          A: [existingPureMeld],
+        },
+      };
+
+      const result = pukarReducer(stateWithPureMeld, {
         type: 'PLAY_NEW_MELD',
         cardIds: ['card-2h', 'card-3h', 'card-joker'],
       });
 
       expect(result.error).toBeUndefined();
-      expect(result.state.melds.A).toHaveLength(1);
-      const meld = result.state.melds.A[0];
+      expect(result.state.melds.A).toHaveLength(2);
+      const meld = result.state.melds.A[1];
       expect(meld.type).toBe('RUN');
       expect(meld.suit).toBe('HEARTS');
       expect(meld.slots).toHaveLength(3);

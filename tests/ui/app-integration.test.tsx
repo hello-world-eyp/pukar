@@ -231,10 +231,10 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(state.pukarPool).toHaveLength(2);
       expect(state.pukarsClaimed?.A ?? 0).toBe(0);
 
-      // Set Player 1's hand to exactly 3 cards that form a valid set
+      // Set Player 1's hand to exactly 3 cards that form a valid pure run
       const c1 = makeCard('h5-1', 'HEARTS', 5);
-      const c2 = makeCard('d5-1', 'DIAMONDS', 5);
-      const c3 = makeCard('s5-1', 'SPADES', 5);
+      const c2 = makeCard('h6-1', 'HEARTS', 6);
+      const c3 = makeCard('h7-1', 'HEARTS', 7);
       const discardCard = makeCard('extra-1', 'CLUBS', 9);
       state.players[0].hand = [c1, c2, c3];
       state.phase = 'MELD';
@@ -242,7 +242,7 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       // Attempting to meld all 3 cards without keeping at least 1 card to discard must fail
       const invalidResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
-        cardIds: ['h5-1', 'd5-1', 's5-1'],
+        cardIds: ['h5-1', 'h6-1', 'h7-1'],
       });
       expect(invalidResult.error).toBe(
         'Cannot meld all cards: you must keep at least 1 card in hand to discard to the pile'
@@ -252,7 +252,7 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       state.players[0].hand = [c1, c2, c3, discardCard];
       const meldResult = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
-        cardIds: ['h5-1', 'd5-1', 's5-1'],
+        cardIds: ['h5-1', 'h6-1', 'h7-1'],
       });
       expect(meldResult.error).toBeUndefined();
       state = meldResult.state;

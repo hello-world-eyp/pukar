@@ -1106,6 +1106,7 @@ export function App({
                     disabled={!isViewingActivePlayer || activeGameState.roundStatus === 'ROUND_OVER'}
                     unifiedMode={true}
                     showDrawButtons={false}
+                    requiresPureSequence={(activeGameState.melds?.[viewingPlayer?.team ?? 'A']?.length ?? 0) === 0}
                   />
                 }
               />

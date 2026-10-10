@@ -392,18 +392,55 @@ export function validateNewSet(cards: Card[]): {
 }
 
 /**
+ * Checks if an array of cards (and optional slots) forms a pure sequence:
+ * - Must be a RUN (consecutive ranks, exact same suit).
+ * - Zero wildcards / jokers.
+ * - Natural Jokers cannot be present.
+ * - If a card of rank 2 is present:
+ *   - It must be of the run's suit.
+ *   - It must occupy its natural rank 2 position (representedRank === 2).
+ *   - It must not be acting as a wildcard (isWildcard === false).
+ */
+export function isPureRun(cards: Card[], slots?: MeldSlot[]): boolean {
+  if (!cards || cards.length < 3) return false;
+  // Natural jokers cannot be in a pure run
+  if (cards.some((c) => isNaturalJoker(c) || c.rank === 0)) return false;
+
+  if (slots && slots.length > 0) {
+    if (slots.some((s) => s.isWildcard)) return false;
+    const firstSuit = slots[0].representedSuit ?? slots[0].card.suit;
+    if (!firstSuit) return false;
+    for (const slot of slots) {
+      if (slot.isWildcard) return false;
+      if (slot.card.suit !== firstSuit || slot.representedSuit !== firstSuit) return false;
+      if (slot.card.rank === 2) {
+        if (slot.representedRank !== 2) return false;
+      }
+    }
+    return true;
+  }
+
+  const runResult = validateNewRun(cards);
+  if (!runResult.valid || !runResult.slots) return false;
+  return isPureRun(cards, runResult.slots);
+}
+
+/**
  * Validates a new meld, auto-detecting whether it is a RUN or a SET.
  * Accepts optional targetJokerRank to designate what rank the Normal Joker should represent in a run.
+ * Accepts optional options.requirePure: when true, the meld must be a pure sequence (no jokers/sets allowed).
  */
 export function validateNewMeld(
   cards: Card[],
-  targetJokerRank?: number
+  targetJokerRank?: number,
+  options?: { requirePure?: boolean }
 ): {
   valid: boolean;
   type?: MeldType;
   suit?: Suit;
   slots?: MeldSlot[];
   jokerCardId?: string;
+  isPure?: boolean;
   error?: string;
 } {
   try {
@@ -414,23 +451,53 @@ export function validateNewMeld(
     const runResult = validateNewRun(cards, targetJokerRank);
     if (runResult.valid && runResult.slots) {
       const wildcardSlot = runResult.slots.find((s) => s.isWildcard);
+      const isPure = isPureRun(cards, runResult.slots);
+
+      if (options?.requirePure && !isPure) {
+        if (cards.some((c) => isNaturalJoker(c) || c.rank === 0)) {
+          return {
+            valid: false,
+            error: 'First sequence on the board must be pure: Natural Jokers are not allowed',
+          };
+        }
+        if (cards.some((c) => c.rank === 2)) {
+          return {
+            valid: false,
+            error: "First sequence on the board must be pure: card '2' must be at its natural place (rank 2)",
+          };
+        }
+        return {
+          valid: false,
+          error: 'First sequence on the board must be a pure sequence (no wildcards or jokers allowed)',
+        };
+      }
+
       return {
         valid: true,
         type: 'RUN',
         suit: runResult.slots[0].representedSuit,
         slots: runResult.slots,
         jokerCardId: wildcardSlot?.card.id,
+        isPure,
       };
     }
 
     const setResult = validateNewSet(cards);
     if (setResult.valid && setResult.slots) {
+      if (options?.requirePure) {
+        return {
+          valid: false,
+          error: 'First sequence on the board must be a pure sequence (sets are not allowed until a pure sequence is established)',
+        };
+      }
+
       const wildcardSlot = setResult.slots.find((s) => s.isWildcard);
       return {
         valid: true,
         type: 'SET',
         slots: setResult.slots,
         jokerCardId: wildcardSlot?.card.id,
+        isPure: false,
       };
     }
 

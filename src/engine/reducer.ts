@@ -279,7 +279,11 @@ function handlePlayNewMeld(
     cardsToMeld.push(card);
   }
 
-  const meldValidation = validateNewMeld(cardsToMeld, jokerRepresentedRank);
+  const team = activePlayer.team;
+  const teamHasMelds = (state.melds[team]?.length ?? 0) > 0;
+  const requirePure = !teamHasMelds;
+
+  const meldValidation = validateNewMeld(cardsToMeld, jokerRepresentedRank, { requirePure });
   if (!meldValidation.valid || !meldValidation.slots || !meldValidation.type) {
     return { state, error: meldValidation.error || 'Cards do not form a valid meld' };
   }
@@ -294,7 +298,6 @@ function handlePlayNewMeld(
     };
   }
 
-  const team = activePlayer.team;
   const meldId = `meld-r${state.round}-${team}-${(state.melds[team]?.length || 0) + 1}`;
   const scoreInfo = evaluateMeldScore({
     id: meldId,
@@ -312,6 +315,9 @@ function handlePlayNewMeld(
     suit: meldValidation.suit,
     cards: cardsToMeld,
     slots: meldValidation.slots,
+    isClean: scoreInfo.description.includes('Clean'),
+    isPure: meldValidation.isPure,
+    isPure13: scoreInfo.isPure13,
     points: scoreInfo.points,
   };
 

@@ -55,6 +55,7 @@ export interface Meld {
   cards: Card[];
   slots: MeldSlot[];
   isClean?: boolean;
+  isPure?: boolean;
   isPure13?: boolean;
   points?: number;
 }
