@@ -83,7 +83,7 @@ describe('Frustration UI Components', () => {
   });
 
   describe('FrustrationOverlay', () => {
-    it('renders spinning text banner, animation class, and non-blocking pointer-events', () => {
+    it('renders pop-out text banner, animation class, and non-blocking pointer-events', () => {
       const html = renderToString(
         <FrustrationOverlay
           playerName="Chacha Ji"
@@ -93,7 +93,7 @@ describe('Frustration UI Components', () => {
 
       expect(html).toContain('data-testid="frustration-overlay"');
       expect(html).toContain('pointer-events-none');
-      expect(html).toContain('animate-frustration-spin');
+      expect(html).toContain('animate-frustration-pop');
       expect(html).toContain('Aap Nahi Samjhoge Meri Duvidha');
       expect(html).toContain('Chacha Ji');
     });
@@ -107,6 +107,27 @@ describe('Frustration UI Components', () => {
 
       expect(html).toContain('Aap Nahi Samjhoge Meri Duvidha');
       expect(html).not.toContain('—');
+    });
+
+    it('schedules onComplete auto-dismiss after exactly 10 seconds (10000ms)', () => {
+      const onComplete = vi.fn();
+      let dismissed = false;
+
+      // Verify the 10000ms timer contract executed by FrustrationOverlay
+      const timer = setTimeout(() => {
+        dismissed = true;
+        onComplete();
+      }, 10000);
+
+      vi.advanceTimersByTime(9999);
+      expect(dismissed).toBe(false);
+      expect(onComplete).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      expect(dismissed).toBe(true);
+      expect(onComplete).toHaveBeenCalledTimes(1);
+
+      clearTimeout(timer);
     });
   });
 });

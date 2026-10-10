@@ -977,7 +977,7 @@ export function App({
         />
       )}
 
-      {/* 7-Second Frustration Animation Overlay */}
+      {/* 10-Second Frustration Animation Overlay */}
       {activeGameState.activeFrustration && (
         <FrustrationOverlay
           playerName={activeGameState.activeFrustration.playerName}
