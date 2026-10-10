@@ -93,25 +93,25 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
       aria-modal="true"
       aria-labelledby="setup-modal-title"
       data-testid="game-setup-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
     >
-      <div className="w-full max-w-xl game-modal-frame rounded-3xl p-5 sm:p-7 text-slate-100 shadow-2xl shadow-black/80 flex flex-col gap-5 max-h-[92vh] overflow-y-auto">
+      <div className="w-full max-w-2xl sm:max-w-3xl lg:max-w-4xl game-modal-frame rounded-3xl p-6 sm:p-8 md:p-9 text-slate-100 shadow-2xl shadow-black/90 flex flex-col gap-6 sm:gap-7 max-h-[92vh] overflow-y-auto border-2 border-amber-500/30">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-amber-900/40">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4 sm:pb-5">
+          <div className="flex items-center gap-3.5 sm:gap-4">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black text-2xl sm:text-3xl shadow-lg shadow-amber-900/50 shrink-0">
               ♠
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 id="setup-modal-title" className="text-xl sm:text-2xl font-black tracking-tight text-white">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h2 id="setup-modal-title" className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                   Pukar Setup
                 </h2>
-                <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
+                <span className="text-xs font-black uppercase px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/40">
                   Royal Rummy
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-sm sm:text-base text-slate-300 font-medium mt-0.5">
                 Configure player count and names before dealing
               </p>
             </div>
@@ -122,36 +122,36 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
               type="button"
               onClick={onClose}
               data-testid="btn-close-setup-modal"
-              className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-2 sm:p-2.5 rounded-2xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
               aria-label="Close setup modal"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
           )}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6 sm:gap-7">
           {/* Step 1: Player Count Selector */}
-          <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-amber-400" />
+          <div className="flex flex-col gap-2.5">
+            <label className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+              <Users className="w-5 h-5 text-amber-400" />
               <span>Select Player Count</span>
             </label>
-            <div className="grid grid-cols-2 gap-3" role="group" aria-label="Player count selection">
+            <div className="grid grid-cols-2 gap-4 sm:gap-5" role="group" aria-label="Player count selection">
               <button
                 type="button"
                 data-testid="btn-select-4p"
                 onClick={() => handlePlayerCountChange(4)}
-                className={`py-3 px-4 rounded-2xl font-bold text-sm border flex items-center justify-center gap-2.5 transition-all ${
+                className={`py-4 sm:py-5 px-5 sm:px-6 rounded-2xl sm:rounded-3xl font-bold border flex items-center justify-center gap-3.5 transition-all cursor-pointer ${
                   playerCount === 4
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/50 scale-[1.02]'
-                    : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border-slate-700'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 border-amber-300 shadow-xl shadow-amber-500/25 ring-4 ring-amber-400/40 scale-[1.01]'
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:border-slate-600'
                 }`}
               >
-                <Users className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="font-extrabold leading-tight">4 Players</div>
-                  <div className={`text-[10px] ${playerCount === 4 ? 'text-slate-900 font-semibold' : 'text-slate-400'}`}>
+                <Users className="w-6 h-6 shrink-0" />
+                <div className="text-left min-w-0">
+                  <div className="text-base sm:text-lg font-black leading-tight">4 Players</div>
+                  <div className={`text-xs sm:text-sm mt-0.5 ${playerCount === 4 ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
                     2 Teams of 2 (2 Pukars)
                   </div>
                 </div>
@@ -161,16 +161,16 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                 type="button"
                 data-testid="btn-select-6p"
                 onClick={() => handlePlayerCountChange(6)}
-                className={`py-3 px-4 rounded-2xl font-bold text-sm border flex items-center justify-center gap-2.5 transition-all ${
+                className={`py-4 sm:py-5 px-5 sm:px-6 rounded-2xl sm:rounded-3xl font-bold border flex items-center justify-center gap-3.5 transition-all cursor-pointer ${
                   playerCount === 6
-                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg shadow-amber-500/20 ring-2 ring-amber-400/50 scale-[1.02]'
-                    : 'bg-slate-800/60 hover:bg-slate-800 text-slate-300 border-slate-700'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 border-amber-300 shadow-xl shadow-amber-500/25 ring-4 ring-amber-400/40 scale-[1.01]'
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 border-slate-700/80 hover:border-slate-600'
                 }`}
               >
-                <Users className="w-4 h-4" />
-                <div className="text-left">
-                  <div className="font-extrabold leading-tight">6 Players</div>
-                  <div className={`text-[10px] ${playerCount === 6 ? 'text-slate-900 font-semibold' : 'text-slate-400'}`}>
+                <Users className="w-6 h-6 shrink-0" />
+                <div className="text-left min-w-0">
+                  <div className="text-base sm:text-lg font-black leading-tight">6 Players</div>
+                  <div className={`text-xs sm:text-sm mt-0.5 ${playerCount === 6 ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
                     2 Teams of 3 (3 Pukars)
                   </div>
                 </div>
@@ -179,45 +179,45 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
           </div>
 
           {/* Step 2: Custom Player Names Organized by Team */}
-          <div className="flex flex-col gap-2.5">
+          <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-400" />
+              <label className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-400" />
                 <span>Player Names & Teams</span>
               </label>
               <button
                 type="button"
                 onClick={handleResetDefaults}
-                className="text-[11px] font-semibold text-slate-400 hover:text-amber-300 flex items-center gap-1 transition-colors"
+                className="text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer"
               >
-                <RotateCcw className="w-3 h-3" />
+                <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset to Defaults</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* TEAM A COLUMN */}
-              <div className="bg-blue-950/40 border border-blue-500/40 rounded-2xl p-3 sm:p-4 flex flex-col gap-2.5">
-                <div className="flex items-center justify-between border-b border-blue-500/30 pb-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-blue-300">
-                    <Shield className="w-3.5 h-3.5 text-blue-400" />
+              <div className="bg-gradient-to-b from-blue-950/60 to-blue-950/40 border-2 border-blue-500/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-blue-500/30 pb-3">
+                  <div className="flex items-center gap-2 font-black text-sm sm:text-base text-blue-200">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0" />
                     <span>Team A (Partners)</span>
                   </div>
-                  <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.2 rounded border border-blue-500/30 font-semibold">
+                  <span className="text-xs bg-blue-500/25 text-blue-200 px-2.5 py-1 rounded-lg border border-blue-400/40 font-bold">
                     {`Seats: ${teamAPlayers.map((i) => i + 1).join(', ')}`}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3.5">
                   {teamAPlayers.map((playerIndex) => (
-                    <div key={`input-p-${playerIndex}`} className="flex flex-col gap-1">
+                    <div key={`input-p-${playerIndex}`} className="flex flex-col gap-1.5">
                       <label
                         htmlFor={`input-player-${playerIndex + 1}`}
-                        className="text-[11px] font-medium text-slate-300 flex items-center justify-between"
+                        className="text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-between"
                       >
                         <span>{`Seat ${playerIndex + 1}`}</span>
                         {playerIndex === 0 && (
-                          <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/60 px-1 rounded">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-2 py-0.5 rounded-md">
                             First Turn
                           </span>
                         )}
@@ -230,7 +230,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                         value={names[playerIndex] || ''}
                         onChange={(e) => handleNameChange(playerIndex, e.target.value)}
                         placeholder={`Player ${playerIndex + 1}`}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all font-semibold"
+                        className="w-full h-11 sm:h-12 bg-slate-900/90 border-2 border-slate-700 focus:border-blue-400 rounded-xl px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-blue-400/25 transition-all font-bold shadow-inner"
                       />
                     </div>
                   ))}
@@ -238,23 +238,23 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
               </div>
 
               {/* TEAM B COLUMN */}
-              <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-3 sm:p-4 flex flex-col gap-2.5">
-                <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
-                  <div className="flex items-center gap-1.5 font-bold text-xs text-amber-300">
-                    <Shield className="w-3.5 h-3.5 text-amber-400" />
+              <div className="bg-gradient-to-b from-amber-950/60 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-amber-500/30 pb-3">
+                  <div className="flex items-center gap-2 font-black text-sm sm:text-base text-amber-200">
+                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
                     <span>Team B (Partners)</span>
                   </div>
-                  <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded border border-amber-500/30 font-semibold">
+                  <span className="text-xs bg-amber-500/25 text-amber-200 px-2.5 py-1 rounded-lg border border-amber-400/40 font-bold">
                     {`Seats: ${teamBPlayers.map((i) => i + 1).join(', ')}`}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-3.5">
                   {teamBPlayers.map((playerIndex) => (
-                    <div key={`input-p-${playerIndex}`} className="flex flex-col gap-1">
+                    <div key={`input-p-${playerIndex}`} className="flex flex-col gap-1.5">
                       <label
                         htmlFor={`input-player-${playerIndex + 1}`}
-                        className="text-[11px] font-medium text-slate-300 flex items-center justify-between"
+                        className="text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-between"
                       >
                         <span>{`Seat ${playerIndex + 1}`}</span>
                       </label>
@@ -266,7 +266,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                         value={names[playerIndex] || ''}
                         onChange={(e) => handleNameChange(playerIndex, e.target.value)}
                         placeholder={`Player ${playerIndex + 1}`}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-400 transition-all font-semibold"
+                        className="w-full h-11 sm:h-12 bg-slate-900/90 border-2 border-slate-700 focus:border-amber-400 rounded-xl px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-amber-400/25 transition-all font-bold shadow-inner"
                       />
                     </div>
                   ))}
@@ -274,18 +274,20 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 text-center mt-1">
-              💡 Partners sit across from each other and share cumulative sequence points and Pukar bonuses.
-            </p>
+            <div className="bg-slate-900/80 border border-slate-800 p-3 sm:p-3.5 rounded-2xl text-center">
+              <p className="text-xs sm:text-sm text-slate-300 font-medium">
+                💡 Partners sit across from each other and share cumulative sequence points and Pukar bonuses.
+              </p>
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 sm:gap-4 pt-3 sm:pt-4 border-t border-slate-800">
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
+                className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl sm:rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-sm sm:text-base font-bold transition-colors cursor-pointer border border-slate-700"
               >
                 Cancel
               </button>
@@ -294,9 +296,9 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
             <button
               type="submit"
               data-testid="btn-start-game"
-              className="flex-1 sm:flex-none h-11 px-7 rounded-xl btn-game-amber font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+              className="flex-1 sm:flex-none h-11 sm:h-12 px-8 sm:px-10 rounded-xl sm:rounded-2xl btn-game-amber font-black text-sm sm:text-base flex items-center justify-center gap-2.5 cursor-pointer shadow-xl shadow-amber-950/60 hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
-              <Play className="w-4 h-4 fill-slate-950" />
+              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-slate-950" />
               <span>{isGameInProgress ? 'Restart & Deal' : 'Start Game'}</span>
             </button>
           </div>
