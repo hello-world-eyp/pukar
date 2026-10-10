@@ -217,26 +217,26 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
       <div className="flex flex-col gap-8">
         {/* TEAM A SECTION */}
         {(teamFilter === 'ALL' || teamFilter === 'A') && (
-          <section data-testid="section-team-a-sequences" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-blue-500/30 pb-2">
+          <section data-testid="section-team-a-sequences" className="flex flex-col gap-3 rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#F7F5F0] border-2 border-[#e7dfcc] text-stone-900 shadow-xl">
+            <div className="flex items-center justify-between border-b border-sky-300 pb-2">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-blue-500" />
-                <h2 className="text-base sm:text-lg font-black text-blue-300 uppercase tracking-wider">
+                <h2 className="text-base sm:text-lg font-black text-sky-950 uppercase tracking-wider">
                   Team A Sequences ({listA.length})
                 </h2>
               </div>
-              <span className="text-xs sm:text-sm font-bold text-blue-400">
+              <span className="text-xs sm:text-sm font-bold text-sky-900">
                 Total Score: {pointsA} pts
               </span>
             </div>
 
             {sortedA.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-slate-900/40 border-2 border-dashed border-slate-800 text-center flex flex-col items-center justify-center gap-2">
-                <Layers className="w-8 h-8 text-slate-600" />
-                <div className="font-bold text-slate-400 text-sm">
+              <div className="p-8 rounded-2xl bg-white/70 border-2 border-dashed border-stone-300 text-center flex flex-col items-center justify-center gap-2">
+                <Layers className="w-8 h-8 text-stone-400" />
+                <div className="font-bold text-stone-700 text-sm">
                   No sequences placed yet by Team A
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-stone-500">
                   Melds placed during the game will be enlarged here with full details.
                 </div>
               </div>
@@ -258,26 +258,26 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
 
         {/* TEAM B SECTION */}
         {(teamFilter === 'ALL' || teamFilter === 'B') && (
-          <section data-testid="section-team-b-sequences" className="flex flex-col gap-3">
-            <div className="flex items-center justify-between border-b border-amber-500/30 pb-2">
+          <section data-testid="section-team-b-sequences" className="flex flex-col gap-3 rounded-2xl sm:rounded-3xl p-4 sm:p-5 bg-[#F7F5F0] border-2 border-[#e7dfcc] text-stone-900 shadow-xl">
+            <div className="flex items-center justify-between border-b border-amber-300 pb-2">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full bg-amber-500" />
-                <h2 className="text-base sm:text-lg font-black text-amber-300 uppercase tracking-wider">
+                <h2 className="text-base sm:text-lg font-black text-amber-950 uppercase tracking-wider">
                   Team B Sequences ({listB.length})
                 </h2>
               </div>
-              <span className="text-xs sm:text-sm font-bold text-amber-400">
+              <span className="text-xs sm:text-sm font-bold text-amber-900">
                 Total Score: {pointsB} pts
               </span>
             </div>
 
             {sortedB.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-slate-900/40 border-2 border-dashed border-slate-800 text-center flex flex-col items-center justify-center gap-2">
-                <Layers className="w-8 h-8 text-slate-600" />
-                <div className="font-bold text-slate-400 text-sm">
+              <div className="p-8 rounded-2xl bg-white/70 border-2 border-dashed border-stone-300 text-center flex flex-col items-center justify-center gap-2">
+                <Layers className="w-8 h-8 text-stone-400" />
+                <div className="font-bold text-stone-700 text-sm">
                   No sequences placed yet by Team B
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-stone-500">
                   Melds placed during the game will be enlarged here with full details.
                 </div>
               </div>
@@ -370,10 +370,10 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
   return (
     <div
       data-testid={`enlarged-meld-${meld.id}`}
-      className={`rounded-2xl p-4 sm:p-5 border flex flex-col gap-3.5 shadow-xl transition-all ${
+      className={`rounded-2xl p-4 sm:p-5 border flex flex-col gap-3.5 shadow-md transition-all ${
         team === 'A'
-          ? 'bg-slate-900/85 border-blue-500/30 hover:border-blue-500/60'
-          : 'bg-slate-900/85 border-amber-500/30 hover:border-amber-500/60'
+          ? 'bg-white border-blue-200/90 hover:border-blue-400 text-stone-900'
+          : 'bg-white border-amber-200/90 hover:border-amber-400 text-stone-900'
       }`}
     >
       {/* Sequence Header */}
@@ -390,20 +390,20 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
 
           {/* Suit Tag */}
           {meld.suit && (
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded-lg border border-slate-700">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-lg border border-stone-200">
               {getSuitSymbol(meld.suit)} {meld.suit}
             </span>
           )}
 
           {/* Card Count */}
-          <span className="text-xs font-bold text-slate-400">
+          <span className="text-xs font-bold text-stone-500">
             {meld.cards.length} cards
           </span>
         </div>
 
         {/* Score & Zoom Button */}
         <div className="flex items-center gap-2">
-          <span className="text-base sm:text-lg font-black text-amber-300 bg-slate-950 px-3 py-0.5 rounded-xl border border-slate-800">
+          <span className="text-base sm:text-lg font-black text-amber-900 bg-amber-100/90 px-3 py-0.5 rounded-xl border border-amber-300 shadow-sm">
             +{points} pts
           </span>
           {onZoom && (
@@ -411,7 +411,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
               type="button"
               data-testid={`btn-zoom-${meld.id}`}
               onClick={() => onZoom(meld)}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors cursor-pointer shadow-sm"
               title="Zoom in modal"
             >
               <ZoomIn className="w-4 h-4" />
@@ -422,13 +422,13 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
 
       {/* Wildcard substitution callout if present */}
       {wildcardSlot && (
-        <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-200 flex items-center gap-2">
+        <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-center gap-2">
           <span>🃏 Wildcard in play:</span>
-          <span className="font-bold text-white">
+          <span className="font-bold text-stone-900">
             {wildcardSlot.card.isNaturalJoker ? 'Natural Joker' : `2 of ${wildcardSlot.card.suit ?? ''}`}
           </span>
           <span>substituting for</span>
-          <span className="font-extrabold text-amber-300 underline underline-offset-2">
+          <span className="font-extrabold text-amber-700 underline underline-offset-2">
             {getRankLabel(wildcardSlot.representedRank)} of{' '}
             {wildcardSlot.representedSuit ?? meld.suit ?? wildcardSlot.card.suit} (
             {getSuitSymbol(wildcardSlot.representedSuit ?? meld.suit ?? wildcardSlot.card.suit)})

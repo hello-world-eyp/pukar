@@ -1,6 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+}
 
 /* Custom smooth scrollbar for card hands and modal dialogs */
 .custom-scrollbar::-webkit-scrollbar {
@@ -376,9 +385,9 @@
   box-shadow: 0 0 0 3px #facc15, 0 0 20px rgba(250, 204, 21, 0.75), 0 8px 16px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Modern Light Cream Arena Mat & Ambient Tabletop */
+/* Modern Warm Off-White (#F7F5F0) Arena Mat & Ambient Tabletop */
 .table-cream-mat {
-  background: radial-gradient(ellipse at 50% 25%, #ffffff 0%, #fbf9f4 55%, #f4eee2 100%);
+  background-color: #F7F5F0;
   border: 2px solid #e7dfcc;
   border-top: 4px solid #ea8f52;
   border-radius: 1.75rem;
@@ -386,8 +395,8 @@
 }
 
 .table-well-light {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 244, 235, 0.95) 100%);
-  border: 1.5px solid #ded5be;
+  background: #ffffff;
+  border: 1.5px solid #e7dfcc;
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.03), 0 4px 14px rgba(0, 0, 0, 0.06);
 }
 

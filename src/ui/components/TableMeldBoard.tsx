@@ -272,7 +272,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
     <div
       data-team={team}
       className={`rounded-2xl sm:rounded-3xl border-2 ${
-        isBlue ? 'border-sky-200/80 bg-sky-50/40' : 'border-amber-200/80 bg-amber-50/40'
+        isBlue ? 'border-sky-300/80 bg-white/60' : 'border-amber-300/80 bg-white/60'
       } p-2.5 sm:p-3 flex flex-col gap-2 sm:gap-2.5 shadow-sm transition-all ${
         isActive ? activeRing : ''
       }`}
