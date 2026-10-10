@@ -766,7 +766,6 @@ export function App({
               setCurrentScreen('MENU');
             }}
             roomCode={isMultiplayerActive ? multiplayerHook.roomCode : null}
-            gameTitle={appMode === 'MULTIPLAYER' ? 'Online Pukar' : 'Friday game night'}
           />
 
       {/* Persistent Multiplayer Status Bar when inside an active online room */}

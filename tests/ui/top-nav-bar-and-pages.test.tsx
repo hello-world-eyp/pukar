@@ -16,7 +16,7 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
   ];
 
   describe('TopNavBar Component', () => {
-    it('renders clean navigation bar with spade logo, pukar branding, and game title', () => {
+    it('renders clean navigation bar with spade logo and pukar branding without random text', () => {
       const html = renderToString(
         <TopNavBar
           activeTab="table"
@@ -24,14 +24,13 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
           onOpenRules={vi.fn()}
           players={mockPlayers}
           currentPlayerIndex={0}
-          gameTitle="Friday game night"
         />
       );
 
       // Lime spade badge and lowercase pukar
       expect(html).toContain('♠');
       expect(html).toContain('pukar');
-      expect(html).toContain('Friday game night');
+      expect(html).not.toContain('Friday game night');
 
       // Random text from before is NOT present
       expect(html).not.toContain('Royal Rummy');

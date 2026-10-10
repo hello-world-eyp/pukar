@@ -41,7 +41,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onToggleMute,
   onNewGame,
   onExitToMenu,
-  gameTitle = 'Friday game night',
+  gameTitle,
   roomCode,
 }) => {
   const displayTitle = roomCode ? `Room ${roomCode}` : gameTitle;
@@ -64,9 +64,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <span className="font-black text-xl sm:text-2xl tracking-tight text-white lowercase">
               pukar
             </span>
-            <span className="text-sm text-slate-400 font-semibold truncate max-w-[130px] sm:max-w-[200px] hidden md:inline">
-              {displayTitle}
-            </span>
+            {displayTitle ? (
+              <span className="text-sm text-slate-400 font-semibold truncate max-w-[130px] sm:max-w-[200px] hidden md:inline">
+                {displayTitle}
+              </span>
+            ) : null}
           </div>
         </div>
 
