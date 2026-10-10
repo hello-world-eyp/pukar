@@ -45,14 +45,19 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       // App Container
       expect(html).toContain('data-testid="pukar-app"');
 
-      // Header branding
-      expect(html).toContain('PUKAR');
-      expect(html).toContain('Royal Rummy');
-      expect(html).toContain('Round 1');
+      // Clean Top Navigation Bar (Mockup matching)
+      expect(html).toContain('data-testid="top-nav-bar"');
+      expect(html.toLowerCase()).toContain('pukar');
+      expect(html).toContain('data-testid="tab-table"');
+      expect(html).toContain('data-testid="tab-sequences"');
+      expect(html).toContain('data-testid="tab-scoreboard"');
+      expect(html).toContain('data-testid="tab-how-to-play"');
+
+      // Random text (like Royal Rummy, In progress, Round 1) removed from header per user instructions
+      expect(html).not.toContain('Royal Rummy');
 
       // Quick Controls in Header (Clean space-saving menu bar)
       expect(html).toContain('data-testid="btn-sound-toggle"');
-      expect(html).toContain('data-testid="btn-rules-modal"');
       expect(html).toContain('data-testid="btn-exit-to-menu"');
       expect(html).toContain('data-testid="btn-restart-game"');
 

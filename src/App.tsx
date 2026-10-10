@@ -14,7 +14,9 @@ import {
   getAddToRunCandidateOptions,
   JokerOption,
 } from './engine/meld-validator';
-import { ScoreBoard } from './ui/components/ScoreBoard';
+import { TopNavBar } from './ui/components/TopNavBar';
+import { SequencesPage } from './ui/components/SequencesPage';
+import { ScoreboardPage } from './ui/components/ScoreboardPage';
 import { TableMeldBoard } from './ui/components/TableMeldBoard';
 import { CenterTable } from './ui/components/CenterTable';
 import { PlayerHand } from './ui/components/PlayerHand';
@@ -81,6 +83,9 @@ export function App({
   const [currentScreen, setCurrentScreen] = useState<'MENU' | 'GAME' | 'MULTIPLAYER_HUB'>(
     defaultInitialScreen
   );
+
+  // Active in-game navigation tab: 'table' (Main Table arena) | 'sequences' (Enlarged Sequences) | 'scoreboard' (Scoreboard Breakdown)
+  const [activeGameTab, setActiveGameTab] = useState<'table' | 'sequences' | 'scoreboard'>('table');
 
   // Hook for multiplayer game lifecycle
   const defaultMultiplayerHook = useMultiplayerGame({
@@ -734,24 +739,21 @@ export function App({
       ) : (
         <>
           {/* =====================================================================
-              1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
+              1. CLEAN TOP NAVIGATION BAR (MOCKUP MATCHING)
           ====================================================================== */}
-          <ScoreBoard
-            round={activeGameState.round}
-            roundStatus={activeGameState.roundStatus}
-            phase={activeGameState.phase}
-            scores={activeGameState.scores}
-            roundScores={activeGameState.roundScores}
-            totalScores={activeGameState.totalScores ?? activeGameState.scores}
-            pukarsClaimed={activeGameState.pukarsClaimed}
+          <TopNavBar
+            activeTab={activeGameTab}
+            onTabChange={setActiveGameTab}
+            onOpenRules={() => setIsRulesModalOpen(true)}
+            players={activeGameState.players.map((p, idx) => ({
+              id: p.id || `p-${idx}`,
+              name: p.name,
+              team: p.team,
+            }))}
             currentPlayerIndex={activeTurnIndex}
-            currentPlayerName={activePlayer?.name}
-            activeTeam={activePlayer?.team}
-            playerCount={activeGameState.playerCount}
             isMuted={isMuted}
             onToggleMute={toggleMute}
-            onOpenRules={() => setIsRulesModalOpen(true)}
-            onRestartGame={
+            onNewGame={
               appMode === 'LOCAL'
                 ? () => handleOpenResetModal(activeGameState.playerCount)
                 : undefined
@@ -760,9 +762,11 @@ export function App({
               if (isMultiplayerActive) {
                 multiplayerHook.leaveRoom();
               }
+              setActiveGameTab('table');
               setCurrentScreen('MENU');
             }}
-            appMode={appMode}
+            roomCode={isMultiplayerActive ? multiplayerHook.roomCode : null}
+            gameTitle={appMode === 'MULTIPLAYER' ? 'Online Pukar' : 'Friday game night'}
           />
 
       {/* Persistent Multiplayer Status Bar when inside an active online room */}
@@ -947,6 +951,24 @@ export function App({
               setCurrentScreen('MENU');
             }}
             multiplayerHook={multiplayerHook}
+          />
+        </main>
+      ) : activeGameTab === 'sequences' ? (
+        <main className="w-full flex-1">
+          <SequencesPage
+            melds={activeGameState.melds}
+            activeTeam={activePlayer?.team ?? 'A'}
+            onBackToTable={() => setActiveGameTab('table')}
+            onZoomMeld={(meld) => setZoomedMeld(meld)}
+            players={activeGameState.players}
+          />
+        </main>
+      ) : activeGameTab === 'scoreboard' ? (
+        <main className="w-full flex-1">
+          <ScoreboardPage
+            gameState={activeGameState}
+            onBackToTable={() => setActiveGameTab('table')}
+            onOpenRules={() => setIsRulesModalOpen(true)}
           />
         </main>
       ) : (
