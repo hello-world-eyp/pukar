@@ -51,6 +51,15 @@ export interface AppProps {
   initialMode?: 'LOCAL' | 'MULTIPLAYER';
   initialScreen?: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB';
   multiplayerGameHook?: UseMultiplayerGameReturn;
+  initialPukarBanner?: {
+    team: 'A' | 'B';
+    playerName: string;
+    points: number;
+  } | null;
+  initialJokerPickupBanner?: {
+    playerName: string;
+  } | null;
+  initialExhaustNotification?: string | null;
 }
 
 export function App({
@@ -58,6 +67,9 @@ export function App({
   initialMode,
   initialScreen,
   multiplayerGameHook,
+  initialPukarBanner,
+  initialJokerPickupBanner,
+  initialExhaustNotification,
 }: AppProps = {}) {
   // ---------------------------------------------------------------------------
   // Application Mode State: LOCAL (Pass & Play hotseat) or MULTIPLAYER (online/LAN)
@@ -122,17 +134,19 @@ export function App({
     team: 'A' | 'B';
     playerName: string;
     points: number;
-  } | null>(null);
+  } | null>(initialPukarBanner ?? null);
   const [pukarSlamEvent, setPukarSlamEvent] = useState<{
     team: 'A' | 'B';
     playerName: string;
     points: number;
   } | null>(null);
   const [isTableRippling, setIsTableRippling] = useState(false);
-  const [exhaustNotification, setExhaustNotification] = useState<string | null>(null);
+  const [exhaustNotification, setExhaustNotification] = useState<string | null>(
+    initialExhaustNotification ?? null
+  );
   const [jokerPickupBanner, setJokerPickupBanner] = useState<{
     playerName: string;
-  } | null>(null);
+  } | null>(initialJokerPickupBanner ?? null);
 
   // Joker Selection Prompt Modal State
   const [jokerPromptData, setJokerPromptData] = useState<{
@@ -166,6 +180,33 @@ export function App({
     }, 5000);
     return () => clearTimeout(timer);
   }, [disconnectToast]);
+
+  // Auto-dismiss Pukar celebration banner after 10 seconds
+  useEffect(() => {
+    if (!pukarBanner) return;
+    const timer = setTimeout(() => {
+      setPukarBanner(null);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [pukarBanner]);
+
+  // Auto-dismiss Joker pickup banner after 10 seconds
+  useEffect(() => {
+    if (!jokerPickupBanner) return;
+    const timer = setTimeout(() => {
+      setJokerPickupBanner(null);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [jokerPickupBanner]);
+
+  // Auto-dismiss deck exhaustion alert after 10 seconds
+  useEffect(() => {
+    if (!exhaustNotification) return;
+    const timer = setTimeout(() => {
+      setExhaustNotification(null);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [exhaustNotification]);
 
   // Track player disconnections in multiplayer mode
   const prevSeatsConnRef = useRef<Map<number, boolean>>(new Map());
