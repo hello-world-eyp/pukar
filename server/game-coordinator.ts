@@ -245,8 +245,14 @@ export class GameCoordinator {
         }
       }
 
-      // Turn verification for regular game moves (deck optimization can be requested at any time)
-      if (!isRoundAdvance && action.type !== 'OPTIMIZE_DECK_ORDER') {
+      // Turn verification for regular game moves (deck optimization and frustration can be requested at any time by any seated player)
+      const isTurnAgnosticAction =
+        isRoundAdvance ||
+        action.type === 'OPTIMIZE_DECK_ORDER' ||
+        action.type === 'TRIGGER_FRUSTRATION' ||
+        action.type === 'CLEAR_FRUSTRATION';
+
+      if (!isTurnAgnosticAction) {
         const activePlayer = room.gameState.players?.[room.gameState.currentPlayerIndex];
         if (!activePlayer || activePlayer.id !== playerId) {
           serverLogger.warn('Action rejected: Not your turn to play', {
@@ -260,6 +266,9 @@ export class GameCoordinator {
 
       // Prepare seats sorted by seatIndex to maintain correct mapping
       const sortedSeats = [...(room.seats || [])].sort((a, b) => a.seatIndex - b.seatIndex);
+      const senderSeat = sortedSeats.find((s) => s.playerId === playerId);
+      const senderPlayer = room.gameState.players?.find((p) => p.id === playerId);
+      const sendingPlayerName = senderSeat?.playerName?.trim() || senderPlayer?.name?.trim() || 'Player';
 
       // Normalize RESET_GAME so player names and count from the authoritative room are preserved
       const effectiveAction: GameAction =
@@ -268,6 +277,11 @@ export class GameCoordinator {
               ...action,
               playerCount: room.playerCount,
               playerNames: sortedSeats.map((s) => s.playerName?.trim() || `Player ${s.seatIndex + 1}`),
+            }
+          : action.type === 'TRIGGER_FRUSTRATION'
+          ? {
+              ...action,
+              playerName: action.playerName || sendingPlayerName,
             }
           : action;
 

@@ -65,6 +65,10 @@ export function sanitizeStateForPlayer(
         isViewerActive && state?.newlyPickedUpCardIds
           ? [...state.newlyPickedUpCardIds]
           : [],
+      frustrationCooldownUntil: state?.frustrationCooldownUntil,
+      activeFrustration: state?.activeFrustration
+        ? { ...state.activeFrustration }
+        : null,
     };
   } catch (err) {
     console.error('Error in sanitizeStateForPlayer:', err);
@@ -82,6 +86,8 @@ export function sanitizeStateForPlayer(
       round: state?.round ?? 1,
       roundStatus: 'PLAYING',
       isRoundOver: false,
+      frustrationCooldownUntil: state?.frustrationCooldownUntil,
+      activeFrustration: null,
     };
   }
 }

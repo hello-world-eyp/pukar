@@ -140,6 +140,14 @@ export function pukarReducer(
         return handleSelectPukarDeck(state, action.deckIndex);
       }
 
+      case 'TRIGGER_FRUSTRATION': {
+        return handleTriggerFrustration(state, action.playerName);
+      }
+
+      case 'CLEAR_FRUSTRATION': {
+        return handleClearFrustration(state);
+      }
+
       default:
         return {
           state,
@@ -804,4 +812,47 @@ function handleSelectPukarDeck(
 
   return { state: nextState };
 }
+
+function handleTriggerFrustration(
+  state: GameState,
+  playerName?: string
+): { state: GameState; error?: string } {
+  const now = Date.now();
+  if (state.frustrationCooldownUntil && now < state.frustrationCooldownUntil) {
+    const remainingSecs = Math.max(1, Math.ceil((state.frustrationCooldownUntil - now) / 1000));
+    return {
+      state,
+      error: `Frustration is on cooldown. Please wait ${remainingSecs} second${remainingSecs === 1 ? '' : 's'}.`,
+    };
+  }
+
+  const triggeringName =
+    playerName ||
+    state.players[state.currentPlayerIndex]?.name ||
+    'Player';
+
+  const nextState: GameState = {
+    ...state,
+    frustrationCooldownUntil: now + 60000,
+    activeFrustration: {
+      playerName: triggeringName,
+      triggeredAt: now,
+    },
+  };
+
+  return { state: nextState };
+}
+
+function handleClearFrustration(state: GameState): { state: GameState } {
+  if (!state.activeFrustration) {
+    return { state };
+  }
+  return {
+    state: {
+      ...state,
+      activeFrustration: null,
+    },
+  };
+}
+
 

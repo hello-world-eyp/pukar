@@ -97,6 +97,8 @@ export interface PlayerHandProps {
   actionsSlot?: React.ReactNode;
   onReorderCards?: (cards: Card[]) => void;
   isHovering?: boolean;
+  frustrationCooldownUntil?: number;
+  onTriggerFrustration?: () => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -122,9 +124,29 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   actionsSlot,
   onReorderCards,
   isHovering = false,
+  frustrationCooldownUntil,
+  onTriggerFrustration,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection] = useState<SortDirection>(initialSortDirection);
+
+  // Live timer for frustration cooldown countdown
+  const [now, setNow] = useState(() => Date.now());
+
+  React.useEffect(() => {
+    if (!frustrationCooldownUntil || frustrationCooldownUntil <= Date.now()) return;
+    const interval = setInterval(() => {
+      setNow(Date.now());
+    }, 500);
+    return () => clearInterval(interval);
+  }, [frustrationCooldownUntil]);
+
+  const frustrationRemainingSecs = useMemo(() => {
+    if (!frustrationCooldownUntil) return 0;
+    return Math.max(0, Math.ceil((frustrationCooldownUntil - now) / 1000));
+  }, [frustrationCooldownUntil, now]);
+
+  const isFrustratedOnCooldown = frustrationRemainingSecs > 0;
 
   // Manual custom arrangement order (list of card IDs)
   const [customOrder, setCustomOrder] = useState<string[]>([]);
@@ -416,8 +438,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </div>
         )}
 
-        {/* SELECTION ACTIONS (CLEAR) - Stable container to prevent layout shifting */}
-        <div className="w-[84px] shrink-0 flex justify-end items-center h-9">
+        {/* RIGHT ACTIONS: CLEAR SELECTION + FRUSTRATION BUTTON */}
+        <div className="shrink-0 flex justify-end items-center gap-2 h-9">
           {selectedCardIds.length > 0 && (
             <button
               type="button"
@@ -428,6 +450,29 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             >
               <X className="w-4 h-4" />
               <span>Clear</span>
+            </button>
+          )}
+
+          {onTriggerFrustration && (
+            <button
+              type="button"
+              aria-label="Frustration"
+              data-testid="btn-frustration"
+              onClick={onTriggerFrustration}
+              disabled={isFrustratedOnCooldown}
+              title={
+                isFrustratedOnCooldown
+                  ? `Frustration is on cooldown (${frustrationRemainingSecs}s remaining)`
+                  : 'Express your frustration!'
+              }
+              className={`h-9 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm ${
+                isFrustratedOnCooldown
+                  ? 'bg-stone-300/80 text-stone-500 border border-stone-400 cursor-not-allowed opacity-75'
+                  : 'bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border border-rose-700 active:scale-95 shadow-orange-500/20 cursor-pointer'
+              }`}
+            >
+              <span className="text-sm leading-none" role="img" aria-label="fire">🔥</span>
+              <span>{isFrustratedOnCooldown ? `Frustration (${frustrationRemainingSecs}s)` : 'Frustration'}</span>
             </button>
           )}
         </div>

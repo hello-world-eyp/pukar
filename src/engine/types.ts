@@ -102,6 +102,8 @@ export interface GameState {
   lastTurnTriggeredByDeckExhaust?: boolean;
   lastPickedUpCard?: Card | null;
   newlyPickedUpCardIds?: string[];
+  frustrationCooldownUntil?: number;
+  activeFrustration?: { playerName: string; triggeredAt: number } | null;
 }
 
 export interface RoundHistoryEntry {
@@ -135,7 +137,9 @@ export type GameAction =
   | { type: 'START_NEXT_ROUND' }
   | { type: 'RESET_GAME'; playerCount?: 4 | 6; playerNames?: string[] }
   | { type: 'OPTIMIZE_DECK_ORDER' }
-  | { type: 'SELECT_PUKAR_DECK'; deckIndex: number };
+  | { type: 'SELECT_PUKAR_DECK'; deckIndex: number }
+  | { type: 'TRIGGER_FRUSTRATION'; playerName?: string }
+  | { type: 'CLEAR_FRUSTRATION' };
 
 export interface GameError {
   code: string;
@@ -185,6 +189,8 @@ export interface SanitizedGameState {
   roundHistory?: RoundHistoryEntry[];
   lastPickedUpCard?: Card | null;
   newlyPickedUpCardIds?: string[];
+  frustrationCooldownUntil?: number;
+  activeFrustration?: { playerName: string; triggeredAt: number } | null;
 }
 
 /**

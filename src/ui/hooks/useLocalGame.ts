@@ -115,6 +115,8 @@ export function useLocalGame({
             action.type !== 'START_NEXT_ROUND' &&
             action.type !== 'RESET_GAME' &&
             action.type !== 'OPTIMIZE_DECK_ORDER' &&
+            action.type !== 'TRIGGER_FRUSTRATION' &&
+            action.type !== 'CLEAR_FRUSTRATION' &&
             !isViewingActivePlayer
           ) {
             setErrorMessage('Not your turn to play');

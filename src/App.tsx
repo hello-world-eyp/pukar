@@ -15,6 +15,7 @@ import { TableSeating } from './ui/components/TableSeating';
 import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
 import { UnclePukarChoiceModal } from './ui/components/UnclePukarChoiceModal';
+import { FrustrationOverlay } from './ui/components/FrustrationOverlay';
 import { GameSetupModal } from './ui/components/GameSetupModal';
 import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
 import { MainMenu } from './ui/components/MainMenu';
@@ -603,6 +604,13 @@ export function App({
                 isRippling={isTableRippling}
                 onReorderCards={handleReorderHand}
                 isHovering={hasSecondRow}
+                frustrationCooldownUntil={activeGameState.frustrationCooldownUntil}
+                onTriggerFrustration={() =>
+                  handleAction({
+                    type: 'TRIGGER_FRUSTRATION',
+                    playerName: viewingPlayer?.name ?? 'Player',
+                  })
+                }
                 actionsSlot={
                   <ActionControls
                     phase={activeGameState.phase}
@@ -966,6 +974,14 @@ export function App({
             setUnclePukarChoiceData(null);
           }}
           onClose={() => setUnclePukarChoiceData(null)}
+        />
+      )}
+
+      {/* 7-Second Frustration Animation Overlay */}
+      {activeGameState.activeFrustration && (
+        <FrustrationOverlay
+          playerName={activeGameState.activeFrustration.playerName}
+          onComplete={() => handleAction({ type: 'CLEAR_FRUSTRATION' })}
         />
       )}
     </div>
