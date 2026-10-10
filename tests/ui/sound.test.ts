@@ -157,14 +157,26 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
       expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(783.99, 100.12);
     });
 
-    it('plays "pukar" fanfare with 4-note celebratory arpeggio', () => {
+    it('plays "pukar" sound with heavy physical slam thud and celebratory chime', () => {
       playSound('pukar');
 
-      // 4 oscillators created for fanfare
-      expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(4);
-      expect(mockOscillator.type).toBe('triangle');
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(523.25, 100);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(1046.5, 100.27);
+      // 4 impact slam layers + 4 celebratory chime notes = 8 oscillators
+      expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(8);
+      // Sub-bass heavy thud impact
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(160, 100);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(36, 100.38);
+      // Table crunch resonance
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(260, 100);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(45, 100.22);
+      // Card snap transient
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(440, 100);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(80, 100.08);
+      // Table tremor rumble
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(60, 100);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(28, 100.45);
+      // Trailing chime arpeggio
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(523.25, 100.12);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(1046.5, 100.33);
     });
 
     it('plays "roundOver" grand victory chord arpeggio', () => {

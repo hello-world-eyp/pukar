@@ -114,19 +114,74 @@ export function playSound(effect: SoundEffect): void {
       }
 
       case 'pukar': {
-        // Celebratory Royal Fanfare (C5, G5, C6) with rich sustain
-        const notes = [523.25, 659.25, 783.99, 1046.5];
-        notes.forEach((freq, idx) => {
+        // Heavy tactile table thud / physical slam impact with celebratory chime
+
+        // 1. Sub-bass visceral drop (weight/slam punch)
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(160, now);
+        subOsc.frequency.exponentialRampToValueAtTime(36, now + 0.38);
+        subGain.gain.setValueAtTime(0.75, now);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
+        subOsc.start(now);
+        subOsc.stop(now + 0.38);
+
+        // 2. Table surface crunch (wooden resonance of cards slamming)
+        const crunchOsc = ctx.createOscillator();
+        const crunchGain = ctx.createGain();
+        crunchOsc.type = 'triangle';
+        crunchOsc.frequency.setValueAtTime(260, now);
+        crunchOsc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
+        crunchGain.gain.setValueAtTime(0.55, now);
+        crunchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        crunchOsc.connect(crunchGain);
+        crunchGain.connect(ctx.destination);
+        crunchOsc.start(now);
+        crunchOsc.stop(now + 0.22);
+
+        // 3. Card pack transient slap (crisp tactile strike on felt)
+        const snapOsc = ctx.createOscillator();
+        const snapGain = ctx.createGain();
+        snapOsc.type = 'triangle';
+        snapOsc.frequency.setValueAtTime(440, now);
+        snapOsc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
+        snapGain.gain.setValueAtTime(0.35, now);
+        snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        snapOsc.connect(snapGain);
+        snapGain.connect(ctx.destination);
+        snapOsc.start(now);
+        snapOsc.stop(now + 0.08);
+
+        // 4. Low table tremor rumble (decaying table acoustic body vibration)
+        const rumbleOsc = ctx.createOscillator();
+        const rumbleGain = ctx.createGain();
+        rumbleOsc.type = 'sine';
+        rumbleOsc.frequency.setValueAtTime(60, now);
+        rumbleOsc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
+        rumbleGain.gain.setValueAtTime(0.45, now);
+        rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        rumbleOsc.connect(rumbleGain);
+        rumbleGain.connect(ctx.destination);
+        rumbleOsc.start(now);
+        rumbleOsc.stop(now + 0.45);
+
+        // 5. Trailing golden celebration chime (ringing in as dust settles from slam)
+        const chimeNotes = [523.25, 659.25, 783.99, 1046.5];
+        chimeNotes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
+          const noteTime = now + 0.12 + idx * 0.07;
           osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.09);
-          gain.gain.setValueAtTime(0.16, now + idx * 0.09);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.35);
+          osc.frequency.setValueAtTime(freq, noteTime);
+          gain.gain.setValueAtTime(0.18, noteTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.32);
           osc.connect(gain);
           gain.connect(ctx.destination);
-          osc.start(now + idx * 0.09);
-          osc.stop(now + idx * 0.09 + 0.35);
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.32);
         });
         break;
       }
