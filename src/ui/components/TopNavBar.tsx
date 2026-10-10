@@ -5,6 +5,7 @@ export interface PlayerInfo {
   id: string;
   name: string;
   team: 'A' | 'B';
+  cardCount?: number;
 }
 
 export interface TopNavBarProps {
@@ -153,7 +154,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     ? 'bg-amber-400/15 border border-amber-400/60 shadow-md shadow-amber-400/10 ring-1 ring-amber-400/40 text-white'
                     : 'text-slate-300'
                 }`}
-                title={`${player.name} (${player.team ? `Team ${player.team}` : ''})${isTurn ? ' • Current Turn' : ''}`}
+                title={`${player.name} (${player.team ? `Team ${player.team}` : ''})${player.cardCount !== undefined ? ` • ${player.cardCount} cards` : ''}${isTurn ? ' • Current Turn' : ''}`}
               >
                 {/* Circular Avatar Badge with Initial */}
                 <div
@@ -165,9 +166,21 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 </div>
 
                 {/* Player Name */}
-                <span className="text-sm font-bold tracking-tight truncate max-w-[95px] sm:max-w-[130px]">
+                <span className="text-sm font-bold tracking-tight truncate max-w-[90px] sm:max-w-[130px]">
                   {player.name}
                 </span>
+
+                {/* Card Count in Hand */}
+                {player.cardCount !== undefined && (
+                  <span
+                    data-testid={`nav-player-card-count-${idx}`}
+                    className={`text-xs font-bold shrink-0 ${
+                      isTurn ? 'text-amber-300 font-extrabold' : 'text-slate-400'
+                    }`}
+                  >
+                    {`(${player.cardCount})`}
+                  </span>
+                )}
 
                 {/* Turn Highlight Indicator Dot */}
                 {isTurn && (

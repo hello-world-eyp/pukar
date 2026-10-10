@@ -749,6 +749,7 @@ export function App({
               id: p.id || `p-${idx}`,
               name: p.name,
               team: p.team,
+              cardCount: (p as any).cardCount ?? (p.hand ? p.hand.length : 0),
             }))}
             currentPlayerIndex={activeTurnIndex}
             isMuted={isMuted}

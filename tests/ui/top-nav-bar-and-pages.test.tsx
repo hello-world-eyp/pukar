@@ -97,6 +97,31 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('data-testid="turn-indicator-dot"');
     });
 
+    it('renders player hand card counts (X) when cardCount is provided on player info', () => {
+      const playersWithCounts: PlayerInfo[] = [
+        { id: 'p1', name: 'Mayank', team: 'A', cardCount: 13 },
+        { id: 'p2', name: 'Leela', team: 'B', cardCount: 12 },
+        { id: 'p3', name: 'Rohan', team: 'A', cardCount: 8 },
+        { id: 'p4', name: 'Priya', team: 'B', cardCount: 0 },
+      ];
+
+      const html = renderToString(
+        <TopNavBar
+          activeTab="table"
+          onTabChange={vi.fn()}
+          onOpenRules={vi.fn()}
+          players={playersWithCounts}
+          currentPlayerIndex={0}
+        />
+      );
+
+      expect(html).toContain('data-testid="nav-player-card-count-0"');
+      expect(html).toContain('(13)');
+      expect(html).toContain('(12)');
+      expect(html).toContain('(8)');
+      expect(html).toContain('(0)');
+    });
+
     it('renders sound toggle, new game, and exit to menu buttons', () => {
       const html = renderToString(
         <TopNavBar
@@ -241,6 +266,14 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('Stock Deck');
       expect(html).toContain('Discard Pile');
       expect(html).toContain('Pukar Pool');
+    });
+
+    it('renders player card count (13) in TopNavBar when game is active', () => {
+      const html = renderToString(<App initialScreen="GAME" />);
+
+      // At start of fresh game, each player has 13 cards in hand
+      expect(html).toContain('data-testid="nav-player-card-count-0"');
+      expect(html).toContain('(13)');
     });
   });
 });
