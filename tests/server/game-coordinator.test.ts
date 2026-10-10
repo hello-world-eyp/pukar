@@ -927,4 +927,25 @@ describe('GameCoordinator', () => {
       );
     });
   });
+
+  describe('Stock Deck Optimization (OPTIMIZE_DECK_ORDER)', () => {
+    it('allows seated players to trigger OPTIMIZE_DECK_ORDER at any time even when not their turn', () => {
+      const room = manager.createRoom('Host', 4, 's1').room;
+      for (let i = 1; i <= 3; i++) {
+        const join = manager.joinRoom(room.roomCode, `P${i + 1}`, `s${i + 1}`);
+        if (join.success) manager.claimSeat(room.roomCode, join.session.playerId, i);
+      }
+      expect(GameCoordinator.startGame(room)).toBe(true);
+
+      const nonActivePlayerId = room.seats[1].playerId!;
+      expect(room.gameState!.currentPlayerIndex).toBe(0);
+
+      const result = GameCoordinator.handleAction(room, nonActivePlayerId, {
+        type: 'OPTIMIZE_DECK_ORDER',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.error).toBeUndefined();
+    });
+  });
 });

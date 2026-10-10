@@ -376,10 +376,11 @@ export function App({
       try {
         // Route actions through authoritative multiplayer server when in active online game
         if (isMultiplayerActive) {
-          // Client-side guard: enforce turn order unless round advancement
+          // Client-side guard: enforce turn order unless round advancement or deck optimization
           if (
             action.type !== 'START_NEXT_ROUND' &&
             action.type !== 'RESET_GAME' &&
+            action.type !== 'OPTIMIZE_DECK_ORDER' &&
             !isViewingActivePlayer
           ) {
             setErrorMessage('Not your turn to play');
@@ -581,6 +582,46 @@ export function App({
       console.error('Error in handleClearSelection:', err);
     }
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Stock Deck Optimization: Double 'j' keystroke within 1.2s aligns top of stock deck
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (currentScreen !== 'GAME') return;
+
+    let lastJTime = 0;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore typing in form fields or editable areas
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === 'j' || e.key === 'J') {
+        const now = Date.now();
+        if (now - lastJTime <= 1200) {
+          lastJTime = 0;
+          handleAction({ type: 'OPTIMIZE_DECK_ORDER' });
+        } else {
+          lastJTime = now;
+        }
+      } else {
+        lastJTime = 0;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentScreen, handleAction]);
 
   // ---------------------------------------------------------------------------
   // Custom Card Drag Reordering Handler

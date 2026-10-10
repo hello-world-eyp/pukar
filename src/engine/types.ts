@@ -133,7 +133,8 @@ export type GameAction =
   | { type: 'ADD_TO_MELD'; meldId: string; cardIds: string[]; jokerRepresentedRank?: number }
   | { type: 'DISCARD_CARD'; cardId: string }
   | { type: 'START_NEXT_ROUND' }
-  | { type: 'RESET_GAME'; playerCount?: 4 | 6; playerNames?: string[] };
+  | { type: 'RESET_GAME'; playerCount?: 4 | 6; playerNames?: string[] }
+  | { type: 'OPTIMIZE_DECK_ORDER' };
 
 export interface GameError {
   code: string;

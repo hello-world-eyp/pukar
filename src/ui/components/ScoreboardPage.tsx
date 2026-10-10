@@ -708,7 +708,7 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
       </div>
 
       {/* =====================================================================
-          4. OFFICIAL SCORING MATRIX CHEAT SHEET
+          4. OFFICIAL SCORING MATRIX QUICK REFERENCE
       ====================================================================== */}
       <div className="rounded-2xl p-4 sm:p-5 bg-slate-950/70 border border-slate-800 flex flex-col gap-3 shadow-lg">
         <div className="flex items-center gap-2">

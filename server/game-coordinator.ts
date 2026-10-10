@@ -245,8 +245,8 @@ export class GameCoordinator {
         }
       }
 
-      // Turn verification for regular game moves
-      if (!isRoundAdvance) {
+      // Turn verification for regular game moves (deck optimization can be requested at any time)
+      if (!isRoundAdvance && action.type !== 'OPTIMIZE_DECK_ORDER') {
         const activePlayer = room.gameState.players?.[room.gameState.currentPlayerIndex];
         if (!activePlayer || activePlayer.id !== playerId) {
           serverLogger.warn('Action rejected: Not your turn to play', {

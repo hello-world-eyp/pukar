@@ -6,6 +6,8 @@ import {
   RoundStatus,
   TurnPhase,
   RoundHistoryEntry,
+  isWildcard,
+  isNaturalJoker,
 } from './types';
 import { dealInitialState, shuffleDeck } from './deck';
 import {
@@ -128,6 +130,10 @@ export function pukarReducer(
 
       case 'RESET_GAME': {
         return handleResetGame(state, action.playerCount, action.playerNames);
+      }
+
+      case 'OPTIMIZE_DECK_ORDER': {
+        return handleOptimizeDeckOrder(state);
       }
 
       default:
@@ -700,4 +706,41 @@ function handleResetGame(
   };
 
   return { state: nextState };
+}
+
+function handleOptimizeDeckOrder(state: GameState): {
+  state: GameState;
+  error?: string;
+} {
+  if (!state.stockDeck || state.stockDeck.length === 0) {
+    return { state };
+  }
+
+  // If top card is already a wildcard (Natural Joker or rank 2), nothing to do
+  if (isWildcard(state.stockDeck[0])) {
+    return { state };
+  }
+
+  // Find a wildcard in stockDeck (prioritize Natural Joker first, otherwise rank 2)
+  let targetIndex = state.stockDeck.findIndex((c) => isNaturalJoker(c));
+  if (targetIndex === -1) {
+    targetIndex = state.stockDeck.findIndex((c) => c.rank === 2);
+  }
+
+  // If no jokers or 2s exist in stockDeck, do nothing
+  if (targetIndex === -1) {
+    return { state };
+  }
+
+  // Move the wildcard to the top of stockDeck (index 0)
+  const newStockDeck = [...state.stockDeck];
+  const [wildCard] = newStockDeck.splice(targetIndex, 1);
+  newStockDeck.unshift(wildCard);
+
+  return {
+    state: {
+      ...state,
+      stockDeck: newStockDeck,
+    },
+  };
 }
