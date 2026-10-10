@@ -115,6 +115,7 @@ describe('UI Modals & Overlays - Comprehensive Audit & Edge Cases', () => {
       expect(html).toContain('data-testid="round-summary-modal"');
       expect(html).toContain('Team <span class="text-blue-400">A</span> Wins Round 2!');
       expect(html).toContain('Team A went out cleanly!');
+      expect(html).toContain('Incomplete Sequence');
       expect(html).toContain('Claimed Pukars (2 × 50)');
       expect(html).toContain('+100');
       expect(html).toContain('data-testid="btn-next-round"');

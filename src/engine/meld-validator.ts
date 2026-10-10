@@ -571,7 +571,7 @@ export function evaluateMeldScore(meld: Meld): {
     if (!meld || (!meld.cards && !meld.slots)) {
       return {
         points: 0,
-        description: 'Incomplete Meld',
+        description: 'Incomplete Sequence',
         isComplete7: false,
         isPure13: false,
       };
@@ -583,7 +583,7 @@ export function evaluateMeldScore(meld: Meld): {
     if (count < 7) {
       return {
         points: 0,
-        description: 'Incomplete Meld',
+        description: 'Incomplete Sequence',
         isComplete7: false,
         isPure13: false,
       };

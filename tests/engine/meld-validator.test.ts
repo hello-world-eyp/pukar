@@ -405,7 +405,7 @@ describe('Meld Validator', () => {
   });
 
   describe('evaluateMeldScore', () => {
-    it('scores incomplete melds (< 7 cards) as 0 points', () => {
+    it('scores incomplete sequences (< 7 cards) as 0 points with Incomplete Sequence description', () => {
       const meld: Meld = {
         id: 'm1',
         team: 'A',
@@ -424,6 +424,7 @@ describe('Meld Validator', () => {
       };
       const score = evaluateMeldScore(meld);
       expect(score.points).toBe(0);
+      expect(score.description).toBe('Incomplete Sequence');
       expect(score.isComplete7).toBe(false);
       expect(score.isPure13).toBe(false);
     });
