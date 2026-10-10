@@ -410,7 +410,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     const isClean = evaluation.points === 200;
     if (meld.type === 'RUN') {
       if (isClean) {
-        badgeText = 'Clean Run - 200 pts';
+        badgeText = 'Pure Sequence - 200 pts';
         badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
       } else {
         badgeText = 'Impure Sequence - 100 pts';

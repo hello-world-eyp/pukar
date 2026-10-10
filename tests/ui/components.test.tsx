@@ -280,7 +280,7 @@ describe('UI Components', () => {
 
       expect(html).toContain('Team A');
       expect(html).toContain('Team B');
-      expect(html).toContain('Clean Run - 200 pts');
+      expect(html).toContain('Pure Sequence - 200 pts');
       expect(html).toContain('Impure Sequence - 100 pts');
       expect(html).toContain('Active Turn');
       expect(html).toContain('200 pts');

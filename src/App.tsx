@@ -1410,7 +1410,7 @@ export function App({
                     <strong>Round Conclusion:</strong> When the Pukar pool is exhausted and a player empties their hand, that player goes out (+50 pts) and the round terminates immediately.
                   </li>
                   <li>
-                    <strong>Clean 7-Card Sequence:</strong> 7+ consecutive natural cards (0 wildcards) = <span className="text-emerald-400 font-bold font-mono">+200 pts</span>.
+                    <strong>Pure Sequence:</strong> 7+ consecutive natural cards (0 wildcards) = <span className="text-emerald-400 font-bold font-mono">+200 pts</span>.
                   </li>
                   <li>
                     <strong>Impure Sequence:</strong> 7+ cards with 1 wildcard = <span className="text-amber-400 font-bold font-mono">+100 pts</span>.

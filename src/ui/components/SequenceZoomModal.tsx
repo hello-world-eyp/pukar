@@ -115,8 +115,10 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
                 <span className="text-amber-400 font-bold">
                   {isPure13
                     ? 'Complete Sequence'
-                    : isComplete7 && meld.type === 'RUN' && points === 100
-                    ? 'Impure Sequence'
+                    : isComplete7 && meld.type === 'RUN'
+                    ? points === 200
+                      ? 'Pure Sequence'
+                      : 'Impure Sequence'
                     : description}
                 </span>
                 <span>•</span>
@@ -185,9 +187,9 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
                   ? 'Complete Sequence (2 through Ace natural, 0 wildcards) scores 500 bonus points.'
                   : isComplete7
                   ? points === 200
-                    ? 'Clean Sequence (7+ consecutive cards without wildcards or twos) scores 200 bonus points.'
+                    ? 'Pure Sequence (7+ consecutive cards without wildcards or twos) scores 200 bonus points.'
                     : 'Impure Sequence (7+ cards utilizing a 2 or Joker wildcard) scores 100 bonus points.'
-                  : 'Incomplete sequence (fewer than 7 cards). Once completed to 7 cards, it awards full clean or impure sequence points.'}
+                  : 'Incomplete sequence (fewer than 7 cards). Once completed to 7 cards, it awards full pure or impure sequence points.'}
               </span>
             </div>
           </div>

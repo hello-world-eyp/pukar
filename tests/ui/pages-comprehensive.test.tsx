@@ -91,7 +91,7 @@ describe('UI Pages - SequencesPage & ScoreboardPage Comprehensive Test Suite', (
       );
 
       expect(html).toContain('Team A Sequences');
-      expect(html).toContain('Clean Run');
+      expect(html).toContain('Pure Sequence');
       expect(html).toContain('200 pts');
       expect(html).toContain('Team B Sequences');
       expect(html).toContain('data-testid="btn-zoom-meld-A1"');

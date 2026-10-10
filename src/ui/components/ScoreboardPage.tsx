@@ -428,7 +428,7 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-900 border border-emerald-500/30 flex items-center justify-between">
             <div>
-              <div className="font-bold text-emerald-300">Clean 7-Card Run / Set</div>
+              <div className="font-bold text-emerald-300">Pure Sequence / Set</div>
               <div className="text-slate-400 text-[11px]">7+ cards, 0 wildcards/2s</div>
             </div>
             <span className="font-black text-sm text-emerald-400 font-mono">200 pts</span>
