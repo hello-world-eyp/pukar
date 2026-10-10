@@ -272,7 +272,7 @@ describe('Table Sequences - Yellow Highlight & Auto-Add Visual Indicators', () =
   });
 
   it('renders App cleanly with TableMeldBoard receiving hand selections', () => {
-    const html = renderToString(<App />);
+    const html = renderToString(<App initialScreen="GAME" />);
     expect(html).toContain('data-testid="pukar-app"');
     expect(html).toContain('Table Sequences');
   });

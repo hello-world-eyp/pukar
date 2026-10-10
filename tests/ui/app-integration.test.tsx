@@ -21,8 +21,26 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
    * 1. Application Mounting & UI Structure
    * ======================================================================== */
   describe('Application Mount & Initial Layout', () => {
-    it('renders the complete application shell without crashing', () => {
+    it('renders the Main Menu landing screen on initial load', () => {
       const html = renderToString(<App />);
+
+      // App Container
+      expect(html).toContain('data-testid="pukar-app"');
+      expect(html).toContain('data-testid="main-menu"');
+
+      // Header branding
+      expect(html).toContain('PUKAR');
+      expect(html).toContain('Royal Rummy');
+
+      // The two main options
+      expect(html).toContain('data-testid="btn-menu-online"');
+      expect(html).toContain('data-testid="btn-menu-local"');
+      expect(html).toContain('Play Online Pukar');
+      expect(html).toContain('Play Local Game');
+    });
+
+    it('renders the complete active in-game arena shell with space-saving header', () => {
+      const html = renderToString(<App initialScreen="GAME" />);
 
       // App Container
       expect(html).toContain('data-testid="pukar-app"');
@@ -32,12 +50,15 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
       expect(html).toContain('Royal Rummy');
       expect(html).toContain('Round 1');
 
-      // Quick Controls in Header
-      expect(html).toContain('data-testid="btn-toggle-4p"');
-      expect(html).toContain('data-testid="btn-toggle-6p"');
+      // Quick Controls in Header (Clean space-saving menu bar)
       expect(html).toContain('data-testid="btn-sound-toggle"');
       expect(html).toContain('data-testid="btn-rules-modal"');
+      expect(html).toContain('data-testid="btn-exit-to-menu"');
       expect(html).toContain('data-testid="btn-restart-game"');
+
+      // 4P/6P toggle is removed from active menu bar to save space
+      expect(html).not.toContain('data-testid="btn-toggle-4p"');
+      expect(html).not.toContain('data-testid="btn-toggle-6p"');
 
       // ScoreBoard
       expect(html).toContain('Team A');

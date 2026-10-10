@@ -5,13 +5,11 @@ import {
   Shield,
   AlertTriangle,
   Crown,
-  Users,
   Volume2,
   VolumeX,
   HelpCircle,
   RotateCcw,
-  Wifi,
-  MonitorPlay,
+  Home,
 } from 'lucide-react';
 
 export interface ScoreBoardProps {
@@ -37,6 +35,7 @@ export interface ScoreBoardProps {
   onRestartGame?: () => void;
   appMode?: 'LOCAL' | 'MULTIPLAYER';
   onOpenModeSelector?: () => void;
+  onExitToMenu?: () => void;
 }
 
 export const ScoreBoard: React.FC<ScoreBoardProps> = ({
@@ -52,14 +51,15 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   activeTeam,
   phase,
   className = '',
-  playerCount,
-  onTogglePlayerCount,
+  playerCount: _playerCount,
+  onTogglePlayerCount: _onTogglePlayerCount,
   isMuted = false,
   onToggleMute,
   onOpenRules,
   onRestartGame,
-  appMode = 'LOCAL',
-  onOpenModeSelector,
+  appMode: _appMode = 'LOCAL',
+  onOpenModeSelector: _onOpenModeSelector,
+  onExitToMenu,
 }) => {
   // Resolve values from props or gameState fallback safely
   let resolvedRound = 1;
@@ -71,7 +71,6 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
   let resolvedPlayerIndex = 0;
   let resolvedPlayerName = 'Player 1';
   let resolvedActiveTeam: Team = 'A';
-  let resolvedPlayerCount: 4 | 6 = playerCount ?? (gameState?.playerCount as 4 | 6) ?? 4;
 
   try {
     resolvedRound = round ?? gameState?.round ?? 1;
@@ -91,9 +90,6 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
     const activePlayer = gameState?.players?.[resolvedPlayerIndex];
     resolvedPlayerName = currentPlayerName ?? activePlayer?.name ?? `Player ${resolvedPlayerIndex + 1}`;
     resolvedActiveTeam = activeTeam ?? activePlayer?.team ?? (resolvedPlayerIndex % 2 === 0 ? 'A' : 'B');
-    if (!playerCount && gameState?.playerCount) {
-      resolvedPlayerCount = gameState.playerCount as 4 | 6;
-    }
   } catch (err) {
     console.error('Error resolving scoreboard metrics:', err);
   }
@@ -270,53 +266,15 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
             </span>
           </div>
 
-          {/* Quick Action Buttons (4P/6P, Sound, Rules, Restart) */}
+          {/* Quick Action Buttons: Sound, Rules, Menu, New Game */}
           <div className="flex items-center gap-2">
-            {/* Player Count Toggle */}
-            {onTogglePlayerCount && (
-              <div
-                className="flex items-center bg-slate-900 border border-slate-700 rounded-xl p-1 text-sm font-bold"
-                role="group"
-                aria-label="Player count selector"
-              >
-                <button
-                  type="button"
-                  data-testid="btn-toggle-4p"
-                  onClick={() => onTogglePlayerCount(4)}
-                  className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 text-sm font-bold ${
-                    resolvedPlayerCount === 4
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="4-Player Mode"
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>4P</span>
-                </button>
-                <button
-                  type="button"
-                  data-testid="btn-toggle-6p"
-                  onClick={() => onTogglePlayerCount(6)}
-                  className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 text-sm font-bold ${
-                    resolvedPlayerCount === 6
-                      ? 'bg-amber-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="6-Player Mode"
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>6P</span>
-                </button>
-              </div>
-            )}
-
             {/* Sound Toggle */}
             {onToggleMute && (
               <button
                 type="button"
                 data-testid="btn-sound-toggle"
                 onClick={onToggleMute}
-                className={`p-2 rounded-xl border text-sm font-semibold transition-colors ${
+                className={`p-2 rounded-xl border text-sm font-semibold transition-colors cursor-pointer ${
                   isMuted
                     ? 'bg-red-950/60 text-red-300 border-red-800/80 hover:bg-red-900/60'
                     : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
@@ -328,41 +286,33 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
               </button>
             )}
 
-            {/* Mode Switcher Button */}
-            {onOpenModeSelector && (
-              <button
-                type="button"
-                data-testid="btn-mode-selector"
-                onClick={onOpenModeSelector}
-                className={`px-2.5 py-1.5 rounded-xl border text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
-                  appMode === 'MULTIPLAYER'
-                    ? 'bg-emerald-950/60 border-emerald-600/70 text-emerald-300 hover:bg-emerald-900/60'
-                    : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
-                }`}
-                title={`Current Mode: ${appMode === 'MULTIPLAYER' ? 'Multiplayer' : 'Local Pass & Play'}`}
-                aria-label="Mode"
-              >
-                {appMode === 'MULTIPLAYER' ? (
-                  <Wifi className="w-4 h-4 text-emerald-400" />
-                ) : (
-                  <MonitorPlay className="w-4 h-4 text-amber-400" />
-                )}
-                <span>Mode</span>
-              </button>
-            )}
-
             {/* Rules Modal Button */}
             {onOpenRules && (
               <button
                 type="button"
                 data-testid="btn-rules-modal"
                 onClick={onOpenRules}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-sm font-bold transition-colors flex items-center gap-1.5"
+                className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
                 title="Game Rules & Guide"
                 aria-label="Game Rules & Guide"
               >
                 <HelpCircle className="w-4 h-4" />
                 <span className="hidden xl:inline">Rules</span>
+              </button>
+            )}
+
+            {/* Main Menu Button */}
+            {onExitToMenu && (
+              <button
+                type="button"
+                data-testid="btn-exit-to-menu"
+                onClick={onExitToMenu}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Return to Main Menu"
+                aria-label="Main Menu"
+              >
+                <Home className="w-4 h-4 text-amber-400" />
+                <span className="hidden sm:inline">Menu</span>
               </button>
             )}
 
@@ -372,8 +322,8 @@ export const ScoreBoard: React.FC<ScoreBoardProps> = ({
                 type="button"
                 data-testid="btn-restart-game"
                 onClick={onRestartGame}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-600 text-sm font-bold transition-colors flex items-center gap-1.5"
-                title="Start New Game"
+                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-600 text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="New Game / Change Configuration"
               >
                 <RotateCcw className="w-4 h-4" />
                 <span className="hidden sm:inline">New Game</span>

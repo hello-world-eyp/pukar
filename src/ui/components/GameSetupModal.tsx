@@ -117,12 +117,12 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
             </div>
           </div>
 
-          {isGameInProgress && onClose && (
+          {onClose && (
             <button
               type="button"
               onClick={onClose}
               data-testid="btn-close-setup-modal"
-              className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
               aria-label="Close setup modal"
             >
               <X className="w-5 h-5" />
@@ -281,11 +281,11 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-800">
-            {isGameInProgress && onClose && (
+            {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors"
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancel
               </button>

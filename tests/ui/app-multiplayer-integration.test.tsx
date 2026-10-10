@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { App } from '../../src/App';
-import { ScoreBoard } from '../../src/ui/components/ScoreBoard';
 import { ModeSelectorModal } from '../../src/ui/components/ModeSelectorModal';
 import { MultiplayerStatusBar } from '../../src/ui/components/multiplayer/MultiplayerStatusBar';
 import { TableSeating } from '../../src/ui/components/TableSeating';
@@ -233,53 +232,27 @@ describe('App Multiplayer Integration & Mode Switching', () => {
   });
 
   /* ========================================================================
-   * 2. Header Mode Switcher & ModeSelectorModal Integration
+   * 2. Main Menu Landing Screen & Space-Saving Menu Bar
    * ======================================================================== */
-  describe('Mode Selector Integration in Header', () => {
-    it('renders the Mode switcher button in the ScoreBoard header with accessible label', () => {
+  describe('Main Menu Landing Screen & Space-Saving Menu Bar', () => {
+    it('renders the Main Menu landing screen on initial load with options for Online and Local play', () => {
       const html = renderToString(<App />);
 
-      expect(html).toContain('data-testid="btn-mode-selector"');
-      expect(html).toContain('aria-label="Mode"');
-      expect(html).toContain('Mode</span>');
+      expect(html).toContain('data-testid="main-menu"');
+      expect(html).toContain('data-testid="btn-menu-online"');
+      expect(html).toContain('data-testid="btn-menu-local"');
+      expect(html).toContain('Play Online Pukar');
+      expect(html).toContain('Play Local Game');
     });
 
-    it('opens ModeSelectorModal when Mode switcher button is clicked', () => {
-      let modalOpenState = false;
-      const setModalOpen = (val: boolean) => {
-        modalOpenState = val;
-      };
+    it('omits Mode switcher and 4P/6P buttons from the in-game ScoreBoard header to save space', () => {
+      const html = renderToString(<App initialScreen="GAME" />);
 
-      const internals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-      if (internals) {
-        let hookIdx = 0;
-        internals.H = {
-          useState: (init: any) => {
-            hookIdx++;
-            // The second useState in App is isModeModalOpen
-            if (hookIdx === 2) {
-              return [modalOpenState, setModalOpen];
-            }
-            return [typeof init === 'function' ? init() : init, () => {}];
-          },
-          useEffect: () => {},
-          useRef: (init: any) => ({ current: init }),
-          useCallback: (fn: any) => fn,
-          useMemo: (fn: any) => fn(),
-          useId: () => 'test-id',
-        };
-      }
-
-      const tree = App({});
-      const scoreBoard = findElement(tree, (el) => el.type === ScoreBoard);
-      expect(scoreBoard).toBeDefined();
-      expect(scoreBoard.props.onOpenModeSelector).toBeDefined();
-
-      const scoreBoardTree = ScoreBoard(scoreBoard.props);
-      const modeBtn = findByTestId(scoreBoardTree, 'btn-mode-selector');
-      expect(modeBtn).toBeDefined();
-      modeBtn.props.onClick();
-      expect(modalOpenState).toBe(true);
+      expect(html).not.toContain('data-testid="btn-mode-selector"');
+      expect(html).not.toContain('data-testid="btn-toggle-4p"');
+      expect(html).not.toContain('data-testid="btn-toggle-6p"');
+      expect(html).toContain('data-testid="btn-restart-game"');
+      expect(html).toContain('data-testid="btn-exit-to-menu"');
     });
 
     it('maintains 100% of offline pass & play hotseat controls when initialMode is LOCAL', () => {

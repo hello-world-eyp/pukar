@@ -28,6 +28,7 @@ import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
 import { GameSetupModal } from './ui/components/GameSetupModal';
 import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
+import { MainMenu } from './ui/components/MainMenu';
 import { MultiplayerHub } from './ui/components/multiplayer/MultiplayerHub';
 import { MultiplayerStatusBar } from './ui/components/multiplayer/MultiplayerStatusBar';
 import { useMultiplayerGame } from './network/useMultiplayerGame';
@@ -46,19 +47,40 @@ import {
 export interface AppProps {
   initialState?: GameState;
   initialMode?: 'LOCAL' | 'MULTIPLAYER';
+  initialScreen?: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB';
   multiplayerGameHook?: UseMultiplayerGameReturn;
 }
 
 export function App({
   initialState,
-  initialMode = 'LOCAL',
+  initialMode,
+  initialScreen,
   multiplayerGameHook,
 }: AppProps = {}) {
   // ---------------------------------------------------------------------------
   // Application Mode State: LOCAL (Pass & Play hotseat) or MULTIPLAYER (online/LAN)
   // ---------------------------------------------------------------------------
-  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(initialMode);
+  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(initialMode ?? 'LOCAL');
   const [isModeModalOpen, setIsModeModalOpen] = useState(false);
+
+  // ---------------------------------------------------------------------------
+  // Application Screen State: MENU (Landing menu), GAME (Active table), MULTIPLAYER_HUB
+  // ---------------------------------------------------------------------------
+  const defaultInitialScreen: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB' =
+    initialScreen ??
+    (initialState
+      ? 'GAME'
+      : initialMode === 'LOCAL'
+      ? 'GAME'
+      : initialMode === 'MULTIPLAYER'
+      ? multiplayerGameHook?.isInGame
+        ? 'GAME'
+        : 'MULTIPLAYER_HUB'
+      : 'MENU');
+
+  const [currentScreen, setCurrentScreen] = useState<'MENU' | 'GAME' | 'MULTIPLAYER_HUB'>(
+    defaultInitialScreen
+  );
 
   // Hook for multiplayer game lifecycle
   const defaultMultiplayerHook = useMultiplayerGame({
@@ -164,6 +186,13 @@ export function App({
       prevSeatsConnRef.current.set(seat.seatIndex, seat.isConnected);
     });
   }, [appMode, multiplayerHook.isInGame, multiplayerHook.lobbySeats, multiplayerHook.mySeatIndex]);
+
+  // Auto-transition to active game screen when multiplayer game starts
+  useEffect(() => {
+    if (appMode === 'MULTIPLAYER' && multiplayerHook.isInGame) {
+      setCurrentScreen('GAME');
+    }
+  }, [appMode, multiplayerHook.isInGame]);
 
   // Sync audio toggle with sound utility
   const toggleMute = useCallback(() => {
@@ -675,6 +704,8 @@ export function App({
       setViewedPlayerIndex(null);
       setSelectedCardIds([]);
       setSelectedMeldId(null);
+      setAppMode('LOCAL');
+      setCurrentScreen('GAME');
     } catch (err) {
       console.error('Error starting game from setup modal:', err);
       setIsSetupModalOpen(false);
@@ -686,39 +717,53 @@ export function App({
       data-testid="pukar-app"
       className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-white overflow-x-clip"
     >
-      {/* =====================================================================
-          1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
-      ====================================================================== */}
-      <ScoreBoard
-        round={activeGameState.round}
-        roundStatus={activeGameState.roundStatus}
-        phase={activeGameState.phase}
-        scores={activeGameState.scores}
-        roundScores={activeGameState.roundScores}
-        totalScores={activeGameState.totalScores ?? activeGameState.scores}
-        pukarsClaimed={activeGameState.pukarsClaimed}
-        currentPlayerIndex={activeTurnIndex}
-        currentPlayerName={activePlayer?.name}
-        activeTeam={activePlayer?.team}
-        playerCount={activeGameState.playerCount}
-        onTogglePlayerCount={
-          appMode === 'LOCAL'
-            ? (count) => {
-                if (activeGameState.playerCount !== count) handleOpenResetModal(count);
+      {currentScreen === 'MENU' ? (
+        <MainMenu
+          onPlayOnline={() => {
+            setAppMode('MULTIPLAYER');
+            setCurrentScreen('MULTIPLAYER_HUB');
+          }}
+          onPlayLocal={() => {
+            setAppMode('LOCAL');
+            setIsSetupModalOpen(true);
+          }}
+          onOpenRules={() => setIsRulesModalOpen(true)}
+          isMuted={isMuted}
+          onToggleMute={toggleMute}
+        />
+      ) : (
+        <>
+          {/* =====================================================================
+              1. UNIFIED TOP NAVIGATION & SCOREBOARD BAR
+          ====================================================================== */}
+          <ScoreBoard
+            round={activeGameState.round}
+            roundStatus={activeGameState.roundStatus}
+            phase={activeGameState.phase}
+            scores={activeGameState.scores}
+            roundScores={activeGameState.roundScores}
+            totalScores={activeGameState.totalScores ?? activeGameState.scores}
+            pukarsClaimed={activeGameState.pukarsClaimed}
+            currentPlayerIndex={activeTurnIndex}
+            currentPlayerName={activePlayer?.name}
+            activeTeam={activePlayer?.team}
+            playerCount={activeGameState.playerCount}
+            isMuted={isMuted}
+            onToggleMute={toggleMute}
+            onOpenRules={() => setIsRulesModalOpen(true)}
+            onRestartGame={
+              appMode === 'LOCAL'
+                ? () => handleOpenResetModal(activeGameState.playerCount)
+                : undefined
+            }
+            onExitToMenu={() => {
+              if (isMultiplayerActive) {
+                multiplayerHook.leaveRoom();
               }
-            : undefined
-        }
-        isMuted={isMuted}
-        onToggleMute={toggleMute}
-        onOpenRules={() => setIsRulesModalOpen(true)}
-        onRestartGame={
-          appMode === 'LOCAL'
-            ? () => handleOpenResetModal(activeGameState.playerCount)
-            : undefined
-        }
-        appMode={appMode}
-        onOpenModeSelector={() => setIsModeModalOpen(true)}
-      />
+              setCurrentScreen('MENU');
+            }}
+            appMode={appMode}
+          />
 
       {/* Persistent Multiplayer Status Bar when inside an active online room */}
       {isMultiplayerActive && (
@@ -736,6 +781,7 @@ export function App({
             setPukarSlamEvent(null);
             setJokerPickupBanner(null);
             setExhaustNotification(null);
+            setCurrentScreen('MENU');
           }}
         />
       )}
@@ -895,7 +941,11 @@ export function App({
           className="w-full max-w-4xl mx-auto px-4 py-8 flex flex-col items-center justify-center flex-1 min-h-[550px]"
         >
           <MultiplayerHub
-            onBackToMenu={() => setAppMode('LOCAL')}
+            onBackToMenu={() => {
+              multiplayerHook.leaveRoom();
+              setAppMode('LOCAL');
+              setCurrentScreen('MENU');
+            }}
             multiplayerHook={multiplayerHook}
           />
         </main>
@@ -1069,6 +1119,8 @@ export function App({
           )}
         </main>
       )}
+        </>
+      )}
 
       {/* =====================================================================
           MODALS
@@ -1145,12 +1197,13 @@ export function App({
         initialPlayerCount={gameState.playerCount}
         initialPlayerNames={gameState.players.map((p) => p.name)}
         isGameInProgress={
-          gameState.round > 1 ||
-          gameState.phase !== 'DRAW' ||
-          (gameState.melds.A?.length ?? 0) > 0 ||
-          (gameState.melds.B?.length ?? 0) > 0 ||
-          (gameState.scores?.A ?? 0) > 0 ||
-          (gameState.scores?.B ?? 0) > 0
+          currentScreen === 'GAME' &&
+          (gameState.round > 1 ||
+            gameState.phase !== 'DRAW' ||
+            (gameState.melds.A?.length ?? 0) > 0 ||
+            (gameState.melds.B?.length ?? 0) > 0 ||
+            (gameState.scores?.A ?? 0) > 0 ||
+            (gameState.scores?.B ?? 0) > 0)
         }
       />
 
