@@ -230,10 +230,10 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
         expect(html).toContain('Team A');
         expect(html).toContain('3 cards');
         expect(html).toContain('1 selected');
-        expect(html).toContain('Sort by Suit');
-        expect(html).toContain('Sort by Rank');
-        expect(html).toContain('High → Low');
-        expect(html).toContain('Low → High');
+        expect(html).not.toContain('Sort by Suit');
+        expect(html).not.toContain('Sort by Rank');
+        expect(html).not.toContain('High → Low');
+        expect(html).not.toContain('Low → High');
         expect(html).toContain('Clear');
         // Check cards rendered
         expect(html).toContain('7 of SPADES');

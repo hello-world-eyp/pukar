@@ -185,8 +185,8 @@ describe('Comprehensive UI Game Elements (src/ui/components/)', () => {
 
       expect(html).toContain('Player 1');
       expect(html).toContain('3 cards');
-      expect(html).toContain('Sort by Suit');
-      expect(html).toContain('Sort by Rank');
+      expect(html).not.toContain('Sort by Suit');
+      expect(html).not.toContain('Sort by Rank');
     });
 
     it('renders empty hand message when cards array is empty', () => {

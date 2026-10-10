@@ -40,7 +40,7 @@ describe('PlayerHand Custom Drag & Drop Reordering', () => {
     expect(reorderedCards.map((c) => c.id)).toEqual(['c2', 'c3', 'c1', 'c4']);
 
     const html = renderToString(
-      <PlayerHand cards={reorderedCards} onReorderCards={onReorder} />
+      <PlayerHand cards={reorderedCards} sortMode="none" onReorderCards={onReorder} />
     );
 
     const slot0 = html.indexOf('data-testid="hand-card-slot-0"');

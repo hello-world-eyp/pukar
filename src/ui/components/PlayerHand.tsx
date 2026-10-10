@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
-import { ArrowDownUp, Sparkles, X, ArrowDown, ArrowUp, Pin } from 'lucide-react';
+import { X, Pin } from 'lucide-react';
 
 export type SortMode = 'suit' | 'rank' | 'none';
 export type SortDirection = 'desc' | 'asc';
@@ -115,8 +115,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   sortMode: controlledSortMode,
   onSortChange,
   sortDirection: controlledSortDirection,
-  onSortDirectionChange,
-  initialSort = 'none',
+  onSortDirectionChange: _onSortDirectionChange,
+  initialSort = 'suit',
   initialSortDirection = 'desc',
   isRippling = false,
   actionsSlot,
@@ -124,7 +124,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isHovering = false,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
-  const [internalSortDirection, setInternalSortDirection] = useState<SortDirection>(initialSortDirection);
+  const [internalSortDirection] = useState<SortDirection>(initialSortDirection);
 
   // Manual custom arrangement order (list of card IDs)
   const [customOrder, setCustomOrder] = useState<string[]>([]);
@@ -159,51 +159,39 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
   };
 
-  const handleSetDirection = (direction: SortDirection) => {
-    try {
-      if (controlledSortDirection === undefined) {
-        setInternalSortDirection(direction);
-      }
-      onSortDirectionChange?.(direction);
-      if (activeSortMode === 'none') {
-        handleSetSort('suit');
-      }
-    } catch (err) {
-      console.error('Error in handleSetDirection:', err);
-    }
-  };
 
-  // Derive cards to display: respects suit / rank sort or custom manual drag order
+  // Derive cards to display: defaults to suit (primary) and rank (secondary)
   const displayCards = useMemo(() => {
     try {
-      if (activeSortMode === 'suit') {
-        return sortCardsBySuit(cards, activeSortDirection);
-      }
       if (activeSortMode === 'rank') {
         return sortCardsByRank(cards, activeSortDirection);
       }
-      // When in manual custom order ('none')
-      if (customOrder.length > 0) {
-        const cardMap = new Map(cards.map((c) => [c.id, c]));
-        const ordered: Card[] = [];
-        // Place known cards in customOrder sequence
-        for (const id of customOrder) {
-          const card = cardMap.get(id);
-          if (card) {
-            ordered.push(card);
-            cardMap.delete(id);
+      if (activeSortMode === 'none') {
+        // When in manual custom order or disabled sort ('none')
+        if (customOrder.length > 0) {
+          const cardMap = new Map(cards.map((c) => [c.id, c]));
+          const ordered: Card[] = [];
+          // Place known cards in customOrder sequence
+          for (const id of customOrder) {
+            const card = cardMap.get(id);
+            if (card) {
+              ordered.push(card);
+              cardMap.delete(id);
+            }
           }
+          // Append any newly drawn / unarranged cards to the end
+          for (const remainingCard of cardMap.values()) {
+            ordered.push(remainingCard);
+          }
+          return ordered;
         }
-        // Append any newly drawn / unarranged cards to the end
-        for (const remainingCard of cardMap.values()) {
-          ordered.push(remainingCard);
-        }
-        return ordered;
+        return cards;
       }
-      return cards;
+      // Default sequencing: Primary by suit, Secondary by rank (descending)
+      return sortCardsBySuit(cards, activeSortDirection);
     } catch (err) {
       console.error('Error calculating displayCards in PlayerHand:', err);
-      return cards;
+      return sortCardsBySuit(cards, activeSortDirection);
     }
   }, [cards, activeSortMode, activeSortDirection, customOrder]);
 
@@ -425,98 +413,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </div>
         )}
 
-        {/* SORT CONTROLS & SELECTION ACTIONS */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* PRIMARY SORT BUTTONS (Suit vs Rank) */}
-          <div className="flex items-center rounded-xl bg-stone-100 p-1 border border-stone-300 shadow-sm">
-            <button
-              type="button"
-              aria-label="Sort by Suit"
-              onClick={() => handleSetSort(activeSortMode === 'suit' ? 'none' : 'suit')}
-              className={`h-9 px-3 text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeSortMode === 'suit'
-                  ? 'bg-stone-900 text-white shadow-md'
-                  : 'text-stone-700 hover:text-stone-950 hover:bg-stone-200'
-              }`}
-              title="Primary: Group by Suit (♠ ♥ ♣ ♦), Secondary: Rank"
-            >
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>Sort by Suit</span>
-            </button>
-            <button
-              type="button"
-              aria-label="Sort by Rank"
-              onClick={() => handleSetSort(activeSortMode === 'rank' ? 'none' : 'rank')}
-              className={`h-9 px-3 text-sm font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-                activeSortMode === 'rank'
-                  ? 'bg-stone-900 text-white shadow-md'
-                  : 'text-stone-700 hover:text-stone-950 hover:bg-stone-200'
-              }`}
-              title="Primary: Group by Rank, Secondary: Suit"
-            >
-              <ArrowDownUp className="w-4 h-4 text-amber-500" />
-              <span>Sort by Rank</span>
-            </button>
-          </div>
-
-          {/* SECONDARY ORDER TOGGLE (Dual Filter: High → Low vs Low → High) */}
-          <div
-            data-testid="sort-direction-controls"
-            className="flex items-center rounded-xl bg-stone-100 p-1 border border-stone-300 shadow-sm"
-          >
-            <button
-              type="button"
-              aria-label="Sort High to Low"
-              data-testid="btn-sort-desc"
-              onClick={() => handleSetDirection('desc')}
-              className={`h-9 px-2.5 text-sm font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                activeSortDirection === 'desc'
-                  ? 'bg-emerald-700 text-white shadow-md'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
-              }`}
-              title={
-                activeSortMode === 'suit'
-                  ? 'Secondary filter: Highest card first, lowest card last (A → 2)'
-                  : 'Primary filter: High to low (A → 2), secondary by suit'
-              }
-            >
-              <ArrowDown className="w-4 h-4" />
-              <span>High → Low</span>
-            </button>
-            <button
-              type="button"
-              aria-label="Sort Low to High"
-              data-testid="btn-sort-asc"
-              onClick={() => handleSetDirection('asc')}
-              className={`h-9 px-2.5 text-sm font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
-                activeSortDirection === 'asc'
-                  ? 'bg-emerald-700 text-white shadow-md'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200'
-              }`}
-              title={
-                activeSortMode === 'suit'
-                  ? 'Secondary filter: Lowest card first, highest card last (2 → A)'
-                  : 'Primary filter: Low to high (2 → A), secondary by suit'
-              }
-            >
-              <ArrowUp className="w-4 h-4" />
-              <span>Low → High</span>
-            </button>
-          </div>
-
-          {/* CLEAR SELECTION BUTTON */}
-          {selectedCardIds.length > 0 && (
+        {/* SELECTION ACTIONS (CLEAR) */}
+        {selectedCardIds.length > 0 && (
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               aria-label="Clear Selection"
+              data-testid="btn-clear-selection"
               onClick={onClearSelection}
               className="h-9 px-3 text-sm font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
             >
               <X className="w-4 h-4" />
               <span>Clear</span>
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* CARDS DISPLAY CONTAINER (RECESSED WOODEN TRAY SLOT) */}
