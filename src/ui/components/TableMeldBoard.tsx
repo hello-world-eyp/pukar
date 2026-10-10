@@ -581,7 +581,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       <div
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center overflow-x-auto pt-3.5 pb-2.5 px-2 scrollbar-thin"
+        className="flex items-center overflow-x-auto overflow-y-hidden overscroll-y-contain pt-4 pb-2.5 px-2 scrollbar-thin"
       >
         {sortedSlots.map((slot, index) => {
           const card = slot.card;
@@ -605,7 +605,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
                 zIndex: index + 1,
                 animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
               }}
-              className={`relative transition-transform hover:-translate-y-2.5 hover:!z-30 shrink-0 ${
+              className={`relative transition-transform hover:-translate-y-1.5 hover:!z-30 shrink-0 ${
                 isRippling ? 'animate-card-ripple' : 'animate-sequence-pop-in'
               }`}
             >

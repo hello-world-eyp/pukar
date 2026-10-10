@@ -427,7 +427,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
       {/* Enlarged Cards Row */}
       <div
         data-testid={`enlarged-cards-row-${meld.id}`}
-        className="flex items-center overflow-x-auto pt-2 pb-3 px-2 scrollbar-thin rounded-xl bg-slate-950/60 border border-slate-800/80"
+        className="flex items-center overflow-x-auto overflow-y-hidden overscroll-y-contain pt-3 pb-3 px-2 scrollbar-thin rounded-xl bg-slate-950/60 border border-slate-800/80"
       >
         {sortedSlots.map((slot, index) => {
           const card = slot.card;
