@@ -147,11 +147,11 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     return (
       <div
         data-testid="action-controls"
-        className={`flex items-center gap-2 flex-wrap sm:flex-nowrap ${className}`}
+        className={`h-10 flex items-center gap-2 flex-nowrap ${className}`}
       >
         {/* DRAW PHASE INLINE GUIDANCE */}
         {!disabled && isDrawPhase && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950 text-sm font-black shadow-md animate-pulse">
+          <div className="h-10 flex items-center gap-2 px-3.5 py-0 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950 text-sm font-black shadow-md animate-pulse shrink-0">
             <MousePointerClick className="w-4 h-4 text-amber-700 shrink-0" />
             <span>YOUR TURN: DRAW • Click Stock Deck or Discard Pile above</span>
           </div>
@@ -160,7 +160,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
         {disabled && (
           <div
             data-testid="waiting-turn-indicator"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-stone-200/80 border border-stone-300 text-stone-600 text-xs font-bold"
+            className="h-10 flex items-center gap-2 px-3 py-0 rounded-xl bg-stone-200/80 border border-stone-300 text-stone-600 text-xs font-bold shrink-0"
           >
             <span className="w-2 h-2 rounded-full bg-stone-400 animate-pulse" />
             <span>Waiting for turn...</span>
@@ -170,7 +170,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
         {/* MELD / DISCARD PHASE ACTIONS */}
         {!isDrawPhase && (
-          <div className="flex items-center gap-2 flex-nowrap">
+          <div className="h-10 flex items-center gap-2 flex-nowrap shrink-0">
             {/* Play New Sequence Button (enabled when valid sequence selected) */}
             <button
               type="button"
@@ -192,7 +192,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             </button>
 
             {/* Validation Preview / Tip Badge */}
-            <div data-testid="meld-validation-badge" className="text-sm shrink-0">
+            <div data-testid="meld-validation-badge" className="h-10 flex items-center text-sm shrink-0">
               {isMeldPhase && (
                 canPlayNewMeld ? (
                   <span className="inline-flex items-center gap-1.5 text-emerald-950 font-bold bg-emerald-100 border border-emerald-400 px-2.5 py-1 rounded-lg shadow-sm">
@@ -212,7 +212,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             {selectedCardCount > 0 && isMeldPhase && !canPlayNewMeld && (
               <div
                 data-testid="add-to-sequence-tip"
-                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-xs font-bold shadow-sm shrink-0"
+                className="hidden xl:flex items-center h-10 gap-1.5 px-2.5 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-xs font-bold shadow-sm shrink-0"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-600 shrink-0" />
                 <span>Click sequence on table to add</span>

@@ -491,8 +491,8 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   const containerClasses = isEligibleToAutoAdd
     ? 'border-2 border-yellow-400 ring-4 ring-yellow-400/70 shadow-2xl shadow-yellow-500/30 bg-yellow-50/90 cursor-pointer hover:scale-[1.015] hover:border-yellow-300 hover:ring-yellow-300 transition-all'
     : isSelected
-    ? 'bg-amber-100/80 border-amber-500 ring-2 ring-amber-400/50 shadow-md'
-    : 'bg-white/90 border-stone-300/80 hover:border-stone-400 hover:bg-white shadow-sm';
+    ? 'bg-amber-100/80 border-2 border-amber-500 ring-2 ring-amber-400/50 shadow-md'
+    : 'bg-white/90 border-2 border-stone-300/80 hover:border-stone-400 hover:bg-white shadow-sm';
 
   const absorbClass = isAbsorbing ? 'animate-sequence-absorb' : '';
 
@@ -503,29 +503,29 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       data-can-add={isEligibleToAutoAdd ? 'true' : undefined}
       data-highlight-yellow={isEligibleToAutoAdd ? 'true' : undefined}
       onClick={handleItemClick}
-      className={`relative group rounded-xl p-2 sm:p-2.5 border transition-all ${
+      className={`relative group rounded-xl p-2 sm:p-2.5 transition-all ${
         canSelect || isEligibleToAutoAdd ? 'cursor-pointer' : ''
       } ${containerClasses} ${absorbClass}`}
     >
-      {/* Yellow Auto-Add Banner */}
+      {/* Yellow Auto-Add Floating Banner (Positioned absolute so height never shifts on card selection) */}
       {isEligibleToAutoAdd && (
         <div
           data-testid={`auto-add-prompt-${meld.id}`}
-          className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-sm font-bold mb-2 animate-pulse flex-wrap"
+          className="absolute -top-3.5 right-3 z-30 pointer-events-none flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-300 border-2 border-yellow-500 text-stone-950 text-xs font-black shadow-lg animate-pulse max-w-[90%] truncate"
         >
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-yellow-600 shrink-0" />
-            <span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-800 shrink-0" />
+            <span className="truncate">
               {`Click sequence to add (${selectedCardsCount} ${selectedCardsCount === 1 ? 'card' : 'cards'})`}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {autoAddValidation?.pickedUpCard && (
-              <span className="text-xs font-black bg-stone-900 text-yellow-300 border border-yellow-400/40 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-black bg-stone-900 text-yellow-300 border border-yellow-400/40 px-1.5 py-0.5 rounded">
                 🃏 Picks up Joker!
               </span>
             )}
-            <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-yellow-400 text-stone-950 shadow-sm shrink-0">
+            <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-yellow-400 text-stone-950 shadow-sm shrink-0 border border-yellow-600">
               Click to Auto-Add
             </span>
           </div>
@@ -533,7 +533,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       )}
 
       {/* Meld Header Bar */}
-      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap sm:flex-nowrap">
+      <div className="h-7 min-h-[28px] flex items-center justify-between mb-2 gap-2 flex-wrap sm:flex-nowrap">
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap sm:flex-nowrap">
           <span
             className={`text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${badgeClass}`}
