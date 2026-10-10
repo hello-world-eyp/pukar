@@ -444,7 +444,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
               <div
                 key={`${card.id}-${slot.representedRank}-${index}`}
                 style={{
-                  marginLeft: index === 0 ? 0 : '-20px',
+                  marginLeft: index === 0 ? 0 : '-58px',
                   zIndex: index + 1,
                 }}
                 className="relative transition-transform hover:-translate-y-3 hover:!z-30 shrink-0"

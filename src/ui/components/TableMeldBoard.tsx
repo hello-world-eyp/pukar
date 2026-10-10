@@ -632,7 +632,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
             <div
               key={`${card.id}-${slot.representedRank}-${index}`}
               style={{
-                marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-16px' : '-10px',
+                marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-44px' : '-26px',
                 zIndex: index + 1,
                 animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
               }}
