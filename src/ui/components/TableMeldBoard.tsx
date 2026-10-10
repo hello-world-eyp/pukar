@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Meld, Team, Suit, Card } from '../../engine/types';
 import { evaluateMeldScore, canAddCardsToMeld } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
-import { Shield, Sparkles, CheckCircle2, PlusCircle, ZoomIn } from 'lucide-react';
+import { Shield, Sparkles, CheckCircle2, PlusCircle, ZoomIn, Lock } from 'lucide-react';
 
 export type MeldSortDirection = 'desc' | 'asc';
 
@@ -305,8 +305,10 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
           sortedMelds.map((meld) => {
             const isSelected = selectedMeldId === meld.id;
             const evaluation = evaluateMeldScore(meld);
+            const isCompleteSequence = evaluation.isPure13 || evaluation.points === 500;
 
             // Check if all selected cards can be added to this sequence
+            // Complete 500-pt sequences are closed - nothing can be added
             const isOwnTeam = isActive;
             const willLeaveEmptyHand = Boolean(
               allHandCards &&
@@ -315,7 +317,8 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 selectedCards.length >= allHandCards.length
             );
             const canAttemptAdd = Boolean(
-              canAdd &&
+              !isCompleteSequence &&
+                canAdd &&
                 isOwnTeam &&
                 selectedCards &&
                 selectedCards.length > 0 &&
@@ -325,6 +328,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
               ? canAddCardsToMeld(meld, selectedCards!)
               : { valid: false };
             const isEligibleToAutoAdd = Boolean(canAttemptAdd && addValidation.valid);
+            const canSelectThisMeld = Boolean(onSelectMeld) && !isCompleteSequence;
 
             return (
               <MeldCardItem
@@ -347,7 +351,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                     console.error('Error in onSelectMeld:', err);
                   }
                 }}
-                canSelect={Boolean(onSelectMeld)}
+                canSelect={canSelectThisMeld}
                 onZoom={onZoomMeld}
                 sortDirection={sortDirection}
                 cardSize={cardSize}
@@ -465,9 +469,13 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     });
   }, [meld.slots, meld.cards, sortDirection]);
 
+  const isCompleteSequence = isPure13 || evaluation.points === 500;
   const [isAbsorbing, setIsAbsorbing] = useState(false);
 
   const handleItemClick = () => {
+    if (isCompleteSequence) {
+      return;
+    }
     if (isEligibleToAutoAdd && onAutoAdd) {
       try {
         setIsAbsorbing(true);
@@ -483,7 +491,9 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
     }
   };
 
-  const containerClasses = isEligibleToAutoAdd
+  const containerClasses = isCompleteSequence
+    ? 'bg-stone-200/50 border-2 border-stone-300/90 text-stone-600 opacity-65 filter grayscale-[45%] shadow-inner cursor-not-allowed hover:opacity-75'
+    : isEligibleToAutoAdd
     ? 'border-2 border-yellow-400 ring-4 ring-yellow-400/70 shadow-2xl shadow-yellow-500/30 bg-yellow-50/90 cursor-pointer hover:scale-[1.015] hover:border-yellow-300 hover:ring-yellow-300 transition-all'
     : isSelected
     ? 'bg-amber-100/80 border-2 border-amber-500 ring-2 ring-amber-400/50 shadow-md'
@@ -497,9 +507,19 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       data-selected={isSelected ? 'true' : undefined}
       data-can-add={isEligibleToAutoAdd ? 'true' : undefined}
       data-highlight-yellow={isEligibleToAutoAdd ? 'true' : undefined}
+      data-complete={isCompleteSequence ? 'true' : undefined}
       onClick={handleItemClick}
+      title={
+        isCompleteSequence
+          ? 'Complete Sequence (500 pts) • Full 13-card sequence; no cards can be added'
+          : undefined
+      }
       className={`relative group rounded-xl p-2 sm:p-2.5 transition-all ${
-        canSelect || isEligibleToAutoAdd ? 'cursor-pointer' : ''
+        isCompleteSequence
+          ? 'cursor-not-allowed'
+          : canSelect || isEligibleToAutoAdd
+          ? 'cursor-pointer'
+          : ''
       } ${containerClasses} ${absorbClass}`}
     >
       {/* Yellow Auto-Add Floating Banner (Positioned absolute so height never shifts on card selection) */}
@@ -543,6 +563,17 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
               {meld.suit}
             </span>
           )}
+
+          {isCompleteSequence && (
+            <span
+              data-testid={`badge-complete-locked-${meld.id}`}
+              className="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
+              title="Complete Sequence is full (13 cards). No cards can be added."
+            >
+              <Lock className="w-3 h-3 text-stone-600" />
+              <span>Closed</span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -559,7 +590,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
                 }
               }}
               title="Zoom into sequence to inspect cards in detail"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer hover:scale-105 shrink-0 whitespace-nowrap shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer hover:scale-105 shrink-0 whitespace-nowrap shadow-sm filter-none opacity-100"
             >
               <ZoomIn className="w-3.5 h-3.5" />
               <span>Zoom</span>

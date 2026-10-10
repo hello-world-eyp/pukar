@@ -10,6 +10,7 @@ import {
   ArrowLeft,
   Layers,
   ZoomIn,
+  Lock,
 } from 'lucide-react';
 
 export interface SequencesPageProps {
@@ -359,7 +360,9 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
     <div
       data-testid={`enlarged-meld-${meld.id}`}
       className={`rounded-2xl p-4 sm:p-5 border flex flex-col gap-3.5 shadow-md transition-all ${
-        team === 'A'
+        isPure13 || points === 500
+          ? 'bg-stone-100/70 border-stone-300/80 text-stone-600 opacity-75 filter grayscale-[35%]'
+          : team === 'A'
           ? 'bg-white border-blue-200/90 hover:border-blue-400 text-stone-900'
           : 'bg-white border-amber-200/90 hover:border-amber-400 text-stone-900'
       }`}
@@ -380,6 +383,17 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
           {meld.suit && (
             <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-lg border border-stone-200">
               {getSuitSymbol(meld.suit)} {meld.suit}
+            </span>
+          )}
+
+          {(isPure13 || points === 500) && (
+            <span
+              data-testid={`badge-complete-locked-${meld.id}`}
+              className="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
+              title="Complete Sequence is full (13 cards). No cards can be added."
+            >
+              <Lock className="w-3 h-3 text-stone-600" />
+              <span>Closed</span>
             </span>
           )}
 

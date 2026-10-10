@@ -361,6 +361,11 @@ describe('UI Components', () => {
 
       expect(html).toContain('Complete Sequence - 500 pts');
       expect(html).toContain('500 pts');
+      expect(html).toContain('data-complete="true"');
+      expect(html).toContain('grayscale-[45%]');
+      expect(html).toContain('cursor-not-allowed');
+      expect(html).toContain('data-testid="badge-complete-locked-pure-meld"');
+      expect(html).toContain('Closed');
     });
 
     it('renders selected meld highlight when selectedMeldId matches', () => {
