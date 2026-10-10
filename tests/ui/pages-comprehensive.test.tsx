@@ -111,6 +111,44 @@ describe('UI Pages - SequencesPage & ScoreboardPage Comprehensive Test Suite', (
       expect(html).toContain('data-testid="filter-team-b"');
       expect(html).toContain('All Teams');
     });
+
+    it('renders normal sequences with clean table styling without dark grey tray and locks complete sequences', () => {
+      const completeMeld: Meld = {
+        id: 'meld-pure13',
+        type: 'RUN',
+        suit: 'DIAMONDS',
+        team: 'A',
+        cards: Array.from({ length: 13 }, (_, i) => ({
+          id: `d-${i + 2}`,
+          suit: 'DIAMONDS',
+          rank: (i + 2 === 14 ? 14 : i + 2) as any,
+        })),
+        slots: Array.from({ length: 13 }, (_, i) => ({
+          card: { id: `d-${i + 2}`, suit: 'DIAMONDS', rank: (i + 2 === 14 ? 14 : i + 2) as any },
+          representedRank: i + 2,
+          isWildcard: false,
+        })),
+        isPure13: true,
+        points: 500,
+      };
+
+      const html = renderToString(
+        <SequencesPage
+          melds={{ A: [meldTeamA, completeMeld], B: [] }}
+          onBackToTable={() => {}}
+        />
+      );
+
+      // Normal meld should NOT have the dark grey background tray
+      expect(html).not.toContain('bg-slate-950/60');
+      expect(html).toContain('enlarged-cards-row-meld-A1');
+
+      // Complete sequence should be greyed out and closed
+      expect(html).toContain('data-testid="badge-complete-locked-meld-pure13"');
+      expect(html).toContain('Closed');
+      expect(html).toContain('Complete Sequence (500 pts)');
+      expect(html).toContain('data-complete="true"');
+    });
   });
 
   /* =========================================================================

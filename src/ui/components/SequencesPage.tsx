@@ -359,72 +359,113 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
   return (
     <div
       data-testid={`enlarged-meld-${meld.id}`}
-      className={`rounded-2xl p-4 sm:p-5 border flex flex-col gap-3.5 shadow-md transition-all ${
+      data-complete={isPure13 || points === 500 ? 'true' : undefined}
+      className={`rounded-2xl p-4 sm:p-5 border-2 flex flex-col justify-between gap-3 shadow-md transition-all ${
         isPure13 || points === 500
-          ? 'bg-stone-100/70 border-stone-300/80 text-stone-600 opacity-75 filter grayscale-[35%]'
+          ? 'bg-stone-200/50 border-stone-300/90 text-stone-600 opacity-65 filter grayscale-[45%] shadow-inner'
           : team === 'A'
-          ? 'bg-white border-blue-200/90 hover:border-blue-400 text-stone-900'
-          : 'bg-white border-amber-200/90 hover:border-amber-400 text-stone-900'
+          ? 'bg-white/90 border-blue-200/90 hover:border-blue-400 text-stone-900 shadow-sm'
+          : 'bg-white/90 border-amber-200/90 hover:border-amber-400 text-stone-900 shadow-sm'
       }`}
     >
-      {/* Sequence Header */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Points / Type Badge */}
-          <span
-            className={`text-xs sm:text-sm px-3 py-1 rounded-full border flex items-center gap-1.5 font-bold ${badgeClass}`}
-          >
-            {isPure13 && <Sparkles className="w-3.5 h-3.5" />}
-            {isComplete7 && !isPure13 && <CheckCircle2 className="w-3.5 h-3.5" />}
-            <span>{badgeText}</span>
-          </span>
-
-          {/* Suit Tag */}
-          {meld.suit && (
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-lg border border-stone-200">
-              {getSuitSymbol(meld.suit)} {meld.suit}
-            </span>
-          )}
-
-          {(isPure13 || points === 500) && (
+      <div className="flex flex-col gap-2">
+        {/* Sequence Header */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Points / Type Badge */}
             <span
-              data-testid={`badge-complete-locked-${meld.id}`}
-              className="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
-              title="Complete Sequence is full (13 cards). No cards can be added."
+              className={`text-xs sm:text-sm px-3 py-1 rounded-full border flex items-center gap-1.5 font-bold ${badgeClass}`}
             >
-              <Lock className="w-3 h-3 text-stone-600" />
-              <span>Closed</span>
+              {isPure13 && <Sparkles className="w-3.5 h-3.5" />}
+              {isComplete7 && !isPure13 && <CheckCircle2 className="w-3.5 h-3.5" />}
+              <span>{badgeText}</span>
             </span>
-          )}
 
-          {/* Card Count */}
-          <span className="text-xs font-bold text-stone-500">
-            {meld.cards.length} cards
-          </span>
+            {/* Suit Tag */}
+            {meld.suit && (
+              <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-stone-700 bg-stone-100 px-2.5 py-0.5 rounded-lg border border-stone-200">
+                {getSuitSymbol(meld.suit)} {meld.suit}
+              </span>
+            )}
+
+            {(isPure13 || points === 500) && (
+              <span
+                data-testid={`badge-complete-locked-${meld.id}`}
+                className="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
+                title="Complete Sequence is full (13 cards). No cards can be added."
+              >
+                <Lock className="w-3 h-3 text-stone-600" />
+                <span>Closed</span>
+              </span>
+            )}
+
+            {/* Card Count */}
+            <span className="text-xs font-bold text-stone-500">
+              {meld.cards.length} cards
+            </span>
+          </div>
+
+          {/* Score & Zoom Button */}
+          <div className="flex items-center gap-2">
+            <span className="text-base sm:text-lg font-black text-amber-900 bg-amber-100/90 px-3 py-0.5 rounded-xl border border-amber-300 shadow-sm">
+              +{points} pts
+            </span>
+            {onZoom && (
+              <button
+                type="button"
+                data-testid={`btn-zoom-${meld.id}`}
+                onClick={() => onZoom(meld)}
+                className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors cursor-pointer shadow-sm"
+                title="Zoom in modal"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Score & Zoom Button */}
-        <div className="flex items-center gap-2">
-          <span className="text-base sm:text-lg font-black text-amber-900 bg-amber-100/90 px-3 py-0.5 rounded-xl border border-amber-300 shadow-sm">
-            +{points} pts
-          </span>
-          {onZoom && (
-            <button
-              type="button"
-              data-testid={`btn-zoom-${meld.id}`}
-              onClick={() => onZoom(meld)}
-              className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 transition-colors cursor-pointer shadow-sm"
-              title="Zoom in modal"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-          )}
+        {/* Enlarged Cards Row - Clean background matching normal table */}
+        <div
+          data-testid={`enlarged-cards-row-${meld.id}`}
+          className="flex items-center overflow-x-auto overflow-y-hidden overscroll-y-contain pt-3 pb-2.5 px-1 scrollbar-thin"
+        >
+          {sortedSlots.map((slot, index) => {
+            const card = slot.card;
+            const isSlotWild = slot.isWildcard;
+            let wildLabel: string | undefined = undefined;
+
+            if (isSlotWild) {
+              const repRank = getRankLabel(slot.representedRank);
+              const repSuit = getSuitSymbol(slot.representedSuit ?? meld.suit ?? card.suit);
+              wildLabel = `Wild (${repRank}${repSuit})`;
+            }
+
+            return (
+              <div
+                key={`${card.id}-${slot.representedRank}-${index}`}
+                style={{
+                  marginLeft: index === 0 ? 0 : '-20px',
+                  zIndex: index + 1,
+                }}
+                className="relative transition-transform hover:-translate-y-3 hover:!z-30 shrink-0"
+              >
+                <PlayingCard
+                  card={card}
+                  size="lg"
+                  isWild={isSlotWild}
+                  representedRank={slot.representedRank}
+                  representedSuit={slot.representedSuit}
+                  wildcardLabel={wildLabel}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Wildcard substitution callout if present */}
+      {/* Wildcard substitution callout placed below cards for clean horizontal card alignment across columns */}
       {wildcardSlot && (
-        <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-center gap-2">
+        <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-50/90 border border-amber-200 text-amber-900 flex items-center gap-2">
           <span>🃏 Wildcard in play:</span>
           <span className="font-bold text-stone-900">
             {wildcardSlot.card.isNaturalJoker ? 'Natural Joker' : `2 of ${wildcardSlot.card.suit ?? ''}`}
@@ -437,44 +478,6 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
           </span>
         </div>
       )}
-
-      {/* Enlarged Cards Row */}
-      <div
-        data-testid={`enlarged-cards-row-${meld.id}`}
-        className="flex items-center overflow-x-auto overflow-y-hidden overscroll-y-contain pt-3 pb-3 px-2 scrollbar-thin rounded-xl bg-slate-950/60 border border-slate-800/80"
-      >
-        {sortedSlots.map((slot, index) => {
-          const card = slot.card;
-          const isSlotWild = slot.isWildcard;
-          let wildLabel: string | undefined = undefined;
-
-          if (isSlotWild) {
-            const repRank = getRankLabel(slot.representedRank);
-            const repSuit = getSuitSymbol(slot.representedSuit ?? meld.suit ?? card.suit);
-            wildLabel = `Wild (${repRank}${repSuit})`;
-          }
-
-          return (
-            <div
-              key={`${card.id}-${slot.representedRank}-${index}`}
-              style={{
-                marginLeft: index === 0 ? 0 : '-20px',
-                zIndex: index + 1,
-              }}
-              className="relative transition-transform hover:-translate-y-3 hover:!z-30 shrink-0"
-            >
-              <PlayingCard
-                card={card}
-                size="lg"
-                isWild={isSlotWild}
-                representedRank={slot.representedRank}
-                representedSuit={slot.representedSuit}
-                wildcardLabel={wildLabel}
-              />
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 };
