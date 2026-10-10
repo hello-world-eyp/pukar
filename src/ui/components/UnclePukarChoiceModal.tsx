@@ -63,7 +63,7 @@ export const UnclePukarChoiceModal: React.FC<UnclePukarChoiceModalProps> = ({
       data-testid="uncle-pukar-choice-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Uncle's Auspicious Pukar Time Deck Selection"
+      aria-label="Sid's Auspicious Pukar Time Deck Selection"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto animate-fade-in"
       onClick={() => {
         // Fallback default on backdrop click
@@ -85,7 +85,7 @@ export const UnclePukarChoiceModal: React.FC<UnclePukarChoiceModalProps> = ({
             </div>
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400 tracking-wide">
-                Uncle&apos;s Auspicious Pukar Time
+                Sid&apos;s Auspicious Pukar Time
               </h2>
               <p className="text-xs sm:text-sm text-slate-300">
                 {playerName ? `${playerName} (Team ${team ?? 'A'}) claimed a Pukar! ` : ''}
@@ -116,7 +116,7 @@ export const UnclePukarChoiceModal: React.FC<UnclePukarChoiceModalProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent blur-xl rounded-full" />
               <img
                 src="/uncle-pukar.png"
-                alt="Uncle meditating before Pukar claim"
+                alt="Sid meditating before Pukar claim"
                 data-testid="uncle-cartoon-image"
                 className="relative z-10 w-auto h-auto max-h-[300px] object-contain drop-shadow-[0_10px_20px_rgba(245,158,11,0.25)] transition-transform duration-300 hover:scale-105"
               />

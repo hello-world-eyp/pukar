@@ -962,7 +962,7 @@ export function App({
         />
       )}
 
-      {/* Uncle's Auspicious Pukar Time Deck Selection Modal */}
+      {/* Sid's Auspicious Pukar Time Deck Selection Modal */}
       {unclePukarChoiceData && unclePukarChoiceData.isOpen && (
         <UnclePukarChoiceModal
           isOpen={unclePukarChoiceData.isOpen}

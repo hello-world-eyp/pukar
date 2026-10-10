@@ -34,10 +34,11 @@ describe('UnclePukarChoiceModal Component', () => {
     );
 
     expect(html).toContain('data-testid="uncle-pukar-choice-modal"');
-    expect(html).toContain('Auspicious Pukar Time');
+    expect(html).toContain("Sid&#x27;s Auspicious Pukar Time");
     expect(html).toContain('data-testid="uncle-live-clock"');
     expect(html).toContain('data-testid="uncle-cartoon-image"');
     expect(html).toContain('src="/uncle-pukar.png"');
+    expect(html).toContain('alt="Sid meditating before Pukar claim"');
     expect(html).toContain('Chacha Ji (Team A) claimed a Pukar!');
     expect(html).toContain('Wait, let me see what time it is before taking the Pukar');
   });
