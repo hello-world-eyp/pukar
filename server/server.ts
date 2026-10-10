@@ -109,6 +109,8 @@ function serveStaticFile(reqPath: string, res: http.ServerResponse): boolean {
 interface ExtWebSocket extends WebSocket {
   isAlive: boolean;
   socketId: string;
+  msgCount: number;
+  windowStart: number;
 }
 
 export interface ServerInstance {
@@ -121,6 +123,12 @@ export interface ServerInstance {
 
 export interface ServerOptions {
   heartbeatIntervalMs?: number;
+  cleanupIntervalMs?: number;
+  roomMaxIdleMs?: number;
+  maxPayloadBytes?: number;
+  allowedOrigins?: string[];
+  rateLimitMaxMessages?: number;
+  rateLimitWindowMs?: number;
   roomManager?: RoomManager;
   serveStatic?: boolean;
 }
@@ -247,7 +255,23 @@ export function startServer(
         }
       });
 
-      const wss = new WebSocketServer({ server });
+      const maxPayload = options?.maxPayloadBytes ?? 64 * 1024;
+      const wss = new WebSocketServer({ server, maxPayload });
+
+      // Stale room garbage collection timer
+      const cleanupIntervalMs = options?.cleanupIntervalMs ?? 60000;
+      const roomMaxIdleMs = options?.roomMaxIdleMs ?? 15 * 60 * 1000;
+      const cleanupTimer = setInterval(() => {
+        try {
+          const cleaned = manager.cleanupStaleRooms(roomMaxIdleMs);
+          if (cleaned.length > 0) {
+            serverLogger.info(`Cleaned up ${cleaned.length} stale rooms`, { roomCodes: cleaned });
+          }
+        } catch (cleanupErr) {
+          serverLogger.error('Error during room cleanup timer', { error: cleanupErr });
+        }
+      }, cleanupIntervalMs);
+      cleanupTimer.unref?.();
 
       // Heartbeat configuration
       const heartbeatIntervalMs = options?.heartbeatIntervalMs ?? 30000;
@@ -277,12 +301,28 @@ export function startServer(
       // Prevent timer from keeping Node process alive if no active handles remain
       heartbeatTimer.unref?.();
 
-      wss.on('connection', (rawWs: WebSocket) => {
+      wss.on('connection', (rawWs: WebSocket, req: http.IncomingMessage) => {
+        // Origin validation check if configured
+        if (options?.allowedOrigins && options.allowedOrigins.length > 0) {
+          const origin = req.headers.origin;
+          if (origin && !options.allowedOrigins.includes(origin)) {
+            serverLogger.warn(`Connection rejected: unauthorized origin ${origin}`, { origin });
+            rawWs.close(4403, 'Forbidden origin');
+            return;
+          }
+        }
+
         const ws = rawWs as ExtWebSocket;
         const socketId = `sock_${crypto.randomUUID().slice(0, 8)}`;
         ws.socketId = socketId;
         ws.isAlive = true;
+        ws.msgCount = 0;
+        ws.windowStart = Date.now();
         sockets.set(socketId, ws);
+
+        ws.on('error', (err) => {
+          serverLogger.error(`Socket error on ${socketId}`, { socketId, error: err });
+        });
 
         serverLogger.info(`Client connected: ${socketId}`, { socketId });
 
@@ -292,6 +332,26 @@ export function startServer(
 
         ws.on('message', (raw) => {
           try {
+            // Rate limiting check
+            const now = Date.now();
+            const rateLimitWindowMs = options?.rateLimitWindowMs ?? 2000;
+            const maxMessages = options?.rateLimitMaxMessages ?? 50;
+
+            if (now - ws.windowStart > rateLimitWindowMs) {
+              ws.windowStart = now;
+              ws.msgCount = 1;
+            } else {
+              ws.msgCount++;
+              if (ws.msgCount > maxMessages) {
+                serverLogger.warn(`Rate limit exceeded for socket: ${socketId}`, { socketId, count: ws.msgCount });
+                safeSend(ws, {
+                  type: 'ERROR',
+                  message: 'Rate limit exceeded: too many requests',
+                  code: 'RATE_LIMITED',
+                });
+                return;
+              }
+            }
             let msg: ClientMessage;
             try {
               msg = JSON.parse(raw.toString()) as ClientMessage;
@@ -730,6 +790,9 @@ export function startServer(
             new Promise<void>((resolveClose) => {
               if (heartbeatTimer) {
                 clearInterval(heartbeatTimer);
+              }
+              if (cleanupTimer) {
+                clearInterval(cleanupTimer);
               }
 
               // Terminate all connected clients

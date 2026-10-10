@@ -638,4 +638,55 @@ describe('RoomManager', () => {
       );
     });
   });
+
+  describe('Security & Lifecycle Garbage Collection', () => {
+    it('sanitizes player names, removes control characters, and enforces length limits', () => {
+      // 50-character name should be truncated to 24
+      const longName = 'A'.repeat(50);
+      const { room } = manager.createRoom(longName, 4, 'sock_1');
+      expect(room.seats[0].playerName).toHaveLength(24);
+      expect(room.seats[0].playerName).toBe('A'.repeat(24));
+
+      // Control characters stripped
+      const controlCharName = 'Bob\x00\x1F\x7FActor';
+      const join = manager.joinRoom(room.roomCode, controlCharName, 'sock_2');
+      expect(join.success).toBe(true);
+      if (join.success) {
+        expect(join.session.playerName).toBe('BobActor');
+      }
+
+      // Empty or whitespace falls back to default
+      const { room: emptyRoom } = manager.createRoom('   ', 4, 'sock_3');
+      expect(emptyRoom.seats[0].playerName).toBe('Host');
+    });
+
+    it('cleans up stale rooms that have been abandoned past maxIdleMs', () => {
+      const { room: activeRoom } = manager.createRoom('Alice', 4, 'sock_1');
+      const { room: staleRoom } = manager.createRoom('Bob', 4, 'sock_2');
+
+      // Disconnect Bob so staleRoom is abandoned
+      manager.handleDisconnect('sock_2');
+
+      // Simulate stale idle time
+      staleRoom.lastActivityAt = Date.now() - 20 * 60 * 1000; // 20 mins ago
+      activeRoom.lastActivityAt = Date.now(); // active now
+
+      const cleaned = manager.cleanupStaleRooms(15 * 60 * 1000); // 15 min threshold
+      expect(cleaned).toContain(staleRoom.roomCode);
+      expect(cleaned).not.toContain(activeRoom.roomCode);
+
+      expect(manager.getRoom(staleRoom.roomCode)).toBeUndefined();
+      expect(manager.getRoom(activeRoom.roomCode)).toBeDefined();
+    });
+
+    it('cleans up completed games (GAME_OVER) after 5 minutes of inactivity', () => {
+      const { room } = manager.createRoom('Alice', 4, 'sock_1');
+      room.status = 'GAME_OVER';
+      room.lastActivityAt = Date.now() - 6 * 60 * 1000; // 6 mins ago
+
+      const cleaned = manager.cleanupStaleRooms();
+      expect(cleaned).toContain(room.roomCode);
+      expect(manager.getRoom(room.roomCode)).toBeUndefined();
+    });
+  });
 });

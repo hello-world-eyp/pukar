@@ -749,4 +749,82 @@ describe('Multiplayer WebSocket E2E Lifecycle & Server Integration', () => {
     expect(() => broadcastLobby(fakeRoom, emptySockets)).not.toThrow();
     expect(() => broadcastGameState(fakeRoom, emptySockets)).not.toThrow();
   });
+
+  describe('Security & Hardening', () => {
+    it('enforces message rate limiting per socket', async () => {
+      // Start a server with low rate limit for testing
+      const rateLimitedServer = await startServer(0, {
+        rateLimitMaxMessages: 5,
+        rateLimitWindowMs: 2000,
+      });
+
+      const client = await connectClient(rateLimitedServer.port);
+      // Send 5 rapid messages (within limit)
+      for (let i = 0; i < 5; i++) {
+        client.ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: `P${i}`, playerCount: 4 }));
+      }
+
+      // 6th message exceeds limit
+      client.ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: 'P_Flooder', playerCount: 4 }));
+
+      const rateLimitMsg = await client.waitForMessage((m) => m.type === 'ERROR' && (m as any).code === 'RATE_LIMITED');
+      expect(rateLimitMsg.type).toBe('ERROR');
+      if (rateLimitMsg.type === 'ERROR') {
+        expect(rateLimitMsg.code).toBe('RATE_LIMITED');
+      }
+
+      await client.close();
+      await rateLimitedServer.close();
+    });
+
+    it('rejects connections from unauthorized origins when allowedOrigins is configured', async () => {
+      const secureServer = await startServer(0, {
+        allowedOrigins: ['https://pukar-official.example.com'],
+      });
+
+      // Try connecting with an unauthorized origin
+      const unauthorizedWs = new WebSocket(`ws://127.0.0.1:${secureServer.port}`, {
+        headers: { origin: 'https://evil-attacker.example.com' },
+      });
+
+      const closeEvent = await new Promise<{ code: number; reason: string }>((resolve) => {
+        unauthorizedWs.on('close', (code, reason) => {
+          resolve({ code, reason: reason.toString() });
+        });
+        unauthorizedWs.on('error', () => {
+          // Handled via close
+        });
+      });
+
+      expect(closeEvent.code).toBe(4403);
+      expect(closeEvent.reason).toContain('Forbidden origin');
+
+      await secureServer.close();
+    });
+
+    it('enforces maxPayload limit on oversized messages', async () => {
+      const secureServer = await startServer(0, {
+        maxPayloadBytes: 1024, // 1 KB limit
+      });
+
+      const client = await connectClient(secureServer.port);
+      const closePromise = new Promise<number>((resolve) => {
+        client.ws.on('close', (code) => resolve(code));
+      });
+
+      // Send 2KB oversized payload
+      const hugeString = 'X'.repeat(2048);
+      client.ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: hugeString, playerCount: 4 }));
+
+      const closeCode = await Promise.race([
+        closePromise,
+        new Promise<number>((res) => setTimeout(() => res(0), 1000)),
+      ]);
+
+      expect(closeCode).toBe(1009); // 1009 = Message Too Big
+
+      await client.close();
+      await secureServer.close();
+    });
+  });
 });

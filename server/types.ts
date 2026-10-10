@@ -29,6 +29,7 @@ export interface Room {
   status: RoomStatus;
   hostPlayerId: string;
   createdAt: number;
+  lastActivityAt?: number;
   seats: LobbySeat[];
   sessions: Map<string, PlayerSession>; // playerId -> PlayerSession
   tokenToPlayerId: Map<string, string>; // sessionToken -> playerId

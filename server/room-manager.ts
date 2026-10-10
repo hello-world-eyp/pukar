@@ -29,6 +29,15 @@ export interface DisconnectResult {
   playerName?: string;
 }
 
+/**
+ * Sanitizes and trims player names, stripping control characters and enforcing a max length of 24 chars.
+ */
+export function sanitizePlayerName(rawName: unknown, defaultFallback: string = 'Player'): string {
+  if (typeof rawName !== 'string') return defaultFallback;
+  const clean = rawName.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 24);
+  return clean || defaultFallback;
+}
+
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
   private socketToPlayer: Map<string, { roomCode: string; playerId: string }> = new Map();
@@ -88,7 +97,7 @@ export class RoomManager {
         this.handleDisconnect(socketId);
       }
 
-      const cleanHostName = (typeof hostName === 'string' ? hostName.trim() : '') || 'Host';
+      const cleanHostName = sanitizePlayerName(hostName, 'Host');
       const roomCode = this.generateRoomCode();
       const hostId = `p_${crypto.randomUUID().slice(0, 8)}`;
       const sessionToken = crypto.randomUUID();
@@ -112,12 +121,14 @@ export class RoomManager {
         isConnected: true,
       };
 
+      const now = Date.now();
       const room: Room = {
         roomCode,
         playerCount,
         status: 'LOBBY',
         hostPlayerId: hostId,
-        createdAt: Date.now(),
+        createdAt: now,
+        lastActivityAt: now,
         seats,
         sessions: new Map([[hostId, hostSession]]),
         tokenToPlayerId: new Map([[sessionToken, hostId]]),
@@ -200,7 +211,7 @@ export class RoomManager {
       // New player joining lobby
       const newPlayerId = `p_${crypto.randomUUID().slice(0, 8)}`;
       const newToken = crypto.randomUUID();
-      const cleanName = (typeof playerName === 'string' ? playerName.trim() : '') || 'Player';
+      const cleanName = sanitizePlayerName(playerName, 'Player');
 
       const newSession: PlayerSession = {
         playerId: newPlayerId,
@@ -214,6 +225,7 @@ export class RoomManager {
 
       room.sessions.set(newPlayerId, newSession);
       room.tokenToPlayerId.set(newToken, newPlayerId);
+      room.lastActivityAt = Date.now();
       this.socketToPlayer.set(socketId, { roomCode: cleanCode, playerId: newPlayerId });
 
       serverLogger.info('New player joined room', { roomCode: cleanCode, playerId: newPlayerId });
@@ -284,6 +296,7 @@ export class RoomManager {
       targetSeat.isConnected = session.isConnected;
       targetSeat.isHost = room.hostPlayerId === playerId;
       session.seatIndex = seatIndex;
+      room.lastActivityAt = Date.now();
 
       serverLogger.info(`Player claimed seat ${seatIndex}`, { roomCode: cleanCode, playerId });
       return { success: true };
@@ -533,6 +546,7 @@ export class RoomManager {
       if (session.seatIndex !== null && room.seats[session.seatIndex]) {
         room.seats[session.seatIndex].isConnected = false;
       }
+      room.lastActivityAt = Date.now();
 
       serverLogger.warn('Player socket disconnected', { roomCode, playerId, socketId });
       return {
@@ -616,6 +630,59 @@ export class RoomManager {
       serverLogger.error('Error checking destroyRoomIfEmpty', { roomCode, error: err });
       return false;
     }
+  }
+
+  /**
+   * Updates lastActivityAt timestamp for an active room.
+   */
+  public touchRoom(roomCode: string): void {
+    const room = this.getRoom(roomCode);
+    if (room) {
+      room.lastActivityAt = Date.now();
+    }
+  }
+
+  /**
+   * Scans all rooms and destroys any that are abandoned or stale.
+   * A room is considered stale if:
+   * 1. It has 0 sessions or all sessions are disconnected, AND idle time >= maxIdleMs (default 15 mins).
+   * 2. It has been finished (GAME_OVER) for more than 5 minutes.
+   * Returns an array of destroyed room codes.
+   */
+  public cleanupStaleRooms(maxIdleMs: number = 15 * 60 * 1000): string[] {
+    const destroyed: string[] = [];
+    const now = Date.now();
+
+    for (const [code, room] of this.rooms.entries()) {
+      try {
+        const lastActive = room.lastActivityAt || room.createdAt || now;
+        const idleTime = now - lastActive;
+
+        // Condition 1: Empty or all players disconnected for >= maxIdleMs
+        const allDisconnected =
+          room.sessions.size === 0 ||
+          Array.from(room.sessions.values()).every((s) => !s.isConnected);
+
+        if (allDisconnected && idleTime >= maxIdleMs) {
+          if (this.destroyRoom(code)) {
+            destroyed.push(code);
+            continue;
+          }
+        }
+
+        // Condition 2: Completed games idle for >= 5 minutes
+        if (room.status === 'GAME_OVER' && idleTime >= 5 * 60 * 1000) {
+          if (this.destroyRoom(code)) {
+            destroyed.push(code);
+            continue;
+          }
+        }
+      } catch (err) {
+        serverLogger.error('Error during cleanupStaleRooms for room', { roomCode: code, error: err });
+      }
+    }
+
+    return destroyed;
   }
 
   /**
