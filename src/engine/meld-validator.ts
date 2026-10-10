@@ -69,6 +69,18 @@ export function getRankDisplayName(rank: number): string {
   return String(rank);
 }
 
+/**
+ * Checks whether a natural card's rank matches a target rank,
+ * accounting for Ace which naturally has rank 14 but can represent rank 1 (Ace low) or rank 14 (Ace high).
+ */
+export function doesCardMatchRank(cardRank: number, targetRank: number): boolean {
+  if (cardRank === targetRank) return true;
+  if ((cardRank === 14 || cardRank === 1) && (targetRank === 1 || targetRank === 14)) {
+    return true;
+  }
+  return false;
+}
+
 export function getSuitDisplayName(suit: Suit): string {
   switch (suit) {
     case 'SPADES':
@@ -661,14 +673,16 @@ export function canAddCardsToMeld(
       }
 
       for (const c of cardsToAdd) {
-        if (!isWildcard(c) && c.rank !== setRank) {
+        if (!isWildcard(c) && !doesCardMatchRank(c.rank, setRank)) {
           return { valid: false, error: 'Cards added to a set must match the set rank' };
         }
       }
 
       // Check if meld has a Normal Joker that can be replaced and picked up
       const normalJokerSlot = meld.slots.find((s) => s.isWildcard && isNaturalJoker(s.card));
-      const hasNaturalCardToAdd = cardsToAdd.some((c) => !isWildcard(c) && c.rank === setRank);
+      const hasNaturalCardToAdd = cardsToAdd.some(
+        (c) => !isWildcard(c) && doesCardMatchRank(c.rank, setRank)
+      );
 
       if (normalJokerSlot && hasNaturalCardToAdd) {
         // Natural card replaces the Normal Joker in the set!
@@ -745,7 +759,10 @@ export function canAddCardsToMeld(
 
       // Check if cardsToAdd contains the exact card the Normal Joker represents!
       const hasReplacementCard = cardsToAdd.some(
-        (c) => !isWildcard(c) && c.rank === jokerRepresentedRank && c.suit === jokerRepresentedSuit
+        (c) =>
+          !isWildcard(c) &&
+          doesCardMatchRank(c.rank, jokerRepresentedRank) &&
+          c.suit === jokerRepresentedSuit
       );
 
       if (hasReplacementCard) {
@@ -832,7 +849,7 @@ export function canAddCardsToMeld(
     const previousSubRank = existingSub2Slot?.representedRank;
     const isReplacingSub2 =
       previousSubRank !== undefined &&
-      cardsToAdd.some((c) => !isWildcard(c) && c.rank === previousSubRank);
+      cardsToAdd.some((c) => !isWildcard(c) && doesCardMatchRank(c.rank, previousSubRank));
 
     // If existing meld had a natural 2, filter candidates to those that preserve 2 at natural rank 2
     const existingNatural2Slot = meld.slots.find(

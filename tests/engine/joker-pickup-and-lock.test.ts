@@ -80,6 +80,42 @@ describe('Normal Joker Pickup & Immutability vs "2" Wildcard', () => {
       expect(result.updatedSlots?.map((s) => s.representedRank)).toEqual([5, 6, 7, 8]);
       expect(result.updatedSlots?.every((s) => !s.isWildcard)).toBe(true);
     });
+
+    it('auto picks up the Normal Joker when replaced by an Ace (rank 14) representing low Ace (representedRank: 1)', () => {
+      const card2 = makeCard('c2d', 'DIAMONDS', 2);
+      const card3 = makeCard('c3d', 'DIAMONDS', 3);
+      const card4 = makeCard('c4d', 'DIAMONDS', 4);
+      const card5 = makeCard('c5d', 'DIAMONDS', 5);
+      const card6 = makeCard('c6d', 'DIAMONDS', 6);
+      const joker = makeCard('joker1', null, 0, true);
+
+      const meld: Meld = {
+        id: 'meld-run-joker-ace',
+        team: 'A',
+        type: 'RUN',
+        suit: 'DIAMONDS',
+        cards: [card6, card5, card4, card3, card2, joker],
+        slots: [
+          { card: joker, representedRank: 1, representedSuit: 'DIAMONDS', isWildcard: true },
+          { card: card2, representedRank: 2, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card3, representedRank: 3, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card4, representedRank: 4, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card5, representedRank: 5, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card6, representedRank: 6, representedSuit: 'DIAMONDS', isWildcard: false },
+        ],
+      };
+
+      const aceCard = makeCard('cAd', 'DIAMONDS', 14);
+      const result = canAddCardsToMeld(meld, [aceCard]);
+
+      expect(result.valid).toBe(true);
+      expect(result.pickedUpCard).toBeDefined();
+      expect(result.pickedUpCard?.id).toBe('joker1');
+      expect(result.updatedSlots).toHaveLength(6);
+      expect(result.updatedSlots?.map((s) => s.representedRank)).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(result.updatedSlots?.every((s) => !s.isWildcard)).toBe(true);
+      expect(result.updatedSlots?.find((s) => s.representedRank === 1)?.card.id).toBe('cAd');
+    });
   });
 
   describe('Normal Joker Immutability (Cannot Shift Up or Down)', () => {
@@ -356,6 +392,71 @@ describe('Normal Joker Pickup & Immutability vs "2" Wildcard', () => {
       const jokerSlot = newMeld.slots.find((s) => s.card.id === 'card-joker');
       expect(jokerSlot?.representedRank).toBe(12);
       expect(jokerSlot?.isWildcard).toBe(true);
+    });
+
+    it('picks up Joker into hand when ADD_TO_MELD replaces low Ace (rank 1 Joker) with Ace of Diamonds (rank 14 card)', () => {
+      const initialState = dealInitialState(4);
+      const card2d = makeCard('card-2d', 'DIAMONDS', 2);
+      const card3d = makeCard('card-3d', 'DIAMONDS', 3);
+      const card4d = makeCard('card-4d', 'DIAMONDS', 4);
+      const card5d = makeCard('card-5d', 'DIAMONDS', 5);
+      const card6d = makeCard('card-6d', 'DIAMONDS', 6);
+      const joker = makeCard('card-joker-d', null, 0, true);
+
+      const tableMeld: Meld = {
+        id: 'meld-diamonds-impure',
+        team: 'A',
+        type: 'RUN',
+        suit: 'DIAMONDS',
+        cards: [card6d, card5d, card4d, card3d, card2d, joker],
+        slots: [
+          { card: card6d, representedRank: 6, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card5d, representedRank: 5, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card4d, representedRank: 4, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card3d, representedRank: 3, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: card2d, representedRank: 2, representedSuit: 'DIAMONDS', isWildcard: false },
+          { card: joker, representedRank: 1, representedSuit: 'DIAMONDS', isWildcard: true },
+        ],
+      };
+
+      const aceCard = makeCard('card-ad', 'DIAMONDS', 14);
+
+      // Player 3 (index 2 in 4-player game, Team A) has Ace of Diamonds in hand
+      const stateWithMeld = {
+        ...initialState,
+        currentPlayerIndex: 2,
+        phase: 'MELD' as const,
+        turnPhase: 'MELD' as const,
+        melds: {
+          ...initialState.melds,
+          A: [tableMeld],
+        },
+        players: initialState.players.map((p, idx) =>
+          idx === 2 ? { ...p, hand: [aceCard, ...p.hand] } : p
+        ),
+      };
+
+      const addResult = pukarReducer(stateWithMeld, {
+        type: 'ADD_TO_MELD',
+        meldId: 'meld-diamonds-impure',
+        cardIds: ['card-ad'],
+      });
+
+      expect(addResult.error).toBeUndefined();
+      const updatedMeld = addResult.state.melds.A[0];
+      // Joker was removed from table
+      expect(updatedMeld.cards.some((c) => c.id === 'card-joker-d')).toBe(false);
+      // Ace was added to table
+      expect(updatedMeld.cards.some((c) => c.id === 'card-ad')).toBe(true);
+      // Run is now natural 1-6 Diamonds
+      expect(updatedMeld.slots.map((s) => s.representedRank)).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(updatedMeld.slots.every((s) => !s.isWildcard)).toBe(true);
+
+      // Player's hand lost Ace and GAINED the Joker
+      const playerHand = addResult.state.players[2].hand;
+      expect(playerHand.some((c) => c.id === 'card-ad')).toBe(false);
+      expect(playerHand.some((c) => c.id === 'card-joker-d')).toBe(true);
+      expect(addResult.state.lastPickedUpCard?.id).toBe('card-joker-d');
     });
   });
 });
