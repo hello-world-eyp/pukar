@@ -1304,130 +1304,130 @@ export function App({
           role="dialog"
           aria-modal="true"
           aria-labelledby="rules-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 lg:p-8 bg-black/85 backdrop-blur-md animate-in fade-in duration-150"
           onClick={() => setIsRulesModalOpen(false)}
         >
           <div
-            className="game-modal-frame rounded-3xl max-w-4xl lg:max-w-5xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden text-slate-100 border-2 border-amber-500/30"
+            className="game-modal-frame rounded-3xl max-w-6xl xl:max-w-7xl 2xl:max-w-[1600px] w-full max-h-[94vh] shadow-2xl flex flex-col overflow-hidden text-slate-100 border-2 border-amber-500/40"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-inner">
-                  <HelpCircle className="w-5 h-5" />
+            <div className="flex items-center justify-between px-6 sm:px-8 py-5 sm:py-6 border-b border-slate-800 bg-slate-900/95 shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="p-3 sm:p-3.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-inner">
+                  <HelpCircle className="w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
                 <div>
-                  <h2 id="rules-modal-title" className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  <h2 id="rules-modal-title" className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-white">
                     Pukar Rules &amp; Gameplay
                   </h2>
-                  <p className="text-xs text-amber-300 font-semibold">Royal Partner Rummy Guide</p>
+                  <p className="text-sm sm:text-base text-amber-300 font-bold mt-0.5">Royal Partner Rummy Guide</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsRulesModalOpen(false)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/60 transition-colors cursor-pointer"
+                className="w-11 h-11 rounded-2xl flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700/60 transition-colors cursor-pointer"
                 aria-label="Close Rules"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Content Body: Spacious 2-Column Responsive Grid */}
-            <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 text-xs text-slate-200 leading-relaxed">
+            <div className="p-6 sm:p-8 lg:p-10 overflow-y-auto flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7 lg:gap-8 text-sm sm:text-base lg:text-[17px] text-slate-200 leading-relaxed scrollbar-thin">
               {/* Card 1: Objective & Teams */}
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
-                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                  <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 sm:p-7 lg:p-8 shadow-md flex flex-col gap-3 sm:gap-4">
+                <h3 className="font-black text-amber-300 text-base sm:text-lg lg:text-xl uppercase tracking-wider flex items-center gap-2.5 border-b border-slate-800/80 pb-3">
+                  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0" />
                   <span>Objective &amp; Teams</span>
                 </h3>
-                <p className="text-slate-300 leading-relaxed">
-                  Pukar is played in <strong>2 partner teams</strong> (Team A vs Team B) with alternating seating. Partners collaborate and share sequences, score points together, and aim to maximize their team&apos;s cumulative score.
+                <p className="text-slate-200 leading-relaxed text-sm sm:text-base lg:text-[17px]">
+                  Pukar is played in <strong className="text-white font-bold">2 partner teams</strong> (Team A vs Team B) with alternating seating. Partners collaborate and share sequences, score points together, and aim to maximize their team&apos;s cumulative score.
                 </p>
-                <ul className="list-disc list-inside space-y-1.5 text-slate-300 pt-1">
+                <ul className="list-disc list-inside space-y-2.5 sm:space-y-3 text-slate-200 pt-1 text-sm sm:text-base lg:text-[17px]">
                   <li>
-                    <strong>Target:</strong> Form valid sequences on the board and empty your hand to claim high-value Pukar bonus decks.
+                    <strong className="text-white font-bold">Target:</strong> Form valid sequences on the board and empty your hand to claim high-value Pukar bonus decks.
                   </li>
                   <li>
-                    <strong>Partnership:</strong> Both partners can add cards to their team&apos;s existing sequences on the table.
+                    <strong className="text-white font-bold">Partnership:</strong> Both partners can add cards to their team&apos;s existing sequences on the table.
                   </li>
                 </ul>
               </div>
 
               {/* Card 2: Turn Sequence */}
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
-                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 sm:p-7 lg:p-8 shadow-md flex flex-col gap-3 sm:gap-4">
+                <h3 className="font-black text-amber-300 text-base sm:text-lg lg:text-xl uppercase tracking-wider flex items-center gap-2.5 border-b border-slate-800/80 pb-3">
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0" />
                   <span>Turn Sequence</span>
                 </h3>
-                <ol className="list-decimal list-inside space-y-2 text-slate-300 leading-relaxed">
+                <ol className="list-decimal list-inside space-y-3 sm:space-y-3.5 text-slate-200 leading-relaxed text-sm sm:text-base lg:text-[17px]">
                   <li>
-                    <strong className="text-amber-300 font-bold">DRAW:</strong> Draw 1 card from the face-down Stock deck OR take the entire face-up Discard pile (&ldquo;The Bottom&rdquo;).
+                    <strong className="text-amber-300 font-extrabold">DRAW:</strong> Draw 1 card from the face-down Stock deck OR take the entire face-up Discard pile (&ldquo;The Bottom&rdquo;).
                   </li>
                   <li>
-                    <strong className="text-amber-300 font-bold">SEQUENCE:</strong> (Optional) Play new 3+ card sequences, or add cards to your team&apos;s existing table sequences. You can make multiple plays in one turn!
+                    <strong className="text-amber-300 font-extrabold">SEQUENCE:</strong> (Optional) Play new 3+ card sequences, or add cards to your team&apos;s existing table sequences. You can make multiple plays in one turn!
                   </li>
                   <li>
-                    <strong className="text-amber-300 font-bold">DISCARD:</strong> (Mandatory) Discard 1 card face-up to the pile to conclude your turn.
+                    <strong className="text-amber-300 font-extrabold">DISCARD:</strong> (Mandatory) Discard 1 card face-up to the pile to conclude your turn.
                   </li>
                 </ol>
               </div>
 
               {/* Card 3: Wildcards & Sequences */}
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
-                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 sm:p-7 lg:p-8 shadow-md flex flex-col gap-3 sm:gap-4">
+                <h3 className="font-black text-amber-300 text-base sm:text-lg lg:text-xl uppercase tracking-wider flex items-center gap-2.5 border-b border-slate-800/80 pb-3">
+                  <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0" />
                   <span>Wildcards &amp; Sequence Rules</span>
                 </h3>
-                <ul className="list-disc list-inside space-y-2 text-slate-300 leading-relaxed">
+                <ul className="list-disc list-inside space-y-3 sm:space-y-3.5 text-slate-200 leading-relaxed text-sm sm:text-base lg:text-[17px]">
                   <li>
-                    <strong className="text-amber-300 font-bold">Pure Opening Sequence:</strong> Each team&apos;s very first sequence on the board must be a <strong>pure run</strong> (no jokers/wildcards; suited card 2 can only be at its natural rank 2 position). Sets are not allowed until this pure run is placed.
+                    <strong className="text-amber-300 font-extrabold">Pure Opening Sequence:</strong> Each team&apos;s very first sequence on the board must be a <strong className="text-white font-bold">pure run</strong> (no jokers/wildcards; suited card 2 can only be at its natural rank 2 position). Sets are not allowed until this pure run is placed.
                   </li>
                   <li>
-                    <strong>All 2s &amp; Natural Jokers:</strong> Function as wildcards. At most 1 wildcard is permitted per sequence.
+                    <strong className="text-white font-bold">All 2s &amp; Natural Jokers:</strong> Function as wildcards. At most 1 wildcard is permitted per sequence.
                   </li>
                   <li>
-                    <strong>Movable 2:</strong> In a run, a card 2 can dynamically float and shift position as natural cards arrive to fill its slot.
+                    <strong className="text-white font-bold">Movable 2:</strong> In a run, a card 2 can dynamically float and shift position as natural cards arrive to fill its slot.
                   </li>
                   <li>
-                    <strong>Normal Joker Lock &amp; Pickup:</strong> Normal Jokers designate a fixed rank on placement. If a player holds the natural card replacing that Joker, they can play it to pick the Joker back into their hand!
+                    <strong className="text-white font-bold">Normal Joker Lock &amp; Pickup:</strong> Normal Jokers designate a fixed rank on placement. If a player holds the natural card replacing that Joker, they can play it to pick the Joker back into their hand!
                   </li>
                 </ul>
               </div>
 
               {/* Card 4: Pukar Claim & Scoring */}
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
-                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
-                  <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl sm:rounded-3xl p-6 sm:p-7 lg:p-8 shadow-md flex flex-col gap-3 sm:gap-4">
+                <h3 className="font-black text-amber-300 text-base sm:text-lg lg:text-xl uppercase tracking-wider flex items-center gap-2.5 border-b border-slate-800/80 pb-3">
+                  <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0" />
                   <span>Pukar Claim &amp; Scoring</span>
                 </h3>
-                <ul className="list-disc list-inside space-y-1.5 text-slate-300 leading-relaxed">
+                <ul className="list-disc list-inside space-y-2.5 sm:space-y-3 text-slate-200 leading-relaxed text-sm sm:text-base lg:text-[17px]">
                   <li>
-                    <strong>Claiming a Pukar (+50 pts):</strong> When a player empties their hand and Pukars remain in the pool, they claim an entire 13-card Pukar deck and their turn continues immediately!
+                    <strong className="text-white font-bold">Claiming a Pukar (+50 pts):</strong> When a player empties their hand and Pukars remain in the pool, they claim an entire 13-card Pukar deck and their turn continues immediately!
                   </li>
                   <li>
-                    <strong>Round Conclusion:</strong> When the Pukar pool is exhausted and a player empties their hand, that player goes out (+50 pts) and the round terminates immediately.
+                    <strong className="text-white font-bold">Round Conclusion:</strong> When the Pukar pool is exhausted and a player empties their hand, that player goes out (+50 pts) and the round terminates immediately.
                   </li>
                   <li>
-                    <strong>Pure Sequence:</strong> 7+ consecutive natural cards (0 wildcards) = <span className="text-emerald-400 font-bold font-mono">+200 pts</span>.
+                    <strong className="text-white font-bold">Pure Sequence:</strong> 7+ consecutive natural cards (0 wildcards) = <span className="text-emerald-400 font-extrabold font-mono text-base sm:text-lg">+200 pts</span>.
                   </li>
                   <li>
-                    <strong>Impure Sequence:</strong> 7+ cards with 1 wildcard = <span className="text-amber-400 font-bold font-mono">+100 pts</span>.
+                    <strong className="text-white font-bold">Impure Sequence:</strong> 7+ cards with 1 wildcard = <span className="text-amber-400 font-extrabold font-mono text-base sm:text-lg">+100 pts</span>.
                   </li>
                   <li>
-                    <strong>Complete Sequence:</strong> Full 13 natural cards in suit (2-to-A) = <span className="text-emerald-400 font-bold font-mono">+500 pts</span>.
+                    <strong className="text-white font-bold">Complete Sequence:</strong> Full 13 natural cards in suit (2-to-A) = <span className="text-emerald-400 font-extrabold font-mono text-base sm:text-lg">+500 pts</span>.
                   </li>
                 </ul>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 flex justify-end shrink-0">
+            <div className="px-6 sm:px-8 py-4 sm:py-5 border-t border-slate-800 bg-slate-900/95 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setIsRulesModalOpen(false)}
-                className="h-10 px-6 rounded-xl text-xs font-black btn-game-amber cursor-pointer"
+                className="h-11 sm:h-12 px-8 sm:px-10 rounded-2xl text-sm sm:text-base font-black btn-game-amber cursor-pointer shadow-lg hover:scale-105 active:scale-95 transition-all"
               >
                 Got It, Let&apos;s Play!
               </button>
