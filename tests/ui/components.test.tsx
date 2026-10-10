@@ -427,10 +427,10 @@ describe('UI Components', () => {
         />
       );
 
-      // Verify toggle button and sort indicator are rendered
-      expect(html).toContain('data-testid="btn-toggle-meld-sort"');
-      expect(html).toContain('Sort: High → Low');
-      expect(html).toContain('High → Low');
+      // Verify sort button is removed and default indicator is rendered
+      expect(html).not.toContain('data-testid="btn-toggle-meld-sort"');
+      expect(html).not.toContain('Sort: High → Low');
+      expect(html).toContain('Sorted Highest to Lowest');
 
       // Verify cards are rendered in order: 6♠ then 5♠ then 4♠
       const idx6 = html.indexOf('aria-label="6 of SPADES"');
@@ -473,8 +473,9 @@ describe('UI Components', () => {
         />
       );
 
-      expect(html).toContain('Sort: Low → High');
-      expect(html).toContain('Low → High');
+      expect(html).not.toContain('data-testid="btn-toggle-meld-sort"');
+      expect(html).not.toContain('Sort: Low → High');
+      expect(html).toContain('Sorted Lowest to Highest');
 
       const idx4 = html.indexOf('aria-label="4 of SPADES"');
       const idx5 = html.indexOf('aria-label="5 of SPADES"');

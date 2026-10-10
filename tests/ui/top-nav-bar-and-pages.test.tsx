@@ -236,7 +236,7 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('data-testid="filter-all"');
       expect(html).toContain('data-testid="filter-team-a"');
       expect(html).toContain('data-testid="filter-team-b"');
-      expect(html).toContain('data-testid="btn-sequences-sort-toggle"');
+      expect(html).not.toContain('data-testid="btn-sequences-sort-toggle"');
     });
   });
 

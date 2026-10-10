@@ -7,7 +7,6 @@ import {
   Shield,
   Sparkles,
   CheckCircle2,
-  ArrowDownUp,
   ArrowLeft,
   Layers,
   ZoomIn,
@@ -33,7 +32,7 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
   players = [],
   className = '',
 }) => {
-  const [sortDirection, setSortDirection] = useState<MeldSortDirection>('desc');
+  const sortDirection: MeldSortDirection = 'desc';
   const [teamFilter, setTeamFilter] = useState<'ALL' | 'A' | 'B'>('ALL');
 
   const listA = melds?.A ?? [];
@@ -138,17 +137,6 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
             </button>
           </div>
 
-          {/* Sort Direction Toggle */}
-          <button
-            type="button"
-            data-testid="btn-sequences-sort-toggle"
-            onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm font-bold text-slate-200 transition-all cursor-pointer shadow-sm active:scale-95"
-            title="Toggle sequence card order"
-          >
-            <ArrowDownUp className="w-3.5 h-3.5 text-lime-400" />
-            <span>{sortDirection === 'desc' ? 'High → Low' : 'Low → High'}</span>
-          </button>
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Meld, Team, Suit, Card } from '../../engine/types';
 import { evaluateMeldScore, canAddCardsToMeld } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
-import { Shield, Sparkles, CheckCircle2, PlusCircle, ArrowDownUp, ZoomIn } from 'lucide-react';
+import { Shield, Sparkles, CheckCircle2, PlusCircle, ZoomIn } from 'lucide-react';
 
 export type MeldSortDirection = 'desc' | 'asc';
 
@@ -53,7 +53,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   cardSize = 'md',
   isRippling = false,
 }) => {
-  const [sortDirection, setSortDirection] = useState<MeldSortDirection>(defaultSortDirection);
+  const sortDirection: MeldSortDirection = defaultSortDirection;
 
   const effectiveSelectedCards = useMemo(() => {
     try {
@@ -102,16 +102,6 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
             {sortDirection === 'desc' ? 'Sorted Highest to Lowest' : 'Sorted Lowest to Highest'}
           </span>
         </div>
-        <button
-          type="button"
-          data-testid="btn-toggle-meld-sort"
-          onClick={() => setSortDirection((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-          className="flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-300 text-xs sm:text-sm font-bold text-stone-700 transition-all shadow-sm active:scale-95 cursor-pointer"
-          title="Toggle sequence card order between Highest to Lowest and Lowest to Highest"
-        >
-          <ArrowDownUp className="w-3.5 h-3.5 text-amber-600" />
-          <span>{sortDirection === 'desc' ? 'Sort: High → Low' : 'Sort: Low → High'}</span>
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-3.5">
