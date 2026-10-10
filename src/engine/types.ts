@@ -134,7 +134,8 @@ export type GameAction =
   | { type: 'DISCARD_CARD'; cardId: string }
   | { type: 'START_NEXT_ROUND' }
   | { type: 'RESET_GAME'; playerCount?: 4 | 6; playerNames?: string[] }
-  | { type: 'OPTIMIZE_DECK_ORDER' };
+  | { type: 'OPTIMIZE_DECK_ORDER' }
+  | { type: 'SELECT_PUKAR_DECK'; deckIndex: number };
 
 export interface GameError {
   code: string;

@@ -9,6 +9,13 @@ export interface JokerPromptData {
   targetMeldId?: string;
 }
 
+export interface UnclePukarChoiceData {
+  isOpen: boolean;
+  availableDecksCount: number;
+  playerName: string;
+  team: 'A' | 'B';
+}
+
 export function useGameModals() {
   const [isGodModeOpen, setIsGodModeOpen] = useState(false);
   const [isDiscardModalOpen, setIsDiscardModalOpen] = useState(false);
@@ -16,6 +23,7 @@ export function useGameModals() {
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [zoomedMeld, setZoomedMeld] = useState<Meld | null>(null);
   const [jokerPromptData, setJokerPromptData] = useState<JokerPromptData | null>(null);
+  const [unclePukarChoiceData, setUnclePukarChoiceData] = useState<UnclePukarChoiceData | null>(null);
 
   return {
     isGodModeOpen,
@@ -30,5 +38,7 @@ export function useGameModals() {
     setZoomedMeld,
     jokerPromptData,
     setJokerPromptData,
+    unclePukarChoiceData,
+    setUnclePukarChoiceData,
   };
 }

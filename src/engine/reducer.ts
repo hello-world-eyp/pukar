@@ -136,6 +136,10 @@ export function pukarReducer(
         return handleOptimizeDeckOrder(state);
       }
 
+      case 'SELECT_PUKAR_DECK': {
+        return handleSelectPukarDeck(state, action.deckIndex);
+      }
+
       default:
         return {
           state,
@@ -744,3 +748,60 @@ function handleOptimizeDeckOrder(state: GameState): {
     },
   };
 }
+
+function handleSelectPukarDeck(
+  state: GameState,
+  deckIndex: number
+): { state: GameState; error?: string } {
+  if (state.roundStatus === 'ROUND_OVER' || state.roundStatus === 'GAME_OVER') {
+    return { state, error: 'Cannot select Pukar deck: round is already over' };
+  }
+
+  const activePlayer = state.players[state.currentPlayerIndex];
+  if (!activePlayer) {
+    return { state, error: 'Active player not found' };
+  }
+
+  // Index 0 means the player confirms keeping the first/default deck
+  if (deckIndex === 0) {
+    return { state };
+  }
+
+  if (deckIndex < 0) {
+    return { state, error: `Invalid Pukar deck index: ${deckIndex}` };
+  }
+
+  // The alternative decks are in state.pukarPool (e.g., deckIndex 1 is pukarPool[0])
+  const poolIndex = deckIndex - 1;
+  const targetDeck = state.pukarPool?.[poolIndex];
+  if (!targetDeck || targetDeck.length === 0) {
+    return {
+      state,
+      error: `Pukar deck ${deckIndex + 1} is not available in the Pukar pool`,
+    };
+  }
+
+  // Swap active player's hand with targetDeck
+  const currentHandCards = [...activePlayer.hand];
+  const newPukarPool = [...state.pukarPool];
+  newPukarPool[poolIndex] = currentHandCards;
+
+  const updatedPlayers = state.players.map((p, idx) => {
+    if (idx !== state.currentPlayerIndex) return p;
+    return {
+      ...p,
+      hand: [...targetDeck],
+    };
+  });
+
+  const nextState: GameState = {
+    ...state,
+    players: updatedPlayers,
+    pukarPool: newPukarPool,
+    pukars: newPukarPool,
+    newlyPickedUpCardIds: targetDeck.map((c) => c.id),
+  };
+
+  return { state: nextState };
+}
+

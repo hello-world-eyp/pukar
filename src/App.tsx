@@ -14,6 +14,7 @@ import { JokerPromptModal } from './ui/components/JokerPromptModal';
 import { TableSeating } from './ui/components/TableSeating';
 import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
+import { UnclePukarChoiceModal } from './ui/components/UnclePukarChoiceModal';
 import { GameSetupModal } from './ui/components/GameSetupModal';
 import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
 import { MainMenu } from './ui/components/MainMenu';
@@ -121,6 +122,8 @@ export function App({
     setZoomedMeld,
     jokerPromptData,
     setJokerPromptData,
+    unclePukarChoiceData,
+    setUnclePukarChoiceData,
   } = useGameModals();
 
   // 3. User feedback, toasts, and celebration overlays
@@ -927,11 +930,42 @@ export function App({
           team={pukarSlamEvent.team}
           playerName={pukarSlamEvent.playerName}
           points={pukarSlamEvent.points}
-          onClose={() => setPukarSlamEvent(null)}
+          onClose={() => {
+            const eventInfo = pukarSlamEvent;
+            setPukarSlamEvent(null);
+            const remainingPukars =
+              'pukarPool' in activeGameState && Array.isArray(activeGameState.pukarPool)
+                ? activeGameState.pukarPool.length
+                : ((activeGameState as SanitizedGameState).pukarPoolCount ?? 0);
+
+            if (remainingPukars >= 1) {
+              setUnclePukarChoiceData({
+                isOpen: true,
+                availableDecksCount: remainingPukars + 1,
+                playerName: eventInfo?.playerName ?? 'Player',
+                team: eventInfo?.team ?? 'A',
+              });
+            }
+          }}
           onImpact={() => {
             setIsTableRippling(true);
             setTimeout(() => setIsTableRippling(false), 1200);
           }}
+        />
+      )}
+
+      {/* Uncle's Auspicious Pukar Time Deck Selection Modal */}
+      {unclePukarChoiceData && unclePukarChoiceData.isOpen && (
+        <UnclePukarChoiceModal
+          isOpen={unclePukarChoiceData.isOpen}
+          availableDecksCount={unclePukarChoiceData.availableDecksCount}
+          playerName={unclePukarChoiceData.playerName}
+          team={unclePukarChoiceData.team}
+          onSelectDeck={(deckIndex) => {
+            handleAction({ type: 'SELECT_PUKAR_DECK', deckIndex });
+            setUnclePukarChoiceData(null);
+          }}
+          onClose={() => setUnclePukarChoiceData(null)}
         />
       )}
     </div>

@@ -48,6 +48,7 @@ describe('Modular UI Hooks (Stage 2 Architecture Verification)', () => {
       expect(modalsResult!.isDiscardModalOpen).toBe(false);
       expect(modalsResult!.zoomedMeld).toBeNull();
       expect(modalsResult!.jokerPromptData).toBeNull();
+      expect(modalsResult!.unclePukarChoiceData).toBeNull();
     });
   });
 
