@@ -340,10 +340,13 @@ export function validateNewRun(
 
 /**
  * Validates whether an array of cards can form a new SET (group).
- * Requirements:
- * - Minimum 3 cards.
+ * Requirements in Pukar:
+ * - A set can only be added if there are at least 7 cards:
+ *   - Clean 7-of-a-kind: 7+ natural cards of the same rank (0 wildcards).
+ *   - Dirty 7-of-a-kind: 6+ natural cards of the same rank and 1 wildcard/joker.
+ * - Incomplete sets (like 3, 3, 3) cannot be placed on the board.
+ * - At most 1 wildcard allowed.
  * - Same rank for all natural cards.
- * - At most 1 wildcard.
  */
 export function validateNewSet(cards: Card[]): {
   valid: boolean;
@@ -351,8 +354,11 @@ export function validateNewSet(cards: Card[]): {
   error?: string;
 } {
   try {
-    if (!cards || cards.length < 3) {
-      return { valid: false, error: 'A set requires at least 3 cards' };
+    if (!cards || cards.length < 7) {
+      return {
+        valid: false,
+        error: 'A set requires at least 7 cards (7 of the same rank, or 6 of the same rank and a joker)',
+      };
     }
 
     // Check for duplicate card instances
@@ -369,6 +375,20 @@ export function validateNewSet(cards: Card[]): {
     const naturalCards = cards.filter((c) => !isWildcard(c));
     if (naturalCards.length === 0) {
       return { valid: false, error: 'A set must contain natural cards' };
+    }
+
+    if (wildcards.length === 1 && naturalCards.length < 6) {
+      return {
+        valid: false,
+        error: 'A set with a joker requires at least 6 natural cards of the same rank',
+      };
+    }
+
+    if (wildcards.length === 0 && naturalCards.length < 7) {
+      return {
+        valid: false,
+        error: 'A set without a joker requires at least 7 natural cards of the same rank',
+      };
     }
 
     const setRank = naturalCards[0].rank;
@@ -514,9 +534,16 @@ export function validateNewMeld(
       };
     }
 
+    const naturalCards = cards.filter((c) => !isWildcard(c));
+    const allSameRank =
+      naturalCards.length > 0 && naturalCards.every((c) => c.rank === naturalCards[0].rank);
+    const chosenError = allSameRank
+      ? setResult.error || runResult.error
+      : runResult.error || setResult.error;
+
     return {
       valid: false,
-      error: runResult.error || setResult.error || 'Cards do not form a valid meld',
+      error: chosenError || 'Cards do not form a valid meld',
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

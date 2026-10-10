@@ -364,8 +364,16 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
       expect(html).not.toMatch(/btn-play-meld[^>]*disabled=""/);
     });
 
-    it('shows real-time validation preview for valid new SET meld', () => {
-      const validSetCards: Card[] = [spade9, heart9, club9];
+    it('shows real-time validation preview for valid new SET meld (7 cards)', () => {
+      const validSetCards: Card[] = [
+        spade9,
+        heart9,
+        club9,
+        { id: 'd9', suit: 'DIAMONDS', rank: 9 },
+        { id: 's9_2', suit: 'SPADES', rank: 9 },
+        { id: 'h9_2', suit: 'HEARTS', rank: 9 },
+        { id: 'c9_2', suit: 'CLUBS', rank: 9 },
+      ];
       const html = renderToString(
         <ActionControls
           phase="MELD"
@@ -375,6 +383,19 @@ describe('UI Controls, Hand, Scoreboard & Inspector Components', () => {
 
       expect(html).toContain('Valid SET');
       expect(html).not.toMatch(/btn-play-meld[^>]*disabled=""/);
+    });
+
+    it('rejects 3-card incomplete set [9♠, 9♥, 9♣] with set validation error', () => {
+      const incompleteSetCards: Card[] = [spade9, heart9, club9];
+      const html = renderToString(
+        <ActionControls
+          phase="MELD"
+          selectedCards={incompleteSetCards}
+        />
+      );
+
+      expect(html).toContain('A set requires at least 7 cards');
+      expect(html).toContain('disabled');
     });
 
     it('shows validation error preview badge when cards do not form a valid meld', () => {

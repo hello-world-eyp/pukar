@@ -199,70 +199,108 @@ describe('Meld Validator', () => {
   });
 
   describe('validateNewSet', () => {
-    it('validates a clean set of same rank (3 cards)', () => {
+    it('validates a clean set of same rank (7 cards: 7 of one thing)', () => {
       const cards = [
         makeCard('c1', 'SPADES', 8),
         makeCard('c2', 'HEARTS', 8),
         makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
+        makeCard('c6', 'HEARTS', 8),
+        makeCard('c7', 'DIAMONDS', 8),
       ];
       const result = validateNewSet(cards);
       expect(result.valid).toBe(true);
-      expect(result.slots?.length).toBe(3);
+      expect(result.slots?.length).toBe(7);
       expect(result.slots?.every((s) => s.representedRank === 8)).toBe(true);
       expect(result.slots?.every((s) => !s.isWildcard)).toBe(true);
     });
 
-    it('validates a clean set of 4 cards of same rank', () => {
+    it('validates a clean set of 8 cards of same rank (multi-deck)', () => {
       const cards = [
         makeCard('c1', 'SPADES', 13),
         makeCard('c2', 'HEARTS', 13),
         makeCard('c3', 'DIAMONDS', 13),
         makeCard('c4', 'CLUBS', 13),
+        makeCard('c5', 'SPADES', 13),
+        makeCard('c6', 'HEARTS', 13),
+        makeCard('c7', 'DIAMONDS', 13),
+        makeCard('c8', 'CLUBS', 13),
       ];
       const result = validateNewSet(cards);
       expect(result.valid).toBe(true);
-      expect(result.slots?.length).toBe(4);
+      expect(result.slots?.length).toBe(8);
     });
 
-    it('rejects sets with fewer than 3 cards', () => {
-      const cards = [makeCard('c1', 'SPADES', 8), makeCard('c2', 'HEARTS', 8)];
-      const result = validateNewSet(cards);
-      expect(result.valid).toBe(false);
-      expect(result.error).toMatch(/at least 3 cards/i);
+    it('rejects sets with fewer than 7 cards (e.g. 3, 3, 3 or 6 cards)', () => {
+      const threeCards = [
+        makeCard('c1', 'SPADES', 3),
+        makeCard('c2', 'HEARTS', 3),
+        makeCard('c3', 'DIAMONDS', 3),
+      ];
+      const result3 = validateNewSet(threeCards);
+      expect(result3.valid).toBe(false);
+      expect(result3.error).toMatch(/at least 7 cards/i);
+
+      const sixCards = [
+        makeCard('c1', 'SPADES', 8),
+        makeCard('c2', 'HEARTS', 8),
+        makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
+        makeCard('c6', 'HEARTS', 8),
+      ];
+      const result6 = validateNewSet(sixCards);
+      expect(result6.valid).toBe(false);
+      expect(result6.error).toMatch(/at least 7 cards/i);
     });
 
     it('rejects sets with mixed ranks among natural cards', () => {
       const cards = [
         makeCard('c1', 'SPADES', 8),
         makeCard('c2', 'HEARTS', 8),
-        makeCard('c3', 'DIAMONDS', 9),
+        makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
+        makeCard('c6', 'HEARTS', 8),
+        makeCard('c7', 'DIAMONDS', 9),
       ];
       const result = validateNewSet(cards);
       expect(result.valid).toBe(false);
       expect(result.error).toMatch(/same rank/i);
     });
 
-    it('validates a dirty set with 1 Natural Joker', () => {
+    it('validates a dirty set with 6 of one thing and 1 Natural Joker (7 cards total)', () => {
       const cards = [
         makeCard('c1', 'SPADES', 8),
         makeCard('c2', 'HEARTS', 8),
+        makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
+        makeCard('c6', 'HEARTS', 8),
         makeCard('j1', null, 0, true),
       ];
       const result = validateNewSet(cards);
       expect(result.valid).toBe(true);
+      expect(result.slots?.length).toBe(7);
       const jokerSlot = result.slots?.find((s) => s.card.id === 'j1');
       expect(jokerSlot?.representedRank).toBe(8);
       expect(jokerSlot?.isWildcard).toBe(true);
     });
 
-    it('validates a dirty set with 1 card of rank 2', () => {
+    it('validates a dirty set with 6 of one thing and 1 card of rank 2 as wildcard (7 cards total)', () => {
       const cards = [
         makeCard('c1', 'SPADES', 8),
         makeCard('c2', 'HEARTS', 8),
+        makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
+        makeCard('c6', 'HEARTS', 8),
         makeCard('twoClubs', 'CLUBS', 2),
       ];
       const result = validateNewSet(cards);
       expect(result.valid).toBe(true);
+      expect(result.slots?.length).toBe(7);
       const twoSlot = result.slots?.find((s) => s.card.id === 'twoClubs');
       expect(twoSlot?.representedRank).toBe(8);
       expect(twoSlot?.isWildcard).toBe(true);
@@ -271,12 +309,30 @@ describe('Meld Validator', () => {
     it('rejects sets with 2+ wildcards', () => {
       const cards = [
         makeCard('c1', 'SPADES', 8),
+        makeCard('c2', 'HEARTS', 8),
+        makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
         makeCard('j1', null, 0, true),
         makeCard('twoClubs', 'CLUBS', 2),
       ];
       const result = validateNewSet(cards);
       expect(result.valid).toBe(false);
       expect(result.error).toMatch(/wildcard/i);
+    });
+
+    it('rejects a set with 5 of one thing and 1 joker (6 cards total)', () => {
+      const cards = [
+        makeCard('c1', 'SPADES', 8),
+        makeCard('c2', 'HEARTS', 8),
+        makeCard('c3', 'DIAMONDS', 8),
+        makeCard('c4', 'CLUBS', 8),
+        makeCard('c5', 'SPADES', 8),
+        makeCard('j1', null, 0, true),
+      ];
+      const result = validateNewSet(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/at least 7 cards/i);
     });
   });
 
@@ -294,11 +350,15 @@ describe('Meld Validator', () => {
       expect(result.jokerCardId).toBeUndefined();
     });
 
-    it('detects and validates a SET', () => {
+    it('detects and validates a clean SET of 7 cards (7 of one thing)', () => {
       const cards = [
         makeCard('c1', 'SPADES', 10),
         makeCard('c2', 'HEARTS', 10),
         makeCard('c3', 'DIAMONDS', 10),
+        makeCard('c4', 'CLUBS', 10),
+        makeCard('c5', 'SPADES', 10),
+        makeCard('c6', 'HEARTS', 10),
+        makeCard('c7', 'DIAMONDS', 10),
       ];
       const result = validateNewMeld(cards);
       expect(result.valid).toBe(true);
@@ -306,15 +366,31 @@ describe('Meld Validator', () => {
       expect(result.jokerCardId).toBeUndefined();
     });
 
-    it('identifies jokerCardId in a dirty meld', () => {
+    it('identifies jokerCardId in a dirty SET of 7 cards (6 tens + 1 joker)', () => {
       const cards = [
         makeCard('c1', 'SPADES', 10),
         makeCard('c2', 'HEARTS', 10),
+        makeCard('c3', 'DIAMONDS', 10),
+        makeCard('c4', 'CLUBS', 10),
+        makeCard('c5', 'SPADES', 10),
+        makeCard('c6', 'HEARTS', 10),
         makeCard('jokerX', null, 0, true),
       ];
       const result = validateNewMeld(cards);
       expect(result.valid).toBe(true);
+      expect(result.type).toBe('SET');
       expect(result.jokerCardId).toBe('jokerX');
+    });
+
+    it('rejects an incomplete 3-card set like [3, 3, 3] with helpful set error', () => {
+      const cards = [
+        makeCard('c1', 'SPADES', 3),
+        makeCard('c2', 'HEARTS', 3),
+        makeCard('c3', 'DIAMONDS', 3),
+      ];
+      const result = validateNewMeld(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/at least 7 cards/i);
     });
 
     it('rejects completely invalid combination', () => {

@@ -99,6 +99,10 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
         makeCard('8s', 'SPADES', 8),
         makeCard('8h', 'HEARTS', 8),
         makeCard('8d', 'DIAMONDS', 8),
+        makeCard('8c', 'CLUBS', 8),
+        makeCard('8s2', 'SPADES', 8),
+        makeCard('8h2', 'HEARTS', 8),
+        makeCard('8d2', 'DIAMONDS', 8),
       ];
       const result = validateNewMeld(cards, undefined, { requirePure: true });
       expect(result.valid).toBe(false);
@@ -135,15 +139,22 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
       state.turnPhase = 'MELD';
 
       // 1. Team A active player attempts to play a SET as opening meld -> REJECTED
-      const setCard1 = makeCard('set-8s', 'SPADES', 8);
-      const setCard2 = makeCard('set-8h', 'HEARTS', 8);
-      const setCard3 = makeCard('set-8d', 'DIAMONDS', 8);
+      const setCards = [
+        makeCard('set-8s', 'SPADES', 8),
+        makeCard('set-8h', 'HEARTS', 8),
+        makeCard('set-8d', 'DIAMONDS', 8),
+        makeCard('set-8c', 'CLUBS', 8),
+        makeCard('set-8s2', 'SPADES', 8),
+        makeCard('set-8h2', 'HEARTS', 8),
+        makeCard('set-8d2', 'DIAMONDS', 8),
+      ];
+      const setCardIds = setCards.map((c) => c.id);
       const extraCard = makeCard('extra-k', 'CLUBS', 13);
-      state.players[0].hand = [setCard1, setCard2, setCard3, extraCard];
+      state.players[0].hand = [...setCards, extraCard];
 
       const setAttempt = pukarReducer(state, {
         type: 'PLAY_NEW_MELD',
-        cardIds: ['set-8s', 'set-8h', 'set-8d'],
+        cardIds: setCardIds,
       });
       expect(setAttempt.error).toContain('First sequence on the board must be a pure sequence');
       expect(state.melds.A).toHaveLength(0);
@@ -176,11 +187,11 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
 
       // 4. Now Team A already has a pure sequence, so Team A can play subsequent sets and dirty runs
       const stateAfterTeamAPure = pureRunResult.state;
-      stateAfterTeamAPure.players[0].hand = [setCard1, setCard2, setCard3, extraCard];
+      stateAfterTeamAPure.players[0].hand = [...setCards, extraCard];
 
       const subsequentSetResult = pukarReducer(stateAfterTeamAPure, {
         type: 'PLAY_NEW_MELD',
-        cardIds: ['set-8s', 'set-8h', 'set-8d'],
+        cardIds: setCardIds,
       });
       expect(subsequentSetResult.error).toBeUndefined();
       expect(subsequentSetResult.state.melds.A).toHaveLength(2);
@@ -190,11 +201,11 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
         ...subsequentSetResult.state,
         currentPlayerIndex: 1, // Player 2 is on Team B
       };
-      stateForTeamB.players[1].hand = [setCard1, setCard2, setCard3, extraCard];
+      stateForTeamB.players[1].hand = [...setCards, extraCard];
 
       const teamBSetAttempt = pukarReducer(stateForTeamB, {
         type: 'PLAY_NEW_MELD',
-        cardIds: ['set-8s', 'set-8h', 'set-8d'],
+        cardIds: setCardIds,
       });
       expect(teamBSetAttempt.error).toContain('First sequence on the board must be a pure sequence');
       expect(stateForTeamB.melds.B).toHaveLength(0);
