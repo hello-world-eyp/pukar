@@ -275,7 +275,7 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
 
       // Official Scoring Matrix
       expect(html).toContain('Official Pukar Scoring Matrix');
-      expect(html).toContain('Pure 13-Card Run (2 to A)');
+      expect(html).toContain('Complete Sequence');
       expect(html).toContain('500 pts');
       expect(html).toContain('Clean 7-Card Run / Set');
       expect(html).toContain('200 pts');

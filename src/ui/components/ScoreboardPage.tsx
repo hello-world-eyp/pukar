@@ -420,8 +420,8 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
           <div className="p-3 rounded-xl bg-slate-900 border border-yellow-500/30 flex items-center justify-between">
             <div>
-              <div className="font-bold text-yellow-300">Pure 13-Card Run (2 to A)</div>
-              <div className="text-slate-400 text-[11px]">Same suit, 0 wildcards/jokers</div>
+              <div className="font-bold text-yellow-300">Complete Sequence</div>
+              <div className="text-slate-400 text-[11px]">Same suit (2 to A), 0 wildcards/jokers</div>
             </div>
             <span className="font-black text-sm text-yellow-400 font-mono">500 pts</span>
           </div>
@@ -436,7 +436,7 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
 
           <div className="p-3 rounded-xl bg-slate-900 border border-blue-500/30 flex items-center justify-between">
             <div>
-              <div className="font-bold text-blue-300">Dirty 7-Card Run / Set</div>
+              <div className="font-bold text-blue-300">Impure Sequence / Set</div>
               <div className="text-slate-400 text-[11px]">7+ cards, 1 wildcard used</div>
             </div>
             <span className="font-black text-sm text-blue-400 font-mono">100 pts</span>

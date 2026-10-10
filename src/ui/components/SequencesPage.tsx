@@ -310,13 +310,13 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
   let badgeClass = 'bg-slate-800 text-slate-200 border-slate-700';
 
   if (isPure13) {
-    badgeText = 'Pure 2-to-A Run (500 pts)';
+    badgeText = 'Complete Sequence (500 pts)';
     badgeClass =
       'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
     const isClean = points === 200;
     if (meld.type === 'RUN') {
-      badgeText = isClean ? 'Clean Run (200 pts)' : 'Dirty Run (100 pts)';
+      badgeText = isClean ? 'Clean Run (200 pts)' : 'Impure Sequence (100 pts)';
       badgeClass = isClean
         ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 font-black shadow-sm'
         : 'bg-blue-950/90 text-blue-300 border-blue-500/60 font-black shadow-sm';

@@ -399,7 +399,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   let badgeClass = '';
 
   if (isPure13) {
-    badgeText = 'Pure 2-A Run - 500 pts';
+    badgeText = 'Complete Sequence - 500 pts';
     badgeClass =
       'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
@@ -409,7 +409,7 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
         badgeText = 'Clean Run - 200 pts';
         badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
       } else {
-        badgeText = 'Dirty Run - 100 pts';
+        badgeText = 'Impure Sequence - 100 pts';
         badgeClass = 'bg-blue-950/80 text-blue-300 border border-blue-500/50 font-black shadow-sm';
       }
     } else {

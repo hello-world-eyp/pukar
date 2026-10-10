@@ -1413,10 +1413,10 @@ export function App({
                     <strong>Clean 7-Card Sequence:</strong> 7+ consecutive natural cards (0 wildcards) = <span className="text-emerald-400 font-bold font-mono">+200 pts</span>.
                   </li>
                   <li>
-                    <strong>Dirty 7-Card Sequence:</strong> 7+ cards with 1 wildcard = <span className="text-amber-400 font-bold font-mono">+100 pts</span>.
+                    <strong>Impure Sequence:</strong> 7+ cards with 1 wildcard = <span className="text-amber-400 font-bold font-mono">+100 pts</span>.
                   </li>
                   <li>
-                    <strong>Pure 13-Card Run (2-to-A):</strong> Full 13 natural cards in suit = <span className="text-emerald-400 font-bold font-mono">+500 pts</span>.
+                    <strong>Complete Sequence:</strong> Full 13 natural cards in suit (2-to-A) = <span className="text-emerald-400 font-bold font-mono">+500 pts</span>.
                   </li>
                 </ul>
               </div>

@@ -112,7 +112,13 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
               <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-2">
                 <span>{`${meld.cards.length} cards total`}</span>
                 <span>•</span>
-                <span className="text-amber-400 font-bold">{description}</span>
+                <span className="text-amber-400 font-bold">
+                  {isPure13
+                    ? 'Complete Sequence'
+                    : isComplete7 && meld.type === 'RUN' && points === 100
+                    ? 'Impure Sequence'
+                    : description}
+                </span>
                 <span>•</span>
                 <span className="text-emerald-400 font-mono font-bold">{`${points} pts`}</span>
               </p>
@@ -176,12 +182,12 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
               <span className="font-bold text-slate-200">Rules & Point Value:</span>
               <span>
                 {isPure13
-                  ? 'Pure 13-Card Sequence (2 through Ace natural, 0 wildcards) scores 500 bonus points.'
+                  ? 'Complete Sequence (2 through Ace natural, 0 wildcards) scores 500 bonus points.'
                   : isComplete7
                   ? points === 200
                     ? 'Clean Sequence (7+ consecutive cards without wildcards or twos) scores 200 bonus points.'
-                    : 'Dirty Sequence (7+ cards utilizing a 2 or Joker wildcard) scores 100 bonus points.'
-                  : 'Incomplete sequence (fewer than 7 cards). Once completed to 7 cards, it awards full clean or dirty sequence points.'}
+                    : 'Impure Sequence (7+ cards utilizing a 2 or Joker wildcard) scores 100 bonus points.'
+                  : 'Incomplete sequence (fewer than 7 cards). Once completed to 7 cards, it awards full clean or impure sequence points.'}
               </span>
             </div>
           </div>

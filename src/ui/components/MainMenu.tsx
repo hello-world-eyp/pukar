@@ -221,7 +221,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <div className="w-full max-w-4xl grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 flex flex-col items-center">
             <span className="text-amber-400 font-extrabold text-sm mb-0.5">200 / 100 Pts</span>
-            <span className="text-[11px] text-slate-400">Clean &amp; Dirty 7s</span>
+            <span className="text-[11px] text-slate-400">Clean &amp; Impure 7s</span>
           </div>
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 flex flex-col items-center">
             <span className="text-amber-400 font-extrabold text-sm mb-0.5">Movable 2s</span>
@@ -233,7 +233,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </div>
           <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 flex flex-col items-center">
             <span className="text-amber-400 font-extrabold text-sm mb-0.5">500 Pts</span>
-            <span className="text-[11px] text-slate-400">Pure 13-Card Run</span>
+            <span className="text-[11px] text-slate-400">Complete Sequence</span>
           </div>
         </div>
       </main>
