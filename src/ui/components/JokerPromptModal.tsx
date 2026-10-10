@@ -71,14 +71,14 @@ export const JokerPromptModal: React.FC<JokerPromptModalProps> = ({
             >
               Designate Joker Position
             </h2>
-            <p className="text-xs sm:text-sm text-amber-300 font-medium">
+            <p className="text-xs text-amber-300 font-medium">
               Choose whether you want this Joker to be the highest card or the lowest card in the sequence
             </p>
           </div>
         </div>
 
         {/* Informative Note */}
-        <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 flex items-start gap-3 text-xs sm:text-sm text-slate-200 leading-relaxed shadow-sm">
+        <div className="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 flex items-start gap-3 text-xs text-slate-200 leading-relaxed shadow-sm">
           <HelpCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
           <p>
             The Normal Joker will remain fixed at this chosen rank on the table. It cannot shift up
@@ -136,14 +136,14 @@ export const JokerPromptModal: React.FC<JokerPromptModalProps> = ({
                         </span>
                       )}
                     </div>
-                    <div className="text-xs sm:text-sm text-slate-300 font-medium">
+                    <div className="text-xs text-slate-300 font-medium">
                       {`Plays as ${rankLabel} of ${option.suit.toLowerCase()}`}
                     </div>
                   </div>
                 </div>
 
                 {/* Action CTA Button */}
-                <div className="ml-3 sm:ml-4 shrink-0 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-amber-500/20 border-2 border-amber-500/50 text-amber-300 text-xs sm:text-sm font-black group-hover:bg-amber-400 group-hover:text-slate-950 transition-all shadow-md group-hover:scale-105">
+                <div className="ml-3 sm:ml-4 shrink-0 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-amber-500/20 border-2 border-amber-500/50 text-amber-300 text-xs font-black group-hover:bg-amber-400 group-hover:text-slate-950 transition-all shadow-md group-hover:scale-105">
                   Select
                 </div>
               </button>
@@ -156,7 +156,7 @@ export const JokerPromptModal: React.FC<JokerPromptModalProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 transition cursor-pointer"
+            className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 transition cursor-pointer"
           >
             Cancel
           </button>

@@ -93,7 +93,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className={`relative w-full max-w-2xl game-modal-frame rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
+        className={`relative w-full max-w-3xl lg:max-w-4xl game-modal-frame rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
       >
         {/* HEADER HERO BANNER */}
         <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 px-6 py-6 border-b border-slate-800 text-center relative">
@@ -142,7 +142,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                   <span className="font-extrabold text-blue-300 text-base">Team A</span>
                 </div>
                 {determinedWinner === 'A' && (
-                  <span className="text-[11px] font-bold text-amber-400 bg-amber-950/60 border border-amber-600/40 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-amber-400 bg-amber-950/60 border border-amber-600/40 px-2.5 py-0.5 rounded-full">
                     Winner
                   </span>
                 )}
@@ -150,7 +150,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
 
               {/* Itemized List */}
               <div className="flex flex-col gap-2 text-xs">
-                <div className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
+                <div className="font-semibold text-slate-400 uppercase tracking-wider text-xs">
                   Sequences Itemization:
                 </div>
                 {meldDetailsA.length === 0 ? (
@@ -207,7 +207,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                   <span className="font-extrabold text-amber-300 text-base">Team B</span>
                 </div>
                 {determinedWinner === 'B' && (
-                  <span className="text-[11px] font-bold text-amber-400 bg-amber-950/60 border border-amber-600/40 px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-amber-400 bg-amber-950/60 border border-amber-600/40 px-2.5 py-0.5 rounded-full">
                     Winner
                   </span>
                 )}
@@ -215,7 +215,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
 
               {/* Itemized List */}
               <div className="flex flex-col gap-2 text-xs">
-                <div className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">
+                <div className="font-semibold text-slate-400 uppercase tracking-wider text-xs">
                   Sequences Itemization:
                 </div>
                 {meldDetailsB.length === 0 ? (

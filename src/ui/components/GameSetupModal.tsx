@@ -111,7 +111,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                   Royal Rummy
                 </span>
               </div>
-              <p className="text-sm sm:text-base text-slate-300 font-medium mt-0.5">
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
                 Configure player count and names before dealing
               </p>
             </div>
@@ -133,8 +133,8 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
         <form onSubmit={handleSubmit} className="flex flex-col gap-6 sm:gap-7">
           {/* Step 1: Player Count Selector */}
           <div className="flex flex-col gap-2.5">
-            <label className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-              <Users className="w-5 h-5 text-amber-400" />
+            <label className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
+              <Users className="w-4 h-4 text-amber-400" />
               <span>Select Player Count</span>
             </label>
             <div className="grid grid-cols-2 gap-4 sm:gap-5" role="group" aria-label="Player count selection">
@@ -151,7 +151,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                 <Users className="w-6 h-6 shrink-0" />
                 <div className="text-left min-w-0">
                   <div className="text-base sm:text-lg font-black leading-tight">4 Players</div>
-                  <div className={`text-xs sm:text-sm mt-0.5 ${playerCount === 4 ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
+                  <div className={`text-xs mt-0.5 ${playerCount === 4 ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
                     2 Teams of 2 (2 Pukars)
                   </div>
                 </div>
@@ -170,7 +170,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                 <Users className="w-6 h-6 shrink-0" />
                 <div className="text-left min-w-0">
                   <div className="text-base sm:text-lg font-black leading-tight">6 Players</div>
-                  <div className={`text-xs sm:text-sm mt-0.5 ${playerCount === 6 ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
+                  <div className={`text-xs mt-0.5 ${playerCount === 6 ? 'text-slate-950 font-bold' : 'text-slate-400'}`}>
                     2 Teams of 3 (3 Pukars)
                   </div>
                 </div>
@@ -181,14 +181,14 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
           {/* Step 2: Custom Player Names Organized by Team */}
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <label className="text-sm sm:text-base font-extrabold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
+              <label className="text-xs font-black uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" />
                 <span>Player Names & Teams</span>
               </label>
               <button
                 type="button"
                 onClick={handleResetDefaults}
-                className="text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer"
+                className="text-xs font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-amber-500/10 transition-colors cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset to Defaults</span>
@@ -199,8 +199,8 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
               {/* TEAM A COLUMN */}
               <div className="bg-gradient-to-b from-blue-950/60 to-blue-950/40 border-2 border-blue-500/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-xl">
                 <div className="flex items-center justify-between border-b border-blue-500/30 pb-3">
-                  <div className="flex items-center gap-2 font-black text-sm sm:text-base text-blue-200">
-                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 shrink-0" />
+                  <div className="flex items-center gap-2 font-black text-xs text-blue-200">
+                    <Shield className="w-4 h-4 text-blue-400 shrink-0" />
                     <span>Team A (Partners)</span>
                   </div>
                   <span className="text-xs bg-blue-500/25 text-blue-200 px-2.5 py-1 rounded-lg border border-blue-400/40 font-bold">
@@ -213,11 +213,11 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                     <div key={`input-p-${playerIndex}`} className="flex flex-col gap-1.5">
                       <label
                         htmlFor={`input-player-${playerIndex + 1}`}
-                        className="text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-between"
+                        className="text-xs font-bold text-slate-200 flex items-center justify-between"
                       >
                         <span>{`Seat ${playerIndex + 1}`}</span>
                         {playerIndex === 0 && (
-                          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-2 py-0.5 rounded-md">
+                          <span className="text-xs font-black uppercase tracking-wider text-emerald-300 bg-emerald-950/80 border border-emerald-500/50 px-2 py-0.5 rounded-md">
                             First Turn
                           </span>
                         )}
@@ -230,7 +230,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                         value={names[playerIndex] || ''}
                         onChange={(e) => handleNameChange(playerIndex, e.target.value)}
                         placeholder={`Player ${playerIndex + 1}`}
-                        className="w-full h-11 sm:h-12 bg-slate-900/90 border-2 border-slate-700 focus:border-blue-400 rounded-xl px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-blue-400/25 transition-all font-bold shadow-inner"
+                        className="w-full h-11 sm:h-12 bg-slate-900/90 border-2 border-slate-700 focus:border-blue-400 rounded-xl px-4 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-blue-400/25 transition-all shadow-inner"
                       />
                     </div>
                   ))}
@@ -240,8 +240,8 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
               {/* TEAM B COLUMN */}
               <div className="bg-gradient-to-b from-amber-950/60 to-amber-950/40 border-2 border-amber-500/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4 shadow-xl">
                 <div className="flex items-center justify-between border-b border-amber-500/30 pb-3">
-                  <div className="flex items-center gap-2 font-black text-sm sm:text-base text-amber-200">
-                    <Shield className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 shrink-0" />
+                  <div className="flex items-center gap-2 font-black text-xs text-amber-200">
+                    <Shield className="w-4 h-4 text-amber-400 shrink-0" />
                     <span>Team B (Partners)</span>
                   </div>
                   <span className="text-xs bg-amber-500/25 text-amber-200 px-2.5 py-1 rounded-lg border border-amber-400/40 font-bold">
@@ -254,7 +254,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                     <div key={`input-p-${playerIndex}`} className="flex flex-col gap-1.5">
                       <label
                         htmlFor={`input-player-${playerIndex + 1}`}
-                        className="text-xs sm:text-sm font-bold text-slate-200 flex items-center justify-between"
+                        className="text-xs font-bold text-slate-200 flex items-center justify-between"
                       >
                         <span>{`Seat ${playerIndex + 1}`}</span>
                       </label>
@@ -266,7 +266,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
                         value={names[playerIndex] || ''}
                         onChange={(e) => handleNameChange(playerIndex, e.target.value)}
                         placeholder={`Player ${playerIndex + 1}`}
-                        className="w-full h-11 sm:h-12 bg-slate-900/90 border-2 border-slate-700 focus:border-amber-400 rounded-xl px-4 py-2 text-sm sm:text-base text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-amber-400/25 transition-all font-bold shadow-inner"
+                        className="w-full h-11 sm:h-12 bg-slate-900/90 border-2 border-slate-700 focus:border-amber-400 rounded-xl px-4 py-2 text-xs font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-amber-400/25 transition-all shadow-inner"
                       />
                     </div>
                   ))}
@@ -275,7 +275,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
             </div>
 
             <div className="bg-slate-900/80 border border-slate-800 p-3 sm:p-3.5 rounded-2xl text-center">
-              <p className="text-xs sm:text-sm text-slate-300 font-medium">
+              <p className="text-xs text-slate-300 font-medium">
                 💡 Partners sit across from each other and share cumulative sequence points and Pukar bonuses.
               </p>
             </div>
@@ -287,7 +287,7 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl sm:rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-sm sm:text-base font-bold transition-colors cursor-pointer border border-slate-700"
+                className="h-11 sm:h-12 px-6 sm:px-7 rounded-xl sm:rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-colors cursor-pointer border border-slate-700"
               >
                 Cancel
               </button>
@@ -296,9 +296,9 @@ export const GameSetupModal: React.FC<GameSetupModalProps> = ({
             <button
               type="submit"
               data-testid="btn-start-game"
-              className="flex-1 sm:flex-none h-11 sm:h-12 px-8 sm:px-10 rounded-xl sm:rounded-2xl btn-game-amber font-black text-sm sm:text-base flex items-center justify-center gap-2.5 cursor-pointer shadow-xl shadow-amber-950/60 hover:scale-[1.01] active:scale-[0.99] transition-all"
+              className="flex-1 sm:flex-none h-11 sm:h-12 px-8 sm:px-10 rounded-xl sm:rounded-2xl btn-game-amber font-black text-xs flex items-center justify-center gap-2.5 cursor-pointer shadow-xl shadow-amber-950/60 hover:scale-[1.01] active:scale-[0.99] transition-all"
             >
-              <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-slate-950" />
+              <Play className="w-4 h-4 fill-slate-950" />
               <span>{isGameInProgress ? 'Restart & Deal' : 'Start Game'}</span>
             </button>
           </div>

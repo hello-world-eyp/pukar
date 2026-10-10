@@ -1262,24 +1262,24 @@ export function App({
           role="dialog"
           aria-modal="true"
           aria-labelledby="rules-modal-title"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-150"
           onClick={() => setIsRulesModalOpen(false)}
         >
           <div
-            className="game-modal-frame rounded-3xl max-w-2xl w-full max-h-[88vh] shadow-2xl flex flex-col overflow-hidden text-slate-100"
+            className="game-modal-frame rounded-3xl max-w-4xl lg:max-w-5xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden text-slate-100 border-2 border-amber-500/30"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/95 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-inner">
                   <HelpCircle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 id="rules-modal-title" className="text-xl font-black tracking-tight text-white">
+                  <h2 id="rules-modal-title" className="text-xl sm:text-2xl font-black tracking-tight text-white">
                     Pukar Rules &amp; Gameplay
                   </h2>
-                  <p className="text-xs text-amber-300/80 font-medium">Royal Partner Rummy Guide</p>
+                  <p className="text-xs text-amber-300 font-semibold">Royal Partner Rummy Guide</p>
                 </div>
               </div>
               <button
@@ -1292,87 +1292,100 @@ export function App({
               </button>
             </div>
 
-            {/* Content */}
-            <div className="p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-slate-200 leading-relaxed">
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-                <h3 className="font-black text-amber-300 text-sm mb-1.5 flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-amber-400" />
-                  Objective &amp; Teams
+            {/* Content Body: Spacious 2-Column Responsive Grid */}
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 text-xs text-slate-200 leading-relaxed">
+              {/* Card 1: Objective & Teams */}
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
+                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                  <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Objective &amp; Teams</span>
                 </h3>
-                <p>
-                  Pukar is played in 2 teams (Team A vs Team B). Players take alternating turns.
-                  Form melds on your team&apos;s board, empty your hand to claim Pukar decks (+50 pts
-                  each), and maximize your team&apos;s cumulative score.
+                <p className="text-slate-300 leading-relaxed">
+                  Pukar is played in <strong>2 partner teams</strong> (Team A vs Team B) with alternating seating. Partners collaborate and share sequences, score points together, and aim to maximize their team&apos;s cumulative score.
                 </p>
-              </div>
-
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-                <h3 className="font-black text-amber-300 text-sm mb-1.5">Turn Sequence</h3>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-200">
+                <ul className="list-disc list-inside space-y-1.5 text-slate-300 pt-1">
                   <li>
-                    <strong className="text-amber-300 font-bold">DRAW:</strong> Draw 1 card from the face-down
-                    Stock deck OR take the entire face-up Discard pile (&ldquo;The Bottom&rdquo;).
+                    <strong>Target:</strong> Form valid sequences on the board and empty your hand to claim high-value Pukar bonus decks.
                   </li>
                   <li>
-                    <strong className="text-amber-300 font-bold">MELD:</strong> (Optional) Play new 3+ card
-                    runs or sets, or add cards to existing team melds. You can make multiple melds!
-                  </li>
-                  <li>
-                    <strong className="text-amber-300 font-bold">DISCARD:</strong> (Mandatory) Discard 1 card
-                    face-up to the Bottom to end your turn.
-                  </li>
-                </ol>
-              </div>
-
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-                <h3 className="font-black text-amber-300 text-sm mb-1.5 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  Wildcards &amp; Melds
-                </h3>
-                <ul className="list-disc list-inside space-y-1.5 text-slate-200">
-                  <li>
-                    All <strong>2s</strong> and <strong>Natural Jokers</strong> are wildcards.
-                  </li>
-                  <li>
-                    A meld requires at least 3 cards and must have at least as many natural cards as
-                    wildcards (wildcard ratio ≤ 50%).
-                  </li>
-                  <li>
-                    <strong>Movable 2:</strong> In a sequence, a 2 can float and shift position as
-                    natural cards fill its represented slot!
+                    <strong>Partnership:</strong> Both partners can add cards to their team&apos;s existing sequences on the table.
                   </li>
                 </ul>
               </div>
 
-              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 shadow-sm">
-                <h3 className="font-black text-amber-300 text-sm mb-1.5 flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-amber-400" />
-                  Pukar Claim &amp; Scoring
+              {/* Card 2: Turn Sequence */}
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
+                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Turn Sequence</span>
                 </h3>
-                <ul className="list-disc list-inside space-y-1.5 text-slate-200">
+                <ol className="list-decimal list-inside space-y-2 text-slate-300 leading-relaxed">
                   <li>
-                    When a player empties their hand and Pukars remain, they claim a 13-card Pukar deck
-                    and score an immediate <strong>+50 points</strong>!
+                    <strong className="text-amber-300 font-bold">DRAW:</strong> Draw 1 card from the face-down Stock deck OR take the entire face-up Discard pile (&ldquo;The Bottom&rdquo;).
                   </li>
                   <li>
-                    When claiming a Pukar (by melding or discarding), your turn does not end! You immediately
-                    receive the 13 cards, continue in Sequence phase without needing to draw, and only end your
-                    turn by dropping another card.
+                    <strong className="text-amber-300 font-bold">SEQUENCE:</strong> (Optional) Play new 3+ card sequences, or add cards to your team&apos;s existing table sequences. You can make multiple plays in one turn!
                   </li>
                   <li>
-                    If all Pukars have run out and a player empties their hand, that also counts as claiming
-                    a Pukar for <strong>+50 points</strong> (with no cards dealt), and the round concludes immediately.
+                    <strong className="text-amber-300 font-bold">DISCARD:</strong> (Mandatory) Discard 1 card face-up to the pile to conclude your turn.
+                  </li>
+                </ol>
+              </div>
+
+              {/* Card 3: Wildcards & Sequences */}
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
+                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                  <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Wildcards &amp; Sequence Rules</span>
+                </h3>
+                <ul className="list-disc list-inside space-y-2 text-slate-300 leading-relaxed">
+                  <li>
+                    <strong className="text-amber-300 font-bold">Pure Opening Sequence:</strong> Each team&apos;s very first sequence on the board must be a <strong>pure run</strong> (no jokers/wildcards; suited card 2 can only be at its natural rank 2 position). Sets are not allowed until this pure run is placed.
+                  </li>
+                  <li>
+                    <strong>All 2s &amp; Natural Jokers:</strong> Function as wildcards. At most 1 wildcard is permitted per sequence.
+                  </li>
+                  <li>
+                    <strong>Movable 2:</strong> In a run, a card 2 can dynamically float and shift position as natural cards arrive to fill its slot.
+                  </li>
+                  <li>
+                    <strong>Normal Joker Lock &amp; Pickup:</strong> Normal Jokers designate a fixed rank on placement. If a player holds the natural card replacing that Joker, they can play it to pick the Joker back into their hand!
+                  </li>
+                </ul>
+              </div>
+
+              {/* Card 4: Pukar Claim & Scoring */}
+              <div className="bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4.5 shadow-sm flex flex-col gap-2">
+                <h3 className="font-black text-amber-300 text-xs uppercase tracking-wider flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                  <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Pukar Claim &amp; Scoring</span>
+                </h3>
+                <ul className="list-disc list-inside space-y-1.5 text-slate-300 leading-relaxed">
+                  <li>
+                    <strong>Claiming a Pukar (+50 pts):</strong> When a player empties their hand and Pukars remain in the pool, they claim an entire 13-card Pukar deck and their turn continues immediately!
+                  </li>
+                  <li>
+                    <strong>Round Conclusion:</strong> When the Pukar pool is exhausted and a player empties their hand, that player goes out (+50 pts) and the round terminates immediately.
+                  </li>
+                  <li>
+                    <strong>Clean 7-Card Sequence:</strong> 7+ consecutive natural cards (0 wildcards) = <span className="text-emerald-400 font-bold font-mono">+200 pts</span>.
+                  </li>
+                  <li>
+                    <strong>Dirty 7-Card Sequence:</strong> 7+ cards with 1 wildcard = <span className="text-amber-400 font-bold font-mono">+100 pts</span>.
+                  </li>
+                  <li>
+                    <strong>Pure 13-Card Run (2-to-A):</strong> Full 13 natural cards in suit = <span className="text-emerald-400 font-bold font-mono">+500 pts</span>.
                   </li>
                 </ul>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 flex justify-end">
+            <div className="px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 flex justify-end shrink-0">
               <button
                 type="button"
                 onClick={() => setIsRulesModalOpen(false)}
-                className="h-10 px-5 rounded-xl text-xs sm:text-sm font-black btn-game-amber cursor-pointer"
+                className="h-10 px-6 rounded-xl text-xs font-black btn-game-amber cursor-pointer"
               >
                 Got It, Let&apos;s Play!
               </button>
