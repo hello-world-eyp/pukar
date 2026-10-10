@@ -22,15 +22,13 @@ export interface TopNavBarProps {
   roomCode?: string | null;
 }
 
-// Distinctive vibrant avatar colors matching modern design
-const AVATAR_PALETTE = [
-  { bg: 'bg-cyan-200 text-cyan-950 ring-cyan-400' },
-  { bg: 'bg-lime-200 text-lime-950 ring-lime-400' },
-  { bg: 'bg-pink-300 text-pink-950 ring-pink-400' },
-  { bg: 'bg-amber-300 text-amber-950 ring-amber-400' },
-  { bg: 'bg-purple-300 text-purple-950 ring-purple-400' },
-  { bg: 'bg-emerald-300 text-emerald-950 ring-emerald-400' },
-];
+// Distinctive team avatar shades:
+// Team A: Cyan shade (Player 1, 3, 5)
+// Team B: Amber shade (Player 2, 4, 6)
+export const TEAM_AVATAR_PALETTE: Record<'A' | 'B', { bg: string }> = {
+  A: { bg: 'bg-cyan-200 text-cyan-950 ring-cyan-400' },
+  B: { bg: 'bg-amber-300 text-amber-950 ring-amber-400' },
+};
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   activeTab,
@@ -143,7 +141,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           {players.map((player, idx) => {
             const isTurn = idx === currentPlayerIndex;
             const initial = player.name ? player.name.trim().charAt(0).toUpperCase() : `${idx + 1}`;
-            const palette = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
+            const isTeamA = player.team ? player.team === 'A' : idx % 2 === 0;
+            const palette = isTeamA ? TEAM_AVATAR_PALETTE.A : TEAM_AVATAR_PALETTE.B;
 
             return (
               <div

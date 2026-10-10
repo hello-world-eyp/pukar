@@ -122,6 +122,36 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('(0)');
     });
 
+    it('renders 2 distinct team avatar shades (cyan for Team A, amber for Team B) so teams are visually distinguishable', () => {
+      const players: PlayerInfo[] = [
+        { id: 'p1', name: 'P1', team: 'A' },
+        { id: 'p2', name: 'P2', team: 'B' },
+        { id: 'p3', name: 'P3', team: 'A' },
+        { id: 'p4', name: 'P4', team: 'B' },
+        { id: 'p5', name: 'P5', team: 'A' },
+        { id: 'p6', name: 'P6', team: 'B' },
+      ];
+
+      const html = renderToString(
+        <TopNavBar
+          activeTab="table"
+          onTabChange={vi.fn()}
+          onOpenRules={vi.fn()}
+          players={players}
+          currentPlayerIndex={0}
+        />
+      );
+
+      // Team A players have cyan avatar badges
+      expect(html).toContain('bg-cyan-200 text-cyan-950 ring-cyan-400');
+      // Team B players have amber avatar badges
+      expect(html).toContain('bg-amber-300 text-amber-950 ring-amber-400');
+      // Old multi-color palette items (lime, pink, purple) are no longer used
+      expect(html).not.toContain('bg-lime-200');
+      expect(html).not.toContain('bg-pink-300');
+      expect(html).not.toContain('bg-purple-300');
+    });
+
     it('renders sound toggle, new game, and exit to menu buttons', () => {
       const html = renderToString(
         <TopNavBar
