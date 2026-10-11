@@ -7,6 +7,8 @@ export interface PukarEventData {
   team: 'A' | 'B';
   playerName: string;
   points: number;
+  playerIndex?: number;
+  playerId?: string;
 }
 
 export interface JokerPickupData {
@@ -15,6 +17,7 @@ export interface JokerPickupData {
 
 export interface UseGameNotificationsProps {
   initialPukarBanner?: PukarEventData | null;
+  initialPukarSlamEvent?: PukarEventData | null;
   initialJokerPickupBanner?: JokerPickupData | null;
   initialExhaustNotification?: string | null;
   appMode: 'LOCAL' | 'MULTIPLAYER';
@@ -24,6 +27,7 @@ export interface UseGameNotificationsProps {
 
 export function useGameNotifications({
   initialPukarBanner,
+  initialPukarSlamEvent,
   initialJokerPickupBanner,
   initialExhaustNotification,
   appMode,
@@ -33,7 +37,9 @@ export function useGameNotifications({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [disconnectToast, setDisconnectToast] = useState<string | null>(null);
   const [pukarBanner, setPukarBanner] = useState<PukarEventData | null>(initialPukarBanner ?? null);
-  const [pukarSlamEvent, setPukarSlamEvent] = useState<PukarEventData | null>(null);
+  const [pukarSlamEvent, setPukarSlamEvent] = useState<PukarEventData | null>(
+    initialPukarSlamEvent ?? initialPukarBanner ?? null
+  );
   const [isTableRippling, setIsTableRippling] = useState(false);
   const [exhaustNotification, setExhaustNotification] = useState<string | null>(
     initialExhaustNotification ?? null
@@ -138,11 +144,14 @@ export function useGameNotifications({
     const nextPukarsB = current.pukarsClaimed?.B ?? 0;
     if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
       const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
-      const actor = current.players[prev.currentPlayerIndex];
+      const claimingPlayerIndex = prev.currentPlayerIndex;
+      const actor = current.players[claimingPlayerIndex];
       const pukarInfo: PukarEventData = {
         team: claimingTeam,
-        playerName: actor?.name ?? `Player ${prev.currentPlayerIndex + 1}`,
+        playerName: actor?.name ?? `Player ${claimingPlayerIndex + 1}`,
         points: 50,
+        playerIndex: claimingPlayerIndex,
+        playerId: actor?.id,
       };
       setPukarBanner(pukarInfo);
       setPukarSlamEvent(pukarInfo);

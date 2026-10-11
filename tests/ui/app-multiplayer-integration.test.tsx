@@ -5,6 +5,7 @@ import { App, parseRoomCodeFromUrl } from '../../src/App';
 import { ModeSelectorModal } from '../../src/ui/components/ModeSelectorModal';
 import { MultiplayerStatusBar } from '../../src/ui/components/multiplayer/MultiplayerStatusBar';
 import { TableSeating } from '../../src/ui/components/TableSeating';
+import { UnclePukarChoiceModal } from '../../src/ui/components/UnclePukarChoiceModal';
 import { UseMultiplayerGameReturn } from '../../src/network/types';
 import { SanitizedGameState, Card } from '../../src/engine/types';
 
@@ -845,16 +846,22 @@ describe('App Multiplayer Integration & Mode Switching', () => {
       });
 
       it('reads from window.location.search when urlSearch is omitted', () => {
-        const originalLocation = (globalThis as any).window?.location;
-        (globalThis as any).window = {
-          location: {
-            search: '?room=TEST',
-          },
-        };
+        const originalWindow = (globalThis as any).window;
+        try {
+          (globalThis as any).window = {
+            location: {
+              search: '?room=TEST',
+            },
+          };
 
-        expect(parseRoomCodeFromUrl()).toBe('TEST');
-
-        (globalThis as any).window.location = originalLocation;
+          expect(parseRoomCodeFromUrl()).toBe('TEST');
+        } finally {
+          if (originalWindow === undefined) {
+            delete (globalThis as any).window;
+          } else {
+            (globalThis as any).window = originalWindow;
+          }
+        }
       });
     });
 
@@ -900,29 +907,254 @@ describe('App Multiplayer Integration & Mode Switching', () => {
       });
 
       it('boots into MULTIPLAYER mode when window.location.search contains ?room=LUCK', () => {
-        const originalLocation = (globalThis as any).window?.location;
-        (globalThis as any).window = {
-          location: {
-            search: '?room=LUCK',
-            origin: 'http://localhost:5173',
-            pathname: '/',
-          },
-        };
+        const originalWindow = (globalThis as any).window;
+        try {
+          (globalThis as any).window = {
+            location: {
+              search: '?room=LUCK',
+              origin: 'http://localhost:5173',
+              pathname: '/',
+            },
+          };
 
-        const mockHook = createMockMultiplayerHook({
-          isInGame: false,
-          roomCode: null,
-        });
+          const mockHook = createMockMultiplayerHook({
+            isInGame: false,
+            roomCode: null,
+          });
 
-        const html = renderToString(
-          <App multiplayerGameHook={mockHook} />
-        );
+          const html = renderToString(
+            <App multiplayerGameHook={mockHook} />
+          );
 
-        expect(html).not.toContain('data-testid="main-menu"');
-        expect(html).toContain('data-testid="multiplayer-hub-container"');
-        expect(html).toContain('value="LUCK"');
+          expect(html).not.toContain('data-testid="main-menu"');
+          expect(html).toContain('data-testid="multiplayer-hub-container"');
+          expect(html).toContain('value="LUCK"');
+        } finally {
+          if (originalWindow === undefined) {
+            delete (globalThis as any).window;
+          } else {
+            (globalThis as any).window = originalWindow;
+          }
+        }
+      });
+    });
+  });
 
-        (globalThis as any).window.location = originalLocation;
+  /* ========================================================================
+   * 8. Auspicious Pukar Time (Uncle Modal) Multiplayer Targeting
+   * ======================================================================== */
+  describe("Sid's Auspicious Pukar Time Deck Selection Modal Isolation", () => {
+    it('shows the Uncle Pukar deck selection modal to the claiming player in multiplayer', () => {
+      const gameState = { ...createMockSanitizedGameState(), currentPlayerIndex: 0 };
+      const harnessAlice = setupStatefulReactHooks();
+      const mockHookAlice = createMockMultiplayerHook({
+        isInGame: true,
+        roomCode: 'PUKR',
+        mySeatIndex: 0, // Alice (Seat 0)
+        myPlayerId: 'p_0',
+        gameState,
+      });
+
+      harnessAlice.resetIndices();
+      const treeAlice1 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookAlice,
+        initialPukarBanner: {
+          team: 'A',
+          playerName: 'Alice',
+          points: 50,
+          playerIndex: 0,
+          playerId: 'p_0',
+        },
+      });
+
+      const pukarSlamAlice = findElement(
+        treeAlice1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlamAlice).toBeDefined();
+
+      // Alice's slam overlay closes
+      pukarSlamAlice.props.onClose();
+
+      // Pass 2: Re-render Alice's client with updated modal state
+      harnessAlice.resetIndices();
+      const treeAlice2 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookAlice,
+      });
+
+      const modalAlice = findElement(treeAlice2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modalAlice).not.toBeNull();
+      expect(modalAlice.props.isOpen).toBe(true);
+      expect(modalAlice.props.playerName).toBe('Alice');
+    });
+
+    it('does NOT show the Uncle Pukar deck selection modal to other players in multiplayer', () => {
+      const gameState = createMockSanitizedGameState();
+      const harnessBob = setupStatefulReactHooks();
+      const mockHookBob = createMockMultiplayerHook({
+        isInGame: true,
+        roomCode: 'PUKR',
+        mySeatIndex: 1, // Bob (Seat 1) - NOT the claiming player
+        myPlayerId: 'p_1',
+        gameState,
+      });
+
+      harnessBob.resetIndices();
+      // Pukar event occurred for Alice (Seat 0)
+      const treeBob1 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookBob,
+        initialPukarBanner: {
+          team: 'A',
+          playerName: 'Alice',
+          points: 50,
+          playerIndex: 0,
+          playerId: 'p_0',
+        },
+      });
+
+      const pukarSlamBob = findElement(
+        treeBob1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlamBob).toBeDefined();
+
+      // Bob's slam overlay closes
+      pukarSlamBob.props.onClose();
+
+      // Pass 2: Re-render Bob's client
+      harnessBob.resetIndices();
+      const treeBob2 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookBob,
+      });
+
+      // Uncle modal must NOT exist for Bob
+      const modalBob = findElement(treeBob2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modalBob).toBeNull();
+    });
+
+    it('does NOT show the Uncle Pukar deck selection modal to spectators in multiplayer', () => {
+      const gameState = createMockSanitizedGameState();
+      const harnessSpec = setupStatefulReactHooks();
+      const mockHookSpec = createMockMultiplayerHook({
+        isInGame: true,
+        roomCode: 'PUKR',
+        mySeatIndex: null, // Spectator
+        myPlayerId: 'p_spec',
+        gameState,
+      });
+
+      harnessSpec.resetIndices();
+      const treeSpec1 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookSpec,
+        initialPukarBanner: {
+          team: 'A',
+          playerName: 'Alice',
+          points: 50,
+          playerIndex: 0,
+          playerId: 'p_0',
+        },
+      });
+
+      const pukarSlamSpec = findElement(
+        treeSpec1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlamSpec).toBeDefined();
+      pukarSlamSpec.props.onClose();
+
+      harnessSpec.resetIndices();
+      const treeSpec2 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookSpec,
+      });
+
+      const modalSpec = findElement(treeSpec2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modalSpec).toBeNull();
+    });
+
+    it('shows the Uncle Pukar modal normally in local pass-and-play mode', () => {
+      const harnessLocal = setupStatefulReactHooks();
+      harnessLocal.resetIndices();
+      const treeLocal1 = App({
+        initialMode: 'LOCAL',
+        initialPukarBanner: {
+          team: 'A',
+          playerName: 'Alice',
+          points: 50,
+          playerIndex: 0,
+          playerId: 'p_0',
+        },
+      });
+
+      const pukarSlamLocal = findElement(
+        treeLocal1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlamLocal).toBeDefined();
+      pukarSlamLocal.props.onClose();
+
+      harnessLocal.resetIndices();
+      const treeLocal2 = App({
+        initialMode: 'LOCAL',
+      });
+
+      const modalLocal = findElement(treeLocal2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modalLocal).not.toBeNull();
+      expect(modalLocal.props.isOpen).toBe(true);
+    });
+
+    it('dispatches SELECT_PUKAR_DECK to multiplayerHook when claiming player selects deck', () => {
+      const gameState = { ...createMockSanitizedGameState(), currentPlayerIndex: 0 };
+      const dispatchAction = vi.fn();
+      const harnessAlice = setupStatefulReactHooks();
+      const mockHookAlice = createMockMultiplayerHook({
+        isInGame: true,
+        roomCode: 'PUKR',
+        mySeatIndex: 0,
+        myPlayerId: 'p_0',
+        gameState,
+        dispatchAction,
+      });
+
+      harnessAlice.resetIndices();
+      const treeAlice1 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookAlice,
+        initialPukarBanner: {
+          team: 'A',
+          playerName: 'Alice',
+          points: 50,
+          playerIndex: 0,
+          playerId: 'p_0',
+        },
+      });
+
+      const pukarSlam = findElement(
+        treeAlice1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlam).toBeDefined();
+      pukarSlam.props.onClose();
+
+      harnessAlice.resetIndices();
+      const treeAlice2 = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHookAlice,
+      });
+
+      const modalAlice = findElement(treeAlice2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modalAlice).not.toBeNull();
+
+      // Alice selects alternative Deck 1
+      modalAlice.props.onSelectDeck(1);
+      expect(dispatchAction).toHaveBeenCalledWith({
+        type: 'SELECT_PUKAR_DECK',
+        deckIndex: 1,
       });
     });
   });

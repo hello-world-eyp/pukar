@@ -175,11 +175,14 @@ export function useLocalGame({
         const nextPukarsB = next.pukarsClaimed?.B ?? 0;
         if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
           const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
-          const actor = gameState.players[gameState.currentPlayerIndex];
+          const claimingPlayerIndex = gameState.currentPlayerIndex;
+          const actor = gameState.players[claimingPlayerIndex];
           const pukarInfo: PukarEventData = {
             team: claimingTeam,
-            playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
+            playerName: actor?.name ?? `Player ${claimingPlayerIndex + 1}`,
             points: 50,
+            playerIndex: claimingPlayerIndex,
+            playerId: actor?.id,
           };
           triggerPukarCelebration(pukarInfo);
           triggerSound('pukar');

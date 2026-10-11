@@ -14,6 +14,8 @@ export interface UnclePukarChoiceData {
   availableDecksCount: number;
   playerName: string;
   team: 'A' | 'B';
+  playerIndex?: number;
+  playerId?: string;
 }
 
 export function useGameModals() {

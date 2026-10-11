@@ -50,6 +50,15 @@ export interface AppProps {
     team: 'A' | 'B';
     playerName: string;
     points: number;
+    playerIndex?: number;
+    playerId?: string;
+  } | null;
+  initialPukarSlamEvent?: {
+    team: 'A' | 'B';
+    playerName: string;
+    points: number;
+    playerIndex?: number;
+    playerId?: string;
   } | null;
   initialJokerPickupBanner?: {
     playerName: string;
@@ -86,6 +95,7 @@ export function App({
   multiplayerGameHook,
   initialUrlRoomCode,
   initialPukarBanner,
+  initialPukarSlamEvent,
   initialJokerPickupBanner,
   initialExhaustNotification,
 }: AppProps = {}) {
@@ -187,6 +197,7 @@ export function App({
     clearAllNotifications,
   } = useGameNotifications({
     initialPukarBanner,
+    initialPukarSlamEvent,
     initialJokerPickupBanner,
     initialExhaustNotification,
     appMode,
@@ -988,12 +999,32 @@ export function App({
                 : ((activeGameState as SanitizedGameState).pukarPoolCount ?? 0);
 
             if (remainingPukars >= 1) {
-              setUnclePukarChoiceData({
-                isOpen: true,
-                availableDecksCount: remainingPukars + 1,
-                playerName: eventInfo?.playerName ?? 'Player',
-                team: eventInfo?.team ?? 'A',
-              });
+              // In multiplayer, the Uncle Pukar deck selection modal must ONLY be shown
+              // to the specific player who earned the Pukar. Other players must not see it.
+              const isClaimingPlayer =
+                appMode !== 'MULTIPLAYER' ||
+                (multiplayerHook.mySeatIndex !== null &&
+                  eventInfo?.playerIndex !== undefined &&
+                  multiplayerHook.mySeatIndex === eventInfo.playerIndex) ||
+                Boolean(
+                  multiplayerHook.myPlayerId &&
+                    eventInfo?.playerId &&
+                    multiplayerHook.myPlayerId === eventInfo.playerId
+                ) ||
+                (multiplayerHook.mySeatIndex !== null &&
+                  Boolean(eventInfo?.playerName) &&
+                  activeGameState.players[multiplayerHook.mySeatIndex]?.name === eventInfo?.playerName);
+
+              if (isClaimingPlayer) {
+                setUnclePukarChoiceData({
+                  isOpen: true,
+                  availableDecksCount: remainingPukars + 1,
+                  playerName: eventInfo?.playerName ?? 'Player',
+                  team: eventInfo?.team ?? 'A',
+                  playerIndex: eventInfo?.playerIndex,
+                  playerId: eventInfo?.playerId,
+                });
+              }
             }
           }}
           onImpact={() => {
@@ -1004,7 +1035,14 @@ export function App({
       )}
 
       {/* Sid's Auspicious Pukar Time Deck Selection Modal */}
-      {unclePukarChoiceData && unclePukarChoiceData.isOpen && (
+      {unclePukarChoiceData &&
+        unclePukarChoiceData.isOpen &&
+        (appMode !== 'MULTIPLAYER' ||
+          (multiplayerHook.mySeatIndex !== null &&
+            (unclePukarChoiceData.playerIndex === undefined ||
+              multiplayerHook.mySeatIndex === unclePukarChoiceData.playerIndex) &&
+            (unclePukarChoiceData.playerId === undefined ||
+              multiplayerHook.myPlayerId === unclePukarChoiceData.playerId))) && (
         <UnclePukarChoiceModal
           isOpen={unclePukarChoiceData.isOpen}
           availableDecksCount={unclePukarChoiceData.availableDecksCount}

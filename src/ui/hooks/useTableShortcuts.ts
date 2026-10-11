@@ -8,7 +8,7 @@ export interface UseTableShortcutsProps {
 
 export function useTableShortcuts({ currentScreen, onAction }: UseTableShortcutsProps) {
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
     if (currentScreen !== 'GAME') return;
 
     let lastJTime = 0;
