@@ -30,19 +30,10 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
   const round = gameState.round ?? 1;
   const roundStatus: RoundStatus = gameState.roundStatus ?? 'PLAYING';
 
-  // Total scores
-  const rawTotalScores = gameState.totalScores ?? gameState.scores ?? { A: 0, B: 0 };
-  const rawRoundScores = gameState.roundScores ?? { A: 0, B: 0 };
-
-  const totalScores = {
-    A: Math.max(rawTotalScores.A ?? 0, (gameState.scores?.A ?? 0)),
-    B: Math.max(rawTotalScores.B ?? 0, (gameState.scores?.B ?? 0)),
-  };
-
-  const roundScores = {
-    A: rawRoundScores.A ?? 0,
-    B: rawRoundScores.B ?? 0,
-  };
+  const isCurrentRoundOver =
+    roundStatus === 'ROUND_OVER' ||
+    roundStatus === 'GAME_OVER' ||
+    Boolean((gameState as any).isRoundOver);
 
   const pukarsClaimed = gameState.pukarsClaimed ?? { A: 0, B: 0 };
   const pukarPointsA = (pukarsClaimed.A ?? 0) * 50;
@@ -76,6 +67,29 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
 
   const meldPointsA = meldDetailsA.reduce((sum, item) => sum + item.evaluation.points, 0);
   const meldPointsB = meldDetailsB.reduce((sum, item) => sum + item.evaluation.points, 0);
+
+  // Total scores
+  const rawTotalScores = gameState.totalScores ?? gameState.scores ?? { A: 0, B: 0 };
+  const rawRoundScores = gameState.roundScores ?? { A: 0, B: 0 };
+
+  // When round is over, rawRoundScores and rawTotalScores already include meld points from calculateRoundEndScores.
+  // During active play (mid-round), meldPoints must be added so the live total and round scores reflect active sequence points!
+  const unrecordedMeldPointsA = isCurrentRoundOver
+    ? 0
+    : Math.max(0, (pukarPointsA + meldPointsA) - (rawRoundScores.A ?? 0));
+  const unrecordedMeldPointsB = isCurrentRoundOver
+    ? 0
+    : Math.max(0, (pukarPointsB + meldPointsB) - (rawRoundScores.B ?? 0));
+
+  const roundScores = {
+    A: (rawRoundScores.A ?? 0) + unrecordedMeldPointsA,
+    B: (rawRoundScores.B ?? 0) + unrecordedMeldPointsB,
+  };
+
+  const totalScores = {
+    A: Math.max(rawTotalScores.A ?? 0, (gameState.scores?.A ?? 0)) + unrecordedMeldPointsA,
+    B: Math.max(rawTotalScores.B ?? 0, (gameState.scores?.B ?? 0)) + unrecordedMeldPointsB,
+  };
 
   // Teams & Players
   const players = gameState.players ?? [];
