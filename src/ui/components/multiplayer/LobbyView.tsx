@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Copy, Check, Play, UserMinus } from 'lucide-react';
+import { Copy, Check, Play, UserMinus, Share2 } from 'lucide-react';
 import { LobbySeat } from '../../../network/types';
 
 export interface LobbyViewProps {
@@ -7,6 +7,7 @@ export interface LobbyViewProps {
   seats: LobbySeat[];
   myPlayerId: string | null;
   isHost: boolean;
+  inviteUrl?: string;
   onSelectSeat: (seatIndex: number) => void;
   onStartGame: () => void;
   onKickPlayer?: (seatIndex: number) => void;
@@ -18,23 +19,41 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   seats,
   myPlayerId,
   isHost,
+  inviteUrl,
   onSelectSeat,
   onStartGame,
   onKickPlayer,
   onLeaveLobby,
 }) => {
-  const [copied, setCopied] = useState(false);
-  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const timerCodeRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerLinkRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const occupiedCount = seats.filter((s) => s.playerId !== null).length;
   const isFull = seats.length > 0 && occupiedCount === seats.length;
 
   React.useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerCodeRef.current) clearTimeout(timerCodeRef.current);
+      if (timerLinkRef.current) clearTimeout(timerLinkRef.current);
     };
   }, []);
 
-  const handleCopy = () => {
+  const getInviteLink = () => {
+    if (inviteUrl) return inviteUrl;
+    try {
+      if (typeof window !== 'undefined' && window.location) {
+        const origin = window.location.origin || '';
+        const pathname = window.location.pathname || '';
+        return `${origin}${pathname}?room=${roomCode}`;
+      }
+    } catch {
+      // Safe fallback
+    }
+    return `?room=${roomCode}`;
+  };
+
+  const handleCopyCode = () => {
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(roomCode).catch(() => {});
@@ -42,9 +61,23 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
     } catch {
       // Safe fallback if clipboard API is not available
     }
-    setCopied(true);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setCopied(false), 2000);
+    setCopiedCode(true);
+    if (timerCodeRef.current) clearTimeout(timerCodeRef.current);
+    timerCodeRef.current = setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleCopyLink = () => {
+    const link = getInviteLink();
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(link).catch(() => {});
+      }
+    } catch {
+      // Safe fallback if clipboard API is not available
+    }
+    setCopiedLink(true);
+    if (timerLinkRef.current) clearTimeout(timerLinkRef.current);
+    timerLinkRef.current = setTimeout(() => setCopiedLink(false), 2000);
   };
 
   return (
@@ -56,27 +89,49 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-stone-800">
         <div>
           <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block">Room Code</span>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
             <span
               data-testid="room-code-display"
-              className="text-3xl font-black tracking-widest text-amber-400 font-mono select-all"
+              className="text-3xl font-black tracking-widest text-amber-400 font-mono select-all mr-1"
             >
               {roomCode}
             </span>
             <button
               data-testid="btn-copy-code"
-              onClick={handleCopy}
-              className="p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5"
+              onClick={handleCopyCode}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold"
               title="Copy Room Code"
               aria-label="Copy Room Code"
             >
-              {copied ? (
+              {copiedCode ? (
                 <>
                   <Check data-testid="copy-success-indicator" className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-bold text-emerald-400">Copied!</span>
                 </>
               ) : (
-                <Copy className="w-4 h-4" />
+                <>
+                  <Copy className="w-4 h-4" />
+                  <span className="hidden sm:inline">Copy Code</span>
+                </>
+              )}
+            </button>
+            <button
+              data-testid="btn-copy-invite-link"
+              onClick={handleCopyLink}
+              className="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 hover:text-amber-200 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold shadow-sm"
+              title="Copy Shareable Invite Link"
+              aria-label="Copy Invite Link"
+            >
+              {copiedLink ? (
+                <>
+                  <Check data-testid="copy-link-success-indicator" className="w-4 h-4 text-emerald-400" />
+                  <span className="text-xs font-black text-emerald-400">Link Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4" />
+                  <span>Copy Invite Link</span>
+                </>
               )}
             </button>
           </div>

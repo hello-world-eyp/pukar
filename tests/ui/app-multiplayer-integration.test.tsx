@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { App } from '../../src/App';
+import { App, parseRoomCodeFromUrl } from '../../src/App';
 import { ModeSelectorModal } from '../../src/ui/components/ModeSelectorModal';
 import { MultiplayerStatusBar } from '../../src/ui/components/multiplayer/MultiplayerStatusBar';
 import { TableSeating } from '../../src/ui/components/TableSeating';
@@ -814,6 +814,116 @@ describe('App Multiplayer Integration & Mode Switching', () => {
       expect(html).toContain('data-testid="multiplayer-status-bar"');
       expect(html).toContain('NONE');
       expect(html).not.toContain('data-testid="status-seat-badge"');
+    });
+  });
+
+  /* ========================================================================
+   * 7. 1-Click Invite Links & URL Room Code Auto-Join
+   * ======================================================================== */
+  describe('1-Click Shareable Invite Links & URL Auto-Join', () => {
+    describe('parseRoomCodeFromUrl helper', () => {
+      it('extracts 4-letter uppercase room code from standard query string', () => {
+        expect(parseRoomCodeFromUrl('?room=ABCD')).toBe('ABCD');
+        expect(parseRoomCodeFromUrl('?room=wxyz')).toBe('WXYZ');
+      });
+
+      it('extracts room code when multiple query parameters exist', () => {
+        expect(parseRoomCodeFromUrl('?source=share&room=PKAR&ref=123')).toBe('PKAR');
+        expect(parseRoomCodeFromUrl('?a=1&b=2&room=Z9X8')).toBe('Z9X8');
+      });
+
+      it('returns null when room parameter is missing or empty', () => {
+        expect(parseRoomCodeFromUrl('?ref=share')).toBeNull();
+        expect(parseRoomCodeFromUrl('?room=')).toBeNull();
+        expect(parseRoomCodeFromUrl('')).toBeNull();
+        expect(parseRoomCodeFromUrl(undefined)).toBeNull();
+      });
+
+      it('returns null when room code is less than 4 characters', () => {
+        expect(parseRoomCodeFromUrl('?room=ABC')).toBeNull();
+        expect(parseRoomCodeFromUrl('?room=12')).toBeNull();
+      });
+
+      it('reads from window.location.search when urlSearch is omitted', () => {
+        const originalLocation = (globalThis as any).window?.location;
+        (globalThis as any).window = {
+          location: {
+            search: '?room=TEST',
+          },
+        };
+
+        expect(parseRoomCodeFromUrl()).toBe('TEST');
+
+        (globalThis as any).window.location = originalLocation;
+      });
+    });
+
+    describe('App auto-connect and lobby pre-fill via initialUrlRoomCode or URL query', () => {
+      it('boots directly into MULTIPLAYER mode and MULTIPLAYER_HUB when initialUrlRoomCode is passed', () => {
+        const mockHook = createMockMultiplayerHook({
+          isInGame: false,
+          roomCode: null,
+        });
+
+        const html = renderToString(
+          <App
+            initialUrlRoomCode="ABCD"
+            multiplayerGameHook={mockHook}
+          />
+        );
+
+        // Does not show Main Menu
+        expect(html).not.toContain('data-testid="main-menu"');
+        // Mounts multiplayer hub
+        expect(html).toContain('data-testid="multiplayer-hub-container"');
+        // Join Room view is rendered with the room code prefilled
+        expect(html).toContain('data-testid="input-room-code"');
+        expect(html).toContain('value="ABCD"');
+        expect(html).toContain('data-testid="btn-join-room"');
+      });
+
+      it('correctly handles full query string like "?room=WXYZ" in initialUrlRoomCode', () => {
+        const mockHook = createMockMultiplayerHook({
+          isInGame: false,
+          roomCode: null,
+        });
+
+        const html = renderToString(
+          <App
+            initialUrlRoomCode="?room=WXYZ"
+            multiplayerGameHook={mockHook}
+          />
+        );
+
+        expect(html).toContain('data-testid="multiplayer-hub-container"');
+        expect(html).toContain('value="WXYZ"');
+      });
+
+      it('boots into MULTIPLAYER mode when window.location.search contains ?room=LUCK', () => {
+        const originalLocation = (globalThis as any).window?.location;
+        (globalThis as any).window = {
+          location: {
+            search: '?room=LUCK',
+            origin: 'http://localhost:5173',
+            pathname: '/',
+          },
+        };
+
+        const mockHook = createMockMultiplayerHook({
+          isInGame: false,
+          roomCode: null,
+        });
+
+        const html = renderToString(
+          <App multiplayerGameHook={mockHook} />
+        );
+
+        expect(html).not.toContain('data-testid="main-menu"');
+        expect(html).toContain('data-testid="multiplayer-hub-container"');
+        expect(html).toContain('value="LUCK"');
+
+        (globalThis as any).window.location = originalLocation;
+      });
     });
   });
 });

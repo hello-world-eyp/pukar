@@ -7,11 +7,13 @@ import { AlertCircle, X, ArrowLeft } from 'lucide-react';
 export interface MultiplayerHubProps {
   onBackToMenu: () => void;
   multiplayerHook: UseMultiplayerGameReturn;
+  initialRoomCode?: string;
 }
 
 export const MultiplayerHub: React.FC<MultiplayerHubProps> = ({
   onBackToMenu,
   multiplayerHook,
+  initialRoomCode,
 }) => {
   const {
     connectionStatus,
@@ -79,6 +81,8 @@ export const MultiplayerHub: React.FC<MultiplayerHubProps> = ({
             onCreateRoom={createRoom}
             onJoinRoom={joinRoom}
             isConnected={connectionStatus === 'CONNECTED'}
+            initialTab={initialRoomCode ? 'JOIN' : undefined}
+            initialRoomCode={initialRoomCode}
           />
           <button
             type="button"

@@ -434,6 +434,8 @@ describe('Multiplayer UI Components', () => {
       // Room code banner
       expect(html).toContain('GAME');
       expect(html).toContain('data-testid="btn-copy-code"');
+      expect(html).toContain('data-testid="btn-copy-invite-link"');
+      expect(html).toContain('Copy Invite Link');
       expect(html).toContain('Waiting for players (2/4)');
 
       // Alternating team tags
@@ -554,6 +556,80 @@ describe('Multiplayer UI Components', () => {
       const copyBtn = findByTestId(tree, 'btn-copy-code');
       expect(() => copyBtn.props.onClick()).not.toThrow();
       expect(writeTextMock).toHaveBeenCalledWith('ERR1');
+    });
+
+    it('copies invite link to clipboard when copy invite link button is clicked', () => {
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      (globalThis as any).navigator = {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      };
+
+      const tree = LobbyView({
+        roomCode: 'TEST',
+        seats: mockSeats4p,
+        myPlayerId: 'p1',
+        isHost: true,
+        onSelectSeat: vi.fn(),
+        onStartGame: vi.fn(),
+        onLeaveLobby: vi.fn(),
+      });
+
+      const copyLinkBtn = findByTestId(tree, 'btn-copy-invite-link');
+      expect(copyLinkBtn).toBeDefined();
+      copyLinkBtn.props.onClick();
+
+      expect(writeTextMock).toHaveBeenCalledWith('?room=TEST');
+    });
+
+    it('uses custom inviteUrl prop when provided to copy invite link', () => {
+      const writeTextMock = vi.fn().mockResolvedValue(undefined);
+      (globalThis as any).navigator = {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      };
+
+      const tree = LobbyView({
+        roomCode: 'TEST',
+        seats: mockSeats4p,
+        myPlayerId: 'p1',
+        isHost: true,
+        inviteUrl: 'https://custom-pukar.domain.com/play?room=TEST',
+        onSelectSeat: vi.fn(),
+        onStartGame: vi.fn(),
+        onLeaveLobby: vi.fn(),
+      });
+
+      const copyLinkBtn = findByTestId(tree, 'btn-copy-invite-link');
+      expect(copyLinkBtn).toBeDefined();
+      copyLinkBtn.props.onClick();
+
+      expect(writeTextMock).toHaveBeenCalledWith('https://custom-pukar.domain.com/play?room=TEST');
+    });
+
+    it('safely handles clipboard rejection without throwing when copying invite link', () => {
+      const writeTextMock = vi.fn().mockRejectedValue(new Error('Permission denied'));
+      (globalThis as any).navigator = {
+        clipboard: {
+          writeText: writeTextMock,
+        },
+      };
+
+      const tree = LobbyView({
+        roomCode: 'ERR1',
+        seats: mockSeats4p,
+        myPlayerId: 'p1',
+        isHost: true,
+        onSelectSeat: vi.fn(),
+        onStartGame: vi.fn(),
+        onLeaveLobby: vi.fn(),
+      });
+
+      const copyLinkBtn = findByTestId(tree, 'btn-copy-invite-link');
+      expect(() => copyLinkBtn.props.onClick()).not.toThrow();
+      expect(writeTextMock).toHaveBeenCalledWith('?room=ERR1');
     });
 
     it('calls onSelectSeat when claim seat button is clicked', () => {
@@ -805,6 +881,20 @@ describe('Multiplayer UI Components', () => {
       backBtn.props.onClick();
 
       expect(onBackToMenu).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes initialRoomCode and initialTab="JOIN" down to CreateJoinView when initialRoomCode is provided', () => {
+      const mockHook = createMockHook();
+      const tree = MultiplayerHub({
+        onBackToMenu: vi.fn(),
+        multiplayerHook: mockHook,
+        initialRoomCode: 'WXYZ',
+      });
+
+      const createJoinView = findElement(tree, (el) => el.type === CreateJoinView);
+      expect(createJoinView).toBeDefined();
+      expect(createJoinView.props.initialRoomCode).toBe('WXYZ');
+      expect(createJoinView.props.initialTab).toBe('JOIN');
     });
   });
 });

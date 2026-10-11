@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { GameState, SanitizedGameState } from './engine/types';
 import { TopNavBar } from './ui/components/TopNavBar';
 import { SequencesPage } from './ui/components/SequencesPage';
@@ -45,6 +45,7 @@ export interface AppProps {
   initialMode?: 'LOCAL' | 'MULTIPLAYER';
   initialScreen?: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB';
   multiplayerGameHook?: UseMultiplayerGameReturn;
+  initialUrlRoomCode?: string;
   initialPukarBanner?: {
     team: 'A' | 'B';
     playerName: string;
@@ -56,24 +57,63 @@ export interface AppProps {
   initialExhaustNotification?: string | null;
 }
 
+/**
+ * Extracts a 4-letter room code from a URL search query string (e.g. "?room=ABCD")
+ */
+export function parseRoomCodeFromUrl(urlSearch?: string): string | null {
+  try {
+    const search =
+      urlSearch !== undefined
+        ? urlSearch
+        : typeof window !== 'undefined'
+        ? window.location?.search ?? ''
+        : '';
+    if (!search) return null;
+    const match = search.match(/[?&]room=([a-zA-Z0-9]{4})/i);
+    if (match) {
+      return match[1].toUpperCase();
+    }
+  } catch {
+    // Ignore URL parse error
+  }
+  return null;
+}
+
 export function App({
   initialState,
   initialMode,
   initialScreen,
   multiplayerGameHook,
+  initialUrlRoomCode,
   initialPukarBanner,
   initialJokerPickupBanner,
   initialExhaustNotification,
 }: AppProps = {}) {
+  // Extract room code if user arrived via shareable invite link (?room=ABCD)
+  const detectedUrlRoomCode = useMemo(() => {
+    if (initialUrlRoomCode) {
+      const match =
+        initialUrlRoomCode.match(/[?&]room=([a-zA-Z0-9]{4})/i) ||
+        initialUrlRoomCode.match(/^([a-zA-Z0-9]{4})$/i);
+      if (match) return match[1].toUpperCase();
+      return initialUrlRoomCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 4) || null;
+    }
+    return parseRoomCodeFromUrl();
+  }, [initialUrlRoomCode]);
+
   // ---------------------------------------------------------------------------
   // Application Mode & Navigation State
   // ---------------------------------------------------------------------------
-  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(initialMode ?? 'LOCAL');
+  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(
+    initialMode ?? (detectedUrlRoomCode ? 'MULTIPLAYER' : 'LOCAL')
+  );
   const [isModeModalOpen, setIsModeModalOpen] = useState(false);
 
   const defaultInitialScreen: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB' =
     initialScreen ??
-    (initialState
+    (detectedUrlRoomCode
+      ? 'MULTIPLAYER_HUB'
+      : initialState
       ? 'GAME'
       : initialMode === 'LOCAL'
       ? 'GAME'
@@ -481,6 +521,7 @@ export function App({
               setCurrentScreen('MENU');
             }}
             multiplayerHook={multiplayerHook}
+            initialRoomCode={detectedUrlRoomCode ?? undefined}
           />
         </main>
       ) : activeGameTab === 'sequences' ? (
