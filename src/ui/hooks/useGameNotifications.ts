@@ -15,11 +15,18 @@ export interface JokerPickupData {
   playerName: string;
 }
 
+export interface PureSequenceCelebrationData {
+  team: 'A' | 'B';
+  playerName: string;
+  suit?: 'SPADES' | 'HEARTS' | 'DIAMONDS' | 'CLUBS';
+}
+
 export interface UseGameNotificationsProps {
   initialPukarBanner?: PukarEventData | null;
   initialPukarSlamEvent?: PukarEventData | null;
   initialJokerPickupBanner?: JokerPickupData | null;
   initialExhaustNotification?: string | null;
+  initialPureSequenceCelebration?: PureSequenceCelebrationData | null;
   appMode: 'LOCAL' | 'MULTIPLAYER';
   multiplayerHook: UseMultiplayerGameReturn;
   triggerSound: (effect: SoundEffect) => void;
@@ -30,6 +37,7 @@ export function useGameNotifications({
   initialPukarSlamEvent,
   initialJokerPickupBanner,
   initialExhaustNotification,
+  initialPureSequenceCelebration,
   appMode,
   multiplayerHook,
   triggerSound,
@@ -46,6 +54,9 @@ export function useGameNotifications({
   );
   const [jokerPickupBanner, setJokerPickupBanner] = useState<JokerPickupData | null>(
     initialJokerPickupBanner ?? null
+  );
+  const [pureSequenceCelebration, setPureSequenceCelebration] = useState<PureSequenceCelebrationData | null>(
+    initialPureSequenceCelebration ?? null
   );
 
   // Auto-dismiss error message after 4.5 seconds
@@ -167,6 +178,23 @@ export function useGameNotifications({
       });
       triggerSound('pukar');
     }
+
+    // Detect Pure 13-Card Sequence (500 pts) in multiplayer
+    const prevMelds = [...(prev.melds?.A ?? []), ...(prev.melds?.B ?? [])];
+    const currentMelds = [...(current.melds?.A ?? []), ...(current.melds?.B ?? [])];
+    const newPureMeld = currentMelds.find(
+      (cm) =>
+        (cm.isPure13 || cm.points === 500) &&
+        !prevMelds.some((pm) => pm.id === cm.id && (pm.isPure13 || pm.points === 500))
+    );
+    if (newPureMeld) {
+      const actor = current.players[current.currentPlayerIndex];
+      setPureSequenceCelebration({
+        team: newPureMeld.team,
+        playerName: actor?.name ?? `Team ${newPureMeld.team}`,
+        suit: newPureMeld.suit,
+      });
+    }
   }, [isMultiplayerActive, multiplayerHook.gameState, triggerSound]);
 
   const triggerPukarCelebration = useCallback((info: PukarEventData) => {
@@ -176,12 +204,17 @@ export function useGameNotifications({
     setTimeout(() => setIsTableRippling(false), 1400);
   }, []);
 
+  const triggerPureSequenceCelebration = useCallback((data: PureSequenceCelebrationData) => {
+    setPureSequenceCelebration(data);
+  }, []);
+
   const clearAllNotifications = useCallback(() => {
     setPukarBanner(null);
     setPukarSlamEvent(null);
     setIsTableRippling(false);
     setExhaustNotification(null);
     setJokerPickupBanner(null);
+    setPureSequenceCelebration(null);
   }, []);
 
   return {
@@ -199,7 +232,10 @@ export function useGameNotifications({
     setExhaustNotification,
     jokerPickupBanner,
     setJokerPickupBanner,
+    pureSequenceCelebration,
+    setPureSequenceCelebration,
     triggerPukarCelebration,
+    triggerPureSequenceCelebration,
     clearAllNotifications,
   };
 }

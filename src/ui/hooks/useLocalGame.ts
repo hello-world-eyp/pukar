@@ -15,7 +15,7 @@ import {
 } from '../../engine/meld-validator';
 import { UseMultiplayerGameReturn } from '../../network/types';
 import { SoundEffect } from '../sound';
-import { PukarEventData, JokerPickupData } from './useGameNotifications';
+import { PukarEventData, JokerPickupData, PureSequenceCelebrationData } from './useGameNotifications';
 import { JokerPromptData } from './useGameModals';
 
 export interface UseLocalGameProps {
@@ -25,6 +25,7 @@ export interface UseLocalGameProps {
   triggerSound: (effect: SoundEffect) => void;
   setErrorMessage: (msg: string | null) => void;
   triggerPukarCelebration: (info: PukarEventData) => void;
+  triggerPureSequenceCelebration?: (data: PureSequenceCelebrationData) => void;
   setExhaustNotification: (msg: string | null) => void;
   setJokerPickupBanner: (info: JokerPickupData | null) => void;
   clearAllNotifications: () => void;
@@ -38,6 +39,7 @@ export function useLocalGame({
   triggerSound,
   setErrorMessage,
   triggerPukarCelebration,
+  triggerPureSequenceCelebration,
   setExhaustNotification,
   setJokerPickupBanner,
   clearAllNotifications,
@@ -228,6 +230,25 @@ export function useLocalGame({
             playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
           });
           triggerSound('pukar');
+        }
+
+        // Detect Pure 13-Card Sequence (500 pts) in local play
+        if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
+          const prevMelds = [...(gameState.melds?.A ?? []), ...(gameState.melds?.B ?? [])];
+          const nextMelds = [...(next.melds?.A ?? []), ...(next.melds?.B ?? [])];
+          const newPureMeld = nextMelds.find(
+            (nm) =>
+              (nm.isPure13 || nm.points === 500) &&
+              !prevMelds.some((pm) => pm.id === nm.id && (pm.isPure13 || pm.points === 500))
+          );
+          if (newPureMeld) {
+            const actor = gameState.players[gameState.currentPlayerIndex];
+            triggerPureSequenceCelebration?.({
+              team: newPureMeld.team,
+              playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
+              suit: newPureMeld.suit,
+            });
+          }
         }
 
         // Clean up selection state

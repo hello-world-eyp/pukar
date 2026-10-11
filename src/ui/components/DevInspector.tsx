@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Player, SanitizedPlayer } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
-import { Eye, EyeOff, Wrench, Layers, ChevronDown, ChevronUp } from 'lucide-react';
+import { Eye, EyeOff, Wrench, Layers, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 
 export interface DevInspectorProps {
   players: Array<Player | SanitizedPlayer>;
@@ -15,6 +15,7 @@ export interface DevInspectorProps {
   discardPileCount?: number;
   isGodModeOpen?: boolean;
   onToggleGodMode?: () => void;
+  onPreviewCelebration?: () => void;
   newlyPickedUpCardIds?: string[];
   className?: string;
 }
@@ -31,6 +32,7 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
   discardPileCount,
   isGodModeOpen: controlledGodMode,
   onToggleGodMode,
+  onPreviewCelebration,
   newlyPickedUpCardIds,
   className = '',
 }) => {
@@ -158,26 +160,42 @@ export const DevInspector: React.FC<DevInspectorProps> = ({
           )}
         </div>
 
-        {/* GOD MODE TOGGLE BUTTON */}
-        <button
-          type="button"
-          data-testid="btn-toggle-godmode"
-          onClick={handleToggleGodMode}
-          aria-expanded={isGodModeOpen}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border self-start sm:self-auto shrink-0 ${
-            isGodModeOpen
-              ? 'bg-purple-600/90 text-white border-purple-400 shadow-md shadow-purple-900/40 ring-1 ring-purple-400'
-              : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700'
-          }`}
-        >
-          {isGodModeOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-          <span>God Mode</span>
-          {isGodModeOpen ? (
-            <ChevronUp className="w-3 h-3 text-purple-200" />
-          ) : (
-            <ChevronDown className="w-3 h-3 text-slate-400" />
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap sm:flex-nowrap">
+          {/* 500-PT CELEBRATION PREVIEW BUTTON */}
+          {onPreviewCelebration && (
+            <button
+              type="button"
+              data-testid="btn-preview-500-celebration"
+              onClick={onPreviewCelebration}
+              className="px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 hover:from-amber-400 hover:to-yellow-300 text-slate-950 border border-amber-400 shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 transition-transform active:scale-95"
+              title="Preview 10s 500-Point Celebration Animation"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Preview 500-Pt Animation</span>
+            </button>
           )}
-        </button>
+
+          {/* GOD MODE TOGGLE BUTTON */}
+          <button
+            type="button"
+            data-testid="btn-toggle-godmode"
+            onClick={handleToggleGodMode}
+            aria-expanded={isGodModeOpen}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border shrink-0 ${
+              isGodModeOpen
+                ? 'bg-purple-600/90 text-white border-purple-400 shadow-md shadow-purple-900/40 ring-1 ring-purple-400'
+                : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700'
+            }`}
+          >
+            {isGodModeOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span>God Mode</span>
+            {isGodModeOpen ? (
+              <ChevronUp className="w-3 h-3 text-purple-200" />
+            ) : (
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* GOD MODE COLLAPSIBLE PANEL (VIEW ALL HANDS) */}

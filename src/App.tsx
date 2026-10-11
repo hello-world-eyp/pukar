@@ -14,6 +14,7 @@ import { JokerPromptModal } from './ui/components/JokerPromptModal';
 import { TableSeating } from './ui/components/TableSeating';
 import { SequenceZoomModal } from './ui/components/SequenceZoomModal';
 import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
+import { PureSequenceCelebrationModal } from './ui/components/PureSequenceCelebrationModal';
 import { UnclePukarChoiceModal } from './ui/components/UnclePukarChoiceModal';
 import { FrustrationOverlay } from './ui/components/FrustrationOverlay';
 import { GameSetupModal } from './ui/components/GameSetupModal';
@@ -193,7 +194,10 @@ export function App({
     setExhaustNotification,
     jokerPickupBanner,
     setJokerPickupBanner,
+    pureSequenceCelebration,
+    setPureSequenceCelebration,
     triggerPukarCelebration,
+    triggerPureSequenceCelebration,
     clearAllNotifications,
   } = useGameNotifications({
     initialPukarBanner,
@@ -237,6 +241,7 @@ export function App({
     triggerSound,
     setErrorMessage,
     triggerPukarCelebration,
+    triggerPureSequenceCelebration,
     setExhaustNotification,
     setJokerPickupBanner,
     clearAllNotifications,
@@ -729,6 +734,13 @@ export function App({
                 pukarPoolCount={gameState.pukarPool.length}
                 isGodModeOpen={isGodModeOpen}
                 onToggleGodMode={() => setIsGodModeOpen((prev) => !prev)}
+                onPreviewCelebration={() =>
+                  triggerPureSequenceCelebration({
+                    team: viewingPlayer?.team ?? 'A',
+                    playerName: viewingPlayer?.name ?? 'Player 1',
+                    suit: 'SPADES',
+                  })
+                }
                 newlyPickedUpCardIds={gameState.newlyPickedUpCardIds}
               />
             </section>
@@ -1073,6 +1085,16 @@ export function App({
         <FrustrationOverlay
           playerName={activeGameState.activeFrustration.playerName}
           onComplete={() => handleAction({ type: 'CLEAR_FRUSTRATION' })}
+        />
+      )}
+
+      {/* 10-Second 500-Point Pure Sequence Celebration Modal */}
+      {pureSequenceCelebration && (
+        <PureSequenceCelebrationModal
+          team={pureSequenceCelebration.team}
+          playerName={pureSequenceCelebration.playerName}
+          suit={pureSequenceCelebration.suit}
+          onClose={() => setPureSequenceCelebration(null)}
         />
       )}
     </div>
