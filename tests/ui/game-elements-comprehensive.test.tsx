@@ -140,7 +140,7 @@ describe('Comprehensive UI Game Elements (src/ui/components/)', () => {
         />
       );
 
-      expect(html).toContain('8 cards in pile');
+      expect(html).toContain('8 cards in discard pile');
       expect(html).toContain('data-testid="discard-pile-fan"');
       // The 6 recent cards (c3 through c8) are rendered, while the oldest cards (c1, c2) are not in the fan
       expect(html).toContain('10 of DIAMONDS'); // top card

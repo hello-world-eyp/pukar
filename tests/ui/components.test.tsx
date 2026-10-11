@@ -174,10 +174,10 @@ describe('UI Components', () => {
         />
       );
 
-      expect(html).toContain('45 cards remaining');
+      expect(html).toContain('45 cards remaining in deck');
       expect(html).toContain('Stock Deck');
       expect(html).toContain('Discard Pile');
-      expect(html).toContain('2 cards in pile');
+      expect(html).toContain('2 cards in discard pile');
       expect(html).toContain('Zoom (2)');
       expect(html).toContain('2 Pukars Available');
       expect(html).toContain('+50 pts bonus');

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
 import { DiscardPileModal } from './DiscardPileModal';
-import { Layers, ArrowDownCircle, Sparkles, AlertTriangle, ZoomIn } from 'lucide-react';
+import { ArrowDownCircle, AlertTriangle, ZoomIn } from 'lucide-react';
 
 export interface CenterTableProps {
   stockDeckCount?: number;
@@ -134,11 +134,11 @@ export const CenterTable: React.FC<CenterTableProps> = ({
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 items-stretch">
           {/* 1. STOCK DECK (LEFT) */}
-          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[220px] sm:min-h-[240px]">
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-stone-800 mb-0.5">
-              <Layers className="w-3.5 h-3.5 text-sky-600" />
-              <span>Stock Deck</span>
-            </div>
+          <div
+            aria-label="Stock Deck"
+            className="relative flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[195px] sm:min-h-[210px]"
+          >
+            <span className="sr-only">Stock Deck</span>
 
             {/* Visual Card Stack with 3D Depth */}
             <div className="relative my-1 flex items-center justify-center">
@@ -190,7 +190,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
             {/* Stock Count & Tactile Button */}
             <div className="flex flex-col items-center gap-1 mt-1 w-full">
               <span className="text-xs sm:text-sm font-extrabold text-stone-700">
-                {`${actualStockCount} ${actualStockCount === 1 ? 'card' : 'cards'} remaining`}
+                {`${actualStockCount} ${actualStockCount === 1 ? 'card' : 'cards'} remaining in deck`}
               </span>
               <button
                 type="button"
@@ -209,26 +209,24 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           </div>
 
           {/* 2. DISCARD PILE (MIDDLE) */}
-          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[220px] sm:min-h-[240px]">
-            <div className="flex items-center justify-between w-full mb-0.5 gap-2">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Layers className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-900 truncate">
-                  Discard Pile
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleOpenPeek}
-                aria-label="Peek Pile"
-                data-testid="btn-zoom-discard-pile"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer shadow-sm hover:scale-105 shrink-0"
-                title="Click to peek into pile and see all buried cards"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-                <span>{`Zoom (${discardPile.length})`}</span>
-              </button>
-            </div>
+          <div
+            aria-label="Discard Pile"
+            className="relative flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[195px] sm:min-h-[210px]"
+          >
+            <span className="sr-only">Discard Pile</span>
+
+            {/* Corner Zoom Button - takes zero vertical layout space */}
+            <button
+              type="button"
+              onClick={handleOpenPeek}
+              aria-label="Peek Pile"
+              data-testid="btn-zoom-discard-pile"
+              className="absolute top-2 sm:top-2.5 right-2 sm:right-2.5 z-20 flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer shadow-sm hover:scale-105 shrink-0"
+              title="Click to peek into pile and see all buried cards"
+            >
+              <ZoomIn className="w-3.5 h-3.5" />
+              <span>{`Zoom (${discardPile.length})`}</span>
+            </button>
 
             {/* Visual Discard Pile Fan (Up to 6 recently discarded cards) - Click to Zoom */}
             <div
@@ -322,7 +320,7 @@ export const CenterTable: React.FC<CenterTableProps> = ({
             {/* Discard Count & Draw Button */}
             <div className="flex flex-col items-center gap-1 mt-1 w-full">
               <span className="text-xs sm:text-sm font-extrabold text-stone-700">
-                {`${discardPile.length} ${discardPile.length === 1 ? 'card' : 'cards'} in pile`}
+                {`${discardPile.length} ${discardPile.length === 1 ? 'card' : 'cards'} in discard pile`}
               </span>
               <button
                 type="button"
@@ -341,11 +339,11 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           </div>
 
           {/* 3. PUKAR POOL (RIGHT) */}
-          <div className="flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[220px] sm:min-h-[240px]">
-            <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-900 mb-0.5">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Pukar Pool (Reserve)</span>
-            </div>
+          <div
+            aria-label="Pukar Pool"
+            className="relative flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[195px] sm:min-h-[210px]"
+          >
+            <span className="sr-only">Pukar Pool (Reserve)</span>
 
             {/* Pukar Stack Visual Graphic */}
             <div className="my-1 flex flex-col items-center justify-center">
