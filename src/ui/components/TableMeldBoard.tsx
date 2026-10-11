@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Meld, Team, Suit, Card } from '../../engine/types';
 import { evaluateMeldScore, canAddCardsToMeld } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
@@ -33,6 +33,7 @@ export interface TableMeldBoardProps {
   defaultSortDirection?: MeldSortDirection;
   cardSize?: 'sm' | 'md';
   isRippling?: boolean;
+  compactMeldHeaders?: boolean;
 }
 
 export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
@@ -52,6 +53,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   defaultSortDirection = 'desc',
   cardSize = 'md',
   isRippling = false,
+  compactMeldHeaders,
 }) => {
   const sortDirection: MeldSortDirection = defaultSortDirection;
 
@@ -123,6 +125,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           canAdd={canAdd}
           onAddToMeld={onAddToMeld}
           isRippling={isRippling}
+          compactMeldHeaders={compactMeldHeaders}
         />
 
         {/* TEAM B MELDS COLUMN */}
@@ -143,6 +146,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           canAdd={canAdd}
           onAddToMeld={onAddToMeld}
           isRippling={isRippling}
+          compactMeldHeaders={compactMeldHeaders}
         />
       </div>
     </div>
@@ -166,6 +170,7 @@ interface TeamMeldColumnProps {
   canAdd?: boolean;
   onAddToMeld?: (meldId: string, cardIds: string[]) => void;
   isRippling?: boolean;
+  compactMeldHeaders?: boolean;
 }
 
 export function sortMelds(
@@ -246,6 +251,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   canAdd = true,
   onAddToMeld,
   isRippling = false,
+  compactMeldHeaders,
 }) => {
   const isBlue = teamColor === 'blue';
 
@@ -356,6 +362,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 sortDirection={sortDirection}
                 cardSize={cardSize}
                 isRippling={isRippling}
+                compactMeldHeaders={compactMeldHeaders}
               />
             );
           })
@@ -379,6 +386,7 @@ interface MeldCardItemProps {
   selectedCardsCount?: number;
   onAutoAdd?: () => void;
   isRippling?: boolean;
+  compactMeldHeaders?: boolean;
 }
 
 const MeldCardItem: React.FC<MeldCardItemProps> = ({
@@ -395,41 +403,96 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   selectedCardsCount = 0,
   onAutoAdd,
   isRippling = false,
+  compactMeldHeaders,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
 
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const uncollapsedWidthRef = useRef<number | null>(null);
+  const [isAutoCompact, setIsAutoCompact] = useState(false);
+
+  // If compactMeldHeaders is passed explicitly, it overrides auto-detection
+  const isCompact =
+    compactMeldHeaders !== undefined ? compactMeldHeaders : isAutoCompact;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (compactMeldHeaders !== undefined) return;
+
+    const checkOverflow = () => {
+      const el = headerRef.current;
+      if (!el) return;
+
+      if (!isCompact) {
+        // If content overflows or container width is under 290px, switch to compact mode
+        if (el.scrollWidth - el.clientWidth > 1 || el.clientWidth < 290) {
+          uncollapsedWidthRef.current = Math.max(el.scrollWidth, 305);
+          setIsAutoCompact(true);
+        }
+      } else {
+        // Only restore full text if container widens enough to fit full badge comfortably
+        const threshold = uncollapsedWidthRef.current ?? 305;
+        if (el.clientWidth >= threshold + 16) {
+          setIsAutoCompact(false);
+          uncollapsedWidthRef.current = null;
+        }
+      }
+    };
+
+    checkOverflow();
+
+    window.addEventListener('resize', checkOverflow);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && headerRef.current) {
+      ro = new ResizeObserver(checkOverflow);
+      ro.observe(headerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', checkOverflow);
+      ro?.disconnect();
+    };
+  }, [isCompact, compactMeldHeaders]);
+
   // Determine Badge Styling & Text
-  let badgeText = '';
+  let fullBadgeText = '';
+  let compactBadgeText = '';
   let badgeClass = '';
 
   if (isPure13) {
-    badgeText = 'Complete Sequence - 500 pts';
+    fullBadgeText = 'Complete Sequence - 500 pts';
+    compactBadgeText = '500 pts';
     badgeClass =
       'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
     const isClean = evaluation.points === 200;
+    compactBadgeText = `${evaluation.points} pts`;
     if (meld.type === 'RUN') {
       if (isClean) {
-        badgeText = 'Pure Sequence - 200 pts';
+        fullBadgeText = 'Pure Sequence - 200 pts';
         badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
       } else {
-        badgeText = 'Impure Sequence - 100 pts';
+        fullBadgeText = 'Impure Sequence - 100 pts';
         badgeClass = 'bg-blue-950/80 text-blue-300 border border-blue-500/50 font-black shadow-sm';
       }
     } else {
       if (isClean) {
-        badgeText = 'Clean 7-of-a-Kind - 200 pts';
+        fullBadgeText = 'Clean 7-of-a-Kind - 200 pts';
         badgeClass = 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/50 font-black shadow-sm';
       } else {
-        badgeText = 'Dirty 7-of-a-Kind - 100 pts';
+        fullBadgeText = 'Dirty 7-of-a-Kind - 100 pts';
         badgeClass = 'bg-blue-950/80 text-blue-300 border border-blue-500/50 font-black shadow-sm';
       }
     }
   } else {
-    // Incomplete (under 7 cards)
-    badgeText = `${meld.cards.length}c`;
+    // Incomplete (under 7 cards, 0 points)
+    fullBadgeText = `${meld.cards.length}c`;
+    compactBadgeText = `${meld.cards.length}c`;
     badgeClass = 'bg-slate-900 text-slate-300 border border-slate-700 font-bold';
   }
+
+  const badgeText = isCompact ? compactBadgeText : fullBadgeText;
 
   // Sort slots: Default highest to lowest (descending by representedRank)
   const sortedSlots = useMemo(() => {
@@ -548,18 +611,34 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       )}
 
       {/* Meld Header Bar */}
-      <div className="h-7 min-h-[28px] flex items-center justify-between mb-2 gap-2 flex-wrap sm:flex-nowrap">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap sm:flex-nowrap">
+      <div
+        ref={headerRef}
+        data-testid={`meld-header-${meld.id}`}
+        data-compact={isCompact ? 'true' : 'false'}
+        className="min-h-[28px] flex items-center justify-between mb-2 gap-1.5 flex-nowrap"
+      >
+        <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
           <span
-            className={`text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${badgeClass}`}
+            data-testid={`badge-meld-score-${meld.id}`}
+            title={fullBadgeText}
+            className={`text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${badgeClass}`}
           >
             {isPure13 && <Sparkles className="w-3.5 h-3.5 text-amber-900 shrink-0" />}
-            {isComplete7 && !isPure13 && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
+            {isComplete7 && !isPure13 && (
+              <CheckCircle2
+                className={`w-3.5 h-3.5 shrink-0 ${
+                  evaluation.points === 200 ? 'text-emerald-500' : 'text-blue-400'
+                }`}
+              />
+            )}
             <span>{badgeText}</span>
           </span>
 
           {meld.suit && (
-            <span className="text-xs sm:text-sm font-extrabold text-stone-700 uppercase tracking-wider whitespace-nowrap shrink-0">
+            <span
+              className="text-xs sm:text-sm font-extrabold text-stone-700 uppercase tracking-wider whitespace-nowrap shrink-0"
+              title={meld.suit}
+            >
               {meld.suit}
             </span>
           )}
@@ -567,11 +646,11 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
           {isCompleteSequence && (
             <span
               data-testid={`badge-complete-locked-${meld.id}`}
-              className="text-[10px] sm:text-xs font-black uppercase px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
+              className="text-[10px] sm:text-xs font-black uppercase px-1.5 sm:px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
               title="Complete Sequence is full (13 cards). No cards can be added."
             >
-              <Lock className="w-3 h-3 text-stone-600" />
-              <span>Closed</span>
+              <Lock className="w-3 h-3 text-stone-600 shrink-0" />
+              <span className={isCompact ? 'hidden sm:inline' : 'inline'}>Closed</span>
             </span>
           )}
         </div>

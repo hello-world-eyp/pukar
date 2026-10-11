@@ -368,6 +368,103 @@ describe('UI Components', () => {
       expect(html).toContain('Closed');
     });
 
+    it('collapses pure vs impure sequence text to points or card count when compactMeldHeaders is enabled', () => {
+      const cleanRunMeld: Meld = {
+        id: 'meld-compact-1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          { id: 's3', suit: 'SPADES', rank: 3 },
+          { id: 's4', suit: 'SPADES', rank: 4 },
+          { id: 's5', suit: 'SPADES', rank: 5 },
+          { id: 's6', suit: 'SPADES', rank: 6 },
+          { id: 's7', suit: 'SPADES', rank: 7 },
+          { id: 's8', suit: 'SPADES', rank: 8 },
+          { id: 's9', suit: 'SPADES', rank: 9 },
+        ],
+        slots: [
+          { card: { id: 's3', suit: 'SPADES', rank: 3 }, representedRank: 3, representedSuit: 'SPADES' },
+          { card: { id: 's4', suit: 'SPADES', rank: 4 }, representedRank: 4, representedSuit: 'SPADES' },
+          { card: { id: 's5', suit: 'SPADES', rank: 5 }, representedRank: 5, representedSuit: 'SPADES' },
+          { card: { id: 's6', suit: 'SPADES', rank: 6 }, representedRank: 6, representedSuit: 'SPADES' },
+          { card: { id: 's7', suit: 'SPADES', rank: 7 }, representedRank: 7, representedSuit: 'SPADES' },
+          { card: { id: 's8', suit: 'SPADES', rank: 8 }, representedRank: 8, representedSuit: 'SPADES' },
+          { card: { id: 's9', suit: 'SPADES', rank: 9 }, representedRank: 9, representedSuit: 'SPADES' },
+        ],
+      };
+
+      const dirtyRunMeld: Meld = {
+        id: 'meld-compact-2',
+        team: 'B',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          { id: 'h3', suit: 'HEARTS', rank: 3 },
+          { id: 'h4', suit: 'HEARTS', rank: 4 },
+          { id: 'w2', suit: 'DIAMONDS', rank: 2 },
+          { id: 'h6', suit: 'HEARTS', rank: 6 },
+          { id: 'h7', suit: 'HEARTS', rank: 7 },
+          { id: 'h8', suit: 'HEARTS', rank: 8 },
+          { id: 'h9', suit: 'HEARTS', rank: 9 },
+        ],
+        slots: [
+          { card: { id: 'h3', suit: 'HEARTS', rank: 3 }, representedRank: 3, representedSuit: 'HEARTS' },
+          { card: { id: 'h4', suit: 'HEARTS', rank: 4 }, representedRank: 4, representedSuit: 'HEARTS' },
+          { card: { id: 'w2', suit: 'DIAMONDS', rank: 2 }, representedRank: 5, representedSuit: 'HEARTS', isWildcard: true },
+          { card: { id: 'h6', suit: 'HEARTS', rank: 6 }, representedRank: 6, representedSuit: 'HEARTS' },
+          { card: { id: 'h7', suit: 'HEARTS', rank: 7 }, representedRank: 7, representedSuit: 'HEARTS' },
+          { card: { id: 'h8', suit: 'HEARTS', rank: 8 }, representedRank: 8, representedSuit: 'HEARTS' },
+          { card: { id: 'h9', suit: 'HEARTS', rank: 9 }, representedRank: 9, representedSuit: 'HEARTS' },
+        ],
+      };
+
+      const incompleteMeld: Meld = {
+        id: 'meld-compact-3',
+        team: 'A',
+        type: 'RUN',
+        suit: 'CLUBS',
+        cards: [
+          { id: 'c3', suit: 'CLUBS', rank: 3 },
+          { id: 'c4', suit: 'CLUBS', rank: 4 },
+          { id: 'c5', suit: 'CLUBS', rank: 5 },
+        ],
+        slots: [
+          { card: { id: 'c3', suit: 'CLUBS', rank: 3 }, representedRank: 3, representedSuit: 'CLUBS', isWildcard: false },
+          { card: { id: 'c4', suit: 'CLUBS', rank: 4 }, representedRank: 4, representedSuit: 'CLUBS', isWildcard: false },
+          { card: { id: 'c5', suit: 'CLUBS', rank: 5 }, representedRank: 5, representedSuit: 'CLUBS', isWildcard: false },
+        ],
+      };
+
+      const html = renderToString(
+        <TableMeldBoard
+          melds={{
+            A: [cleanRunMeld, incompleteMeld],
+            B: [dirtyRunMeld],
+          }}
+          compactMeldHeaders={true}
+        />
+      );
+
+      // Verify compact flags on headers
+      expect(html).toContain('data-testid="meld-header-meld-compact-1"');
+      expect(html).toContain('data-compact="true"');
+
+      // The long text "Pure Sequence - 200 pts" is NOT in the visible badge text, but "200 pts" is!
+      expect(html).toContain('data-testid="badge-meld-score-meld-compact-1"');
+      expect(html).toContain('200 pts');
+      expect(html).toContain('title="Pure Sequence - 200 pts"'); // Accessible tooltip preserved
+
+      // The long text "Impure Sequence - 100 pts" is collapsed to "100 pts"
+      expect(html).toContain('data-testid="badge-meld-score-meld-compact-2"');
+      expect(html).toContain('100 pts');
+      expect(html).toContain('title="Impure Sequence - 100 pts"');
+
+      // Incomplete sequence displays number of cards (3c)
+      expect(html).toContain('data-testid="badge-meld-score-meld-compact-3"');
+      expect(html).toContain('3c');
+    });
+
     it('renders selected meld highlight when selectedMeldId matches', () => {
       const meld: Meld = {
         id: 'sel-1',
