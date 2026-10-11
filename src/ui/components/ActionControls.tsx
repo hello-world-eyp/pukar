@@ -32,6 +32,8 @@ export interface ActionControlsProps {
   showDrawButtons?: boolean;
   unifiedMode?: boolean;
   requiresPureSequence?: boolean;
+  cardsPickedUpThisTurn?: string[];
+  initialHandSizeThisTurn?: number;
 }
 
 export const ActionControls: React.FC<ActionControlsProps> = ({
@@ -53,6 +55,8 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   showDrawButtons,
   unifiedMode = false,
   requiresPureSequence = false,
+  cardsPickedUpThisTurn,
+  initialHandSizeThisTurn,
 }) => {
   // Resolve effective selected cards
   const selectedCards: Card[] = useMemo(() => {
@@ -110,8 +114,24 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
   const canPlayNewMeld = !disabled && isMeldPhase && meldValidation.valid;
 
+  // Single picked up card discard restriction
+  const isSelectedCardDisallowedFromDiscard = useMemo(() => {
+    if (selectedCardCount !== 1) return false;
+    const selectedCardId = selectedCards[0]?.id;
+    if (!selectedCardId) return false;
+    if (!cardsPickedUpThisTurn || cardsPickedUpThisTurn.length !== 1) return false;
+    if (cardsPickedUpThisTurn[0] !== selectedCardId) return false;
+    // Exception: player started turn with only 1 card in hand
+    if (initialHandSizeThisTurn === 1) return false;
+    return true;
+  }, [selectedCardCount, selectedCards, cardsPickedUpThisTurn, initialHandSizeThisTurn]);
+
   // Discard Card Eligibility
-  const canDiscard = !disabled && isDiscardAllowed && selectedCardCount === 1;
+  const canDiscard =
+    !disabled &&
+    isDiscardAllowed &&
+    selectedCardCount === 1 &&
+    !isSelectedCardDisallowedFromDiscard;
 
   // Action handlers
   const handlePlayMeldClick = () => {
@@ -134,11 +154,18 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
   const discardButtonLabel = useMemo(() => {
     if (selectedCardCount === 1) {
+      if (isSelectedCardDisallowedFromDiscard) {
+        return "Can't discard drawn card";
+      }
       const card = selectedCards[0];
       return `Discard ${getRankLabel(card.rank, card.isNaturalJoker || card.rank === 0)}${getSuitSymbol(card.suit)}`;
     }
     return 'Discard Selected Card';
-  }, [selectedCardCount, selectedCards]);
+  }, [selectedCardCount, selectedCards, isSelectedCardDisallowedFromDiscard]);
+
+  const discardTooltip = isSelectedCardDisallowedFromDiscard
+    ? 'Cannot discard the single card picked up this turn unless you started with only 1 card in hand'
+    : undefined;
 
   // =========================================================================
   // UNIFIED INLINE MODE (Rendered cleanly within the player dock)
@@ -225,6 +252,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
               data-testid="btn-discard"
               disabled={!canDiscard}
               onClick={handleDiscardClick}
+              title={discardTooltip}
               className={`h-10 px-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
                 canDiscard
                   ? 'btn-game-danger'
@@ -414,6 +442,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
           data-testid="btn-discard"
           disabled={!canDiscard}
           onClick={handleDiscardClick}
+          title={discardTooltip}
           className={`w-full sm:w-auto min-w-[200px] h-11 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-md ${
             canDiscard
               ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-700/30 active:scale-95'

@@ -65,6 +65,12 @@ export function sanitizeStateForPlayer(
         isViewerActive && state?.newlyPickedUpCardIds
           ? [...state.newlyPickedUpCardIds]
           : [],
+      cardsPickedUpThisTurn:
+        isViewerActive && state?.cardsPickedUpThisTurn
+          ? [...state.cardsPickedUpThisTurn]
+          : [],
+      initialHandSizeThisTurn:
+        isViewerActive ? state?.initialHandSizeThisTurn : undefined,
       frustrationCooldownUntil: state?.frustrationCooldownUntil,
       activeFrustration: state?.activeFrustration
         ? { ...state.activeFrustration }

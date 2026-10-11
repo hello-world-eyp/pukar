@@ -99,12 +99,16 @@ export interface PlayerHandProps {
   isHovering?: boolean;
   frustrationCooldownUntil?: number;
   onTriggerFrustration?: () => void;
+  cardsPickedUpThisTurn?: string[];
+  initialHandSizeThisTurn?: number;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
   cards,
   selectedCardIds = [],
   newCardIds = [],
+  cardsPickedUpThisTurn = [],
+  initialHandSizeThisTurn,
   onToggleCardSelection,
   onSelectCard,
   onClearSelection,
@@ -219,6 +223,16 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   const selectedSet = useMemo(() => new Set(selectedCardIds), [selectedCardIds]);
   const newCardSet = useMemo(() => new Set(newCardIds), [newCardIds]);
+  const cannotDiscardSet = useMemo(() => {
+    if (!cardsPickedUpThisTurn || cardsPickedUpThisTurn.length !== 1) {
+      return new Set<string>();
+    }
+    // If started with only 1 card in hand, player is allowed to discard the picked up card!
+    if (initialHandSizeThisTurn === 1) {
+      return new Set<string>();
+    }
+    return new Set<string>(cardsPickedUpThisTurn);
+  }, [cardsPickedUpThisTurn, initialHandSizeThisTurn]);
 
   // Card reordering logic
   const handleMoveCard = useCallback(
@@ -493,6 +507,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);
+              const isDisallowedFromDiscard = cannotDiscardSet.has(card.id);
               const isBeingDragged = isDragging && draggedIndex === index;
               const isDropTarget = isDragging && dragOverIndex === index && draggedIndex !== index;
 
@@ -534,7 +549,11 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                       ? '-translate-y-1 hover:-translate-y-2 cursor-grab'
                       : 'hover:-translate-y-1 cursor-grab'
                   }`}
-                  title="Click to select • Drag to reorder"
+                  title={
+                    isDisallowedFromDiscard
+                      ? 'Single card picked up this turn (cannot discard this turn) • Drag to reorder'
+                      : 'Click to select • Drag to reorder'
+                  }
                 >
                   {/* Drop Target Insertion Indicator Line */}
                   {isDropTarget && (

@@ -135,5 +135,6 @@ export function dealInitialState(
     roundHistory: [],
     finalTurnPlayerIndex: null,
     newlyPickedUpCardIds: [],
+    cardsPickedUpThisTurn: [],
   };
 }

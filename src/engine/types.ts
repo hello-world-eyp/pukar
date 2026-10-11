@@ -102,6 +102,8 @@ export interface GameState {
   lastTurnTriggeredByDeckExhaust?: boolean;
   lastPickedUpCard?: Card | null;
   newlyPickedUpCardIds?: string[];
+  cardsPickedUpThisTurn?: string[];
+  initialHandSizeThisTurn?: number;
   frustrationCooldownUntil?: number;
   activeFrustration?: { playerName: string; triggeredAt: number } | null;
 }
@@ -189,6 +191,8 @@ export interface SanitizedGameState {
   roundHistory?: RoundHistoryEntry[];
   lastPickedUpCard?: Card | null;
   newlyPickedUpCardIds?: string[];
+  cardsPickedUpThisTurn?: string[];
+  initialHandSizeThisTurn?: number;
   frustrationCooldownUntil?: number;
   activeFrustration?: { playerName: string; triggeredAt: number } | null;
 }

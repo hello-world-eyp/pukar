@@ -647,6 +647,16 @@ export function App({
                     ? (activeGameState.newlyPickedUpCardIds ?? [])
                     : []
                 }
+                cardsPickedUpThisTurn={
+                  isViewingActivePlayer
+                    ? (activeGameState.cardsPickedUpThisTurn ?? [])
+                    : []
+                }
+                initialHandSizeThisTurn={
+                  isViewingActivePlayer
+                    ? activeGameState.initialHandSizeThisTurn
+                    : undefined
+                }
                 onToggleCardSelection={handleToggleCardSelection}
                 onClearSelection={handleClearSelection}
                 playerName={viewingPlayer?.name ?? 'Player'}
@@ -697,6 +707,8 @@ export function App({
                     unifiedMode={true}
                     showDrawButtons={false}
                     requiresPureSequence={(activeGameState.melds?.[viewingPlayer?.team ?? 'A']?.length ?? 0) === 0}
+                    cardsPickedUpThisTurn={activeGameState.cardsPickedUpThisTurn}
+                    initialHandSizeThisTurn={activeGameState.initialHandSizeThisTurn}
                   />
                 }
               />

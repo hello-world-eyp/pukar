@@ -183,6 +183,7 @@ function handleDrawFromStock(state: GameState): {
     return { state, error: 'Active player not found' };
   }
 
+  const initialHandSize = activePlayer.hand.length;
   const drawnCard = state.stockDeck[0];
   let remainingStock = state.stockDeck.slice(1);
   let pukarPool = [...state.pukarPool];
@@ -219,6 +220,8 @@ function handleDrawFromStock(state: GameState): {
     lastTurnTriggeredByDeckExhaust,
     lastPickedUpCard: null,
     newlyPickedUpCardIds: [drawnCard.id],
+    cardsPickedUpThisTurn: [drawnCard.id],
+    initialHandSizeThisTurn: initialHandSize,
   };
 
   return { state: nextState };
@@ -243,6 +246,7 @@ function handleTakeDiscard(state: GameState): {
     return { state, error: 'Active player not found' };
   }
 
+  const initialHandSize = activePlayer.hand.length;
   const cardsFromDiscard = [...state.discardPile];
   const updatedPlayers = state.players.map((p, idx) => {
     if (idx !== state.currentPlayerIndex) return p;
@@ -260,6 +264,8 @@ function handleTakeDiscard(state: GameState): {
     turnPhase: 'MELD',
     lastPickedUpCard: null,
     newlyPickedUpCardIds: cardsFromDiscard.map((c) => c.id),
+    cardsPickedUpThisTurn: cardsFromDiscard.map((c) => c.id),
+    initialHandSizeThisTurn: initialHandSize,
   };
 
   return { state: nextState };
@@ -500,6 +506,21 @@ function handleDiscardCard(
     return { state, error: `Card ${cardId} is not in active player hand` };
   }
 
+  // Rule: If player picked up only 1 card this turn, they cannot discard that same card,
+  // unless they started with only 1 card in hand.
+  if (
+    state.cardsPickedUpThisTurn &&
+    state.cardsPickedUpThisTurn.length === 1 &&
+    state.cardsPickedUpThisTurn[0] === cardId &&
+    state.initialHandSizeThisTurn !== 1
+  ) {
+    return {
+      state,
+      error:
+        'Cannot discard the single card picked up this turn unless you started with only 1 card in hand',
+    };
+  }
+
   const discardedCard = activePlayer.hand[cardIndex];
   let remainingHand = [
     ...activePlayer.hand.slice(0, cardIndex),
@@ -523,6 +544,8 @@ function handleDiscardCard(
   let isRoundOver = state.isRoundOver ?? false;
 
   let newlyPickedUpCardIds: string[] = [];
+  let cardsPickedUpThisTurn: string[] = [];
+  let initialHandSizeThisTurn: number | undefined = undefined;
 
   // Check if hand reaches 0 upon discard
   let claimedPukarMidDiscard = false;
@@ -533,6 +556,8 @@ function handleDiscardCard(
       pukarPool = pukarPool.slice(1);
       remainingHand = [...claimedPukar];
       newlyPickedUpCardIds = claimedPukar.map((c) => c.id);
+      cardsPickedUpThisTurn = claimedPukar.map((c) => c.id);
+      initialHandSizeThisTurn = 0;
 
       scores[team] += 50;
       roundScores[team] += 50;
@@ -610,6 +635,8 @@ function handleDiscardCard(
     finalTurnPlayerIndex,
     lastPickedUpCard: null,
     newlyPickedUpCardIds,
+    cardsPickedUpThisTurn,
+    initialHandSizeThisTurn,
   };
 
   if (isRoundOver) {
@@ -682,6 +709,8 @@ function handleStartNextRound(state: GameState): {
     turnPhase: 'DRAW',
     lastPickedUpCard: null,
     newlyPickedUpCardIds: [],
+    cardsPickedUpThisTurn: [],
+    initialHandSizeThisTurn: undefined,
   };
 
   return { state: nextState };
@@ -715,6 +744,8 @@ function handleResetGame(
     turnPhase: 'DRAW',
     lastPickedUpCard: null,
     newlyPickedUpCardIds: [],
+    cardsPickedUpThisTurn: [],
+    initialHandSizeThisTurn: undefined,
   };
 
   return { state: nextState };
