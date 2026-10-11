@@ -20,6 +20,7 @@ export interface TopNavBarProps {
   onExitToMenu?: () => void;
   gameTitle?: string;
   roomCode?: string | null;
+  consolidatePlayers?: boolean;
 }
 
 // Distinctive team avatar shades:
@@ -42,13 +43,88 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onExitToMenu,
   gameTitle,
   roomCode,
+  consolidatePlayers,
 }) => {
   const displayTitle = roomCode ? `Room ${roomCode}` : gameTitle;
 
+  const headerRef = React.useRef<HTMLElement | null>(null);
+  const uncollapsedWidthRef = React.useRef<number | null>(null);
+  const [isAutoConsolidated, setIsAutoConsolidated] = React.useState(false);
+
+  // When consolidatePlayers is explicitly passed, it overrides auto-detection
+  const isConsolidated =
+    consolidatePlayers !== undefined ? consolidatePlayers : isAutoConsolidated;
+
+  // Reset cached measurement and auto-consolidation state if player count changes
+  React.useEffect(() => {
+    uncollapsedWidthRef.current = null;
+    setIsAutoConsolidated(false);
+  }, [players.length]);
+
+  // Monitor header dimensions and consolidate roster when horizontal scroll would occur
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (consolidatePlayers !== undefined) return;
+
+    const checkOverflow = () => {
+      const el = headerRef.current;
+      if (!el) return;
+
+      if (!isConsolidated) {
+        // Full roster is currently shown. Detect if content overflows container width.
+        // A threshold of > 2px guards against fractional subpixel discrepancies.
+        if (el.scrollWidth - el.clientWidth > 2) {
+          uncollapsedWidthRef.current = el.scrollWidth;
+          setIsAutoConsolidated(true);
+        }
+      } else {
+        // Consolidated to active player. Check if container has widened enough to fit full roster.
+        const cachedWidth = uncollapsedWidthRef.current;
+        if (cachedWidth && el.clientWidth >= cachedWidth + 16) {
+          setIsAutoConsolidated(false);
+          uncollapsedWidthRef.current = null;
+        }
+      }
+    };
+
+    checkOverflow();
+
+    window.addEventListener('resize', checkOverflow);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && headerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        checkOverflow();
+      });
+      resizeObserver.observe(headerRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', checkOverflow);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [isConsolidated, consolidatePlayers, players.length]);
+
+  const activeIndex =
+    currentPlayerIndex >= 0 && currentPlayerIndex < players.length
+      ? currentPlayerIndex
+      : 0;
+
+  const displayedPlayers =
+    isConsolidated && players.length > 0
+      ? [{ player: players[activeIndex], originalIndex: activeIndex }]
+      : players.map((player, idx) => ({ player, originalIndex: idx }));
+
   return (
     <header
+      ref={headerRef}
       data-testid="top-nav-bar"
-      className="w-full min-h-[64px] sm:min-h-[72px] bg-[#0e121d] border-b border-slate-800/80 px-4 sm:px-8 py-3 text-slate-100 flex items-center justify-between gap-4 shadow-xl z-30 overflow-x-auto selection:bg-amber-500/30"
+      data-consolidated={isConsolidated ? 'true' : 'false'}
+      className={`w-full min-h-[64px] sm:min-h-[72px] bg-[#0e121d] border-b border-slate-800/80 px-4 sm:px-8 py-3 text-slate-100 flex items-center justify-between gap-4 shadow-xl z-30 selection:bg-amber-500/30 ${
+        isConsolidated ? 'overflow-x-hidden' : 'overflow-x-auto'
+      }`}
     >
       {/* =====================================================================
           1. LEFT: LOGO, TITLE, AND NAVIGATION PILLS
@@ -135,25 +211,26 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         {/* Player Roster with Initials & Active Turn Glow */}
         <div
           data-testid="nav-players-roster"
+          data-consolidated={isConsolidated ? 'true' : 'false'}
           className="flex items-center gap-2 sm:gap-2.5 flex-wrap"
           aria-label="Players in game"
         >
-          {players.map((player, idx) => {
-            const isTurn = idx === currentPlayerIndex;
-            const initial = player.name ? player.name.trim().charAt(0).toUpperCase() : `${idx + 1}`;
-            const isTeamA = player.team ? player.team === 'A' : idx % 2 === 0;
+          {displayedPlayers.map(({ player, originalIndex }) => {
+            const isTurn = originalIndex === currentPlayerIndex;
+            const initial = player.name ? player.name.trim().charAt(0).toUpperCase() : `${originalIndex + 1}`;
+            const isTeamA = player.team ? player.team === 'A' : originalIndex % 2 === 0;
             const palette = isTeamA ? TEAM_AVATAR_PALETTE.A : TEAM_AVATAR_PALETTE.B;
 
             return (
               <div
-                key={player.id || `nav-p-${idx}`}
-                data-testid={`nav-player-${idx}`}
+                key={player.id || `nav-p-${originalIndex}`}
+                data-testid={`nav-player-${originalIndex}`}
                 className={`h-10 sm:h-11 flex items-center gap-2 px-2.5 sm:px-3 rounded-xl transition-all ${
                   isTurn
                     ? 'bg-amber-400/15 border border-amber-400/60 shadow-md shadow-amber-400/10 ring-1 ring-amber-400/40 text-white'
                     : 'text-slate-300'
                 }`}
-                title={`${player.name} (${player.team ? `Team ${player.team}` : ''})${player.cardCount !== undefined ? ` • ${player.cardCount} cards` : ''}${isTurn ? ' • Current Turn' : ''}`}
+                title={`${player.name} (${player.team ? `Team ${player.team}` : ''})${player.cardCount !== undefined ? ` • ${player.cardCount} cards` : ''}${isTurn ? ' • Current Turn' : ''}${isConsolidated && players.length > 1 ? ` • (${players.length} players in game)` : ''}`}
               >
                 {/* Circular Avatar Badge with Initial */}
                 <div
@@ -172,7 +249,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 {/* Card Count in Hand */}
                 {player.cardCount !== undefined && (
                   <span
-                    data-testid={`nav-player-card-count-${idx}`}
+                    data-testid={`nav-player-card-count-${originalIndex}`}
                     className={`text-xs font-bold shrink-0 ${
                       isTurn ? 'text-amber-300 font-extrabold' : 'text-slate-400'
                     }`}
