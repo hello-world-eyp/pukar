@@ -9,7 +9,7 @@ function makeCard(id: string, suit: 'SPADES' | 'HEARTS' | 'DIAMONDS' | 'CLUBS', 
 }
 
 describe('Rule: Discard restriction on picked up cards', () => {
-  it('rejects discarding the drawn card if player picked up only 1 card from stock and had >1 cards in hand', () => {
+  it('allows discarding the card drawn from the stock deck on the same turn', () => {
     const initialState = dealInitialState(4);
     const topStockCard = initialState.stockDeck[0];
 
@@ -18,28 +18,16 @@ describe('Rule: Discard restriction on picked up cards', () => {
     expect(drawResult.error).toBeUndefined();
     expect(drawResult.state.phase).toBe('MELD');
 
-    // Attempt to discard the card just drawn
+    // Drawing from the stock deck allows discarding the card just drawn
     const discardResult = pukarReducer(drawResult.state, {
       type: 'DISCARD_CARD',
       cardId: topStockCard.id,
     });
 
-    expect(discardResult.error).toBe(
-      'Cannot discard the single card picked up this turn unless you started with only 1 card in hand'
-    );
-    // State remains in active player's turn
-    expect(discardResult.state.currentPlayerIndex).toBe(0);
-    expect(discardResult.state.phase).toBe('MELD');
-
-    // But discarding another card from original hand succeeds
-    const otherCard = drawResult.state.players[0].hand.find((c) => c.id !== topStockCard.id)!;
-    const validDiscard = pukarReducer(drawResult.state, {
-      type: 'DISCARD_CARD',
-      cardId: otherCard.id,
-    });
-    expect(validDiscard.error).toBeUndefined();
-    expect(validDiscard.state.currentPlayerIndex).toBe(1);
-    expect(validDiscard.state.phase).toBe('DRAW');
+    expect(discardResult.error).toBeUndefined();
+    // Turn successfully advances to next player
+    expect(discardResult.state.currentPlayerIndex).toBe(1);
+    expect(discardResult.state.phase).toBe('DRAW');
   });
 
   it('rejects discarding the picked up card if player took 1 card from discard pile and had >1 cards in hand', () => {
@@ -153,7 +141,7 @@ describe('Rule: Discard restriction on picked up cards', () => {
     expect(discardResult.state.currentPlayerIndex).toBe(1);
   });
 
-  it('rejects discarding drawn card even if player melded cards down to fewer cards, as long as initial hand size was >1', () => {
+  it('rejects discarding 1 card picked up from discard pile even if player melded cards down to fewer cards, as long as initial hand size was >1', () => {
     let state = dealInitialState(4);
     // Player starts with 4 cards (initial hand size > 1)
     const runCards = [
@@ -164,23 +152,24 @@ describe('Rule: Discard restriction on picked up cards', () => {
     const fillerCard = makeCard('filler', 'HEARTS', 10);
     state.players[0].hand = [...runCards, fillerCard];
 
-    const topStock = state.stockDeck[0];
-    const drawResult = pukarReducer(state, { type: 'DRAW_FROM_STOCK' });
-    expect(drawResult.error).toBeUndefined();
+    const soloDiscard = makeCard('disc-solo-meld', 'DIAMONDS', 9);
+    state.discardPile = [soloDiscard];
+    const takeResult = pukarReducer(state, { type: 'TAKE_DISCARD' });
+    expect(takeResult.error).toBeUndefined();
 
     // Player melds the run
-    const meldResult = pukarReducer(drawResult.state, {
+    const meldResult = pukarReducer(takeResult.state, {
       type: 'PLAY_NEW_MELD',
       cardIds: ['r1', 'r2', 'r3'],
     });
     expect(meldResult.error).toBeUndefined();
-    // Hand now has 2 cards: filler and topStock
+    // Hand now has 2 cards: filler and soloDiscard
     expect(meldResult.state.players[0].hand).toHaveLength(2);
 
-    // Attempting to discard topStock is still rejected because initial hand size was 4 (> 1)
+    // Attempting to discard soloDiscard is rejected because initial hand size was 4 (> 1)
     const discardResult = pukarReducer(meldResult.state, {
       type: 'DISCARD_CARD',
-      cardId: topStock.id,
+      cardId: soloDiscard.id,
     });
 
     expect(discardResult.error).toBe(
@@ -197,16 +186,18 @@ describe('Rule: Discard restriction on picked up cards', () => {
 
   it('sanitizes cardsPickedUpThisTurn and initialHandSizeThisTurn for player perspective', () => {
     let state = dealInitialState(4);
-    const drawResult = pukarReducer(state, { type: 'DRAW_FROM_STOCK' });
+    const soloDiscard = makeCard('disc-solo-san', 'CLUBS', 6);
+    state.discardPile = [soloDiscard];
+    const takeResult = pukarReducer(state, { type: 'TAKE_DISCARD' });
 
-    const activePlayerId = drawResult.state.players[0].id;
-    const opponentPlayerId = drawResult.state.players[1].id;
+    const activePlayerId = takeResult.state.players[0].id;
+    const opponentPlayerId = takeResult.state.players[1].id;
 
-    const sanitizedForActive = sanitizeStateForPlayer(drawResult.state, activePlayerId);
+    const sanitizedForActive = sanitizeStateForPlayer(takeResult.state, activePlayerId);
     expect(sanitizedForActive.cardsPickedUpThisTurn?.length).toBe(1);
     expect(sanitizedForActive.initialHandSizeThisTurn).toBe(13);
 
-    const sanitizedForOpponent = sanitizeStateForPlayer(drawResult.state, opponentPlayerId);
+    const sanitizedForOpponent = sanitizeStateForPlayer(takeResult.state, opponentPlayerId);
     expect(sanitizedForOpponent.cardsPickedUpThisTurn).toEqual([]);
     expect(sanitizedForOpponent.initialHandSizeThisTurn).toBeUndefined();
   });

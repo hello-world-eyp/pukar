@@ -155,7 +155,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   const discardButtonLabel = useMemo(() => {
     if (selectedCardCount === 1) {
       if (isSelectedCardDisallowedFromDiscard) {
-        return "Can't discard drawn card";
+        return "Can't discard picked up card";
       }
       const card = selectedCards[0];
       return `Discard ${getRankLabel(card.rank, card.isNaturalJoker || card.rank === 0)}${getSuitSymbol(card.suit)}`;
@@ -164,7 +164,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
   }, [selectedCardCount, selectedCards, isSelectedCardDisallowedFromDiscard]);
 
   const discardTooltip = isSelectedCardDisallowedFromDiscard
-    ? 'Cannot discard the single card picked up this turn unless you started with only 1 card in hand'
+    ? 'Cannot discard the single card picked up from the discard pile this turn unless you started with only 1 card in hand'
     : undefined;
 
   // =========================================================================

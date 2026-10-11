@@ -26,9 +26,9 @@ describe('UI: Pick-up and Discard Restriction Controls', () => {
     );
 
     expect(html).toContain('disabled=""');
-    expect(html).toContain("Can&#x27;t discard drawn card");
+    expect(html).toContain("Can&#x27;t discard picked up card");
     expect(html).toContain(
-      'title="Cannot discard the single card picked up this turn unless you started with only 1 card in hand"'
+      'title="Cannot discard the single card picked up from the discard pile this turn unless you started with only 1 card in hand"'
     );
   });
 
@@ -45,7 +45,7 @@ describe('UI: Pick-up and Discard Restriction Controls', () => {
       />
     );
 
-    expect(html).not.toContain("Can&#x27;t discard drawn card");
+    expect(html).not.toContain("Can&#x27;t discard picked up card");
     expect(html).toContain('Discard 10♠');
   });
 

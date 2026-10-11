@@ -220,7 +220,7 @@ function handleDrawFromStock(state: GameState): {
     lastTurnTriggeredByDeckExhaust,
     lastPickedUpCard: null,
     newlyPickedUpCardIds: [drawnCard.id],
-    cardsPickedUpThisTurn: [drawnCard.id],
+    cardsPickedUpThisTurn: [],
     initialHandSizeThisTurn: initialHandSize,
   };
 
