@@ -279,6 +279,28 @@ export function App({
     (isCompactScreen && (teamAMeldCount >= 2 || teamBMeldCount >= 2));
 
   // ---------------------------------------------------------------------------
+  // Auspicious Pukar Deck Selection State Tracking
+  // ---------------------------------------------------------------------------
+  const remainingPukars =
+    'pukarPool' in activeGameState && Array.isArray(activeGameState.pukarPool)
+      ? activeGameState.pukarPool.length
+      : ((activeGameState as SanitizedGameState).pukarPoolCount ?? 0);
+
+  const isClaimingPlayer =
+    appMode !== 'MULTIPLAYER' ||
+    (multiplayerHook.mySeatIndex !== null &&
+      ((unclePukarChoiceData?.playerIndex !== undefined &&
+        multiplayerHook.mySeatIndex === unclePukarChoiceData.playerIndex) ||
+        (pukarSlamEvent?.playerIndex !== undefined &&
+          multiplayerHook.mySeatIndex === pukarSlamEvent.playerIndex) ||
+        multiplayerHook.mySeatIndex === activeTurnIndex));
+
+  const isPukarSelectionPending = Boolean(
+    (unclePukarChoiceData?.isOpen || (pukarSlamEvent && remainingPukars >= 1)) &&
+      isClaimingPlayer
+  );
+
+  // ---------------------------------------------------------------------------
   // Game Setup & Reset Handlers
   // ---------------------------------------------------------------------------
   const handleOpenResetModal = (_count?: 4 | 6) => {
@@ -592,9 +614,9 @@ export function App({
                     }
                     discardPile={activeGameState.discardPile}
                     pukarPoolCount={
-                      isMultiplayerActive
+                      (isMultiplayerActive
                         ? (activeGameState as SanitizedGameState).pukarPoolCount
-                        : gameState.pukarPool.length
+                        : gameState.pukarPool.length) + (isPukarSelectionPending ? 1 : 0)
                     }
                     canDraw={activeGameState.phase === 'DRAW' && isViewingActivePlayer}
                     onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
@@ -653,7 +675,12 @@ export function App({
               }
             >
               <PlayerHand
-                cards={viewingPlayer.hand ?? []}
+                cards={
+                  isPukarSelectionPending && isViewingActivePlayer
+                    ? []
+                    : (viewingPlayer.hand ?? [])
+                }
+                isChoosingPukar={isPukarSelectionPending && isViewingActivePlayer}
                 cardSize="md"
                 selectedCardIds={selectedCardIds}
                 newCardIds={
@@ -740,7 +767,9 @@ export function App({
                 onForceTurn={handleForceTurn}
                 stockDeckCount={gameState.stockDeck.length}
                 discardPileCount={gameState.discardPile.length}
-                pukarPoolCount={gameState.pukarPool.length}
+                pukarPoolCount={
+                  gameState.pukarPool.length + (isPukarSelectionPending ? 1 : 0)
+                }
                 isGodModeOpen={isGodModeOpen}
                 onToggleGodMode={() => setIsGodModeOpen((prev) => !prev)}
                 onPreviewCelebration={() =>
@@ -1085,7 +1114,10 @@ export function App({
             handleAction({ type: 'SELECT_PUKAR_DECK', deckIndex });
             setUnclePukarChoiceData(null);
           }}
-          onClose={() => setUnclePukarChoiceData(null)}
+          onClose={() => {
+            handleAction({ type: 'SELECT_PUKAR_DECK', deckIndex: 0 });
+            setUnclePukarChoiceData(null);
+          }}
         />
       )}
 

@@ -160,6 +160,7 @@ export interface PlayerHandProps {
   initialHandSizeThisTurn?: number;
   containerWidth?: number;
   minVisibleCardWidth?: number;
+  isChoosingPukar?: boolean;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -191,6 +192,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   onTriggerFrustration,
   containerWidth,
   minVisibleCardWidth,
+  isChoosingPukar = false,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection] = useState<SortDirection>(initialSortDirection);
@@ -591,10 +593,15 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 )}
               </div>
               <div className="flex items-center gap-2 text-sm text-stone-700 font-bold leading-none">
-                <span data-testid="card-count" className="font-extrabold text-stone-900">
-                  {`${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
+                <span
+                  data-testid="card-count"
+                  className={`font-extrabold ${isChoosingPukar ? 'text-amber-800 animate-pulse' : 'text-stone-900'}`}
+                >
+                  {isChoosingPukar
+                    ? 'Selecting Pukar Deck...'
+                    : `${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
                 </span>
-                {selectedCardIds.length > 0 && (
+                {!isChoosingPukar && selectedCardIds.length > 0 && (
                   <>
                     <span className="text-stone-500">•</span>
                     <span
@@ -605,17 +612,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     </span>
                   </>
                 )}
-                <span className="text-stone-400 hidden sm:inline">•</span>
-                <span className="text-xs font-semibold text-stone-600 hidden sm:inline" title="Drag cards to rearrange them in any custom order">
-                  Drag cards to reorder
-                </span>
+                {!isChoosingPukar && (
+                  <>
+                    <span className="text-stone-400 hidden sm:inline">•</span>
+                    <span className="text-xs font-semibold text-stone-600 hidden sm:inline" title="Drag cards to rearrange them in any custom order">
+                      Drag cards to reorder
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* CONTEXTUAL ACTION CONTROLS SLOT */}
-        {actionsSlot && (
+        {!isChoosingPukar && actionsSlot && (
           <div className="flex items-center justify-center my-0 flex-1 max-w-xl mx-auto h-9">
             {actionsSlot}
           </div>
@@ -623,7 +634,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {/* RIGHT ACTIONS: CLEAR SELECTION + FRUSTRATION BUTTON */}
         <div className="shrink-0 flex justify-end items-center gap-2 h-9">
-          {selectedCardIds.length > 0 && (
+          {!isChoosingPukar && selectedCardIds.length > 0 && (
             <button
               type="button"
               aria-label="Clear Selection"
@@ -642,14 +653,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               aria-label="Frustration"
               data-testid="btn-frustration"
               onClick={onTriggerFrustration}
-              disabled={isFrustratedOnCooldown}
+              disabled={isFrustratedOnCooldown || isChoosingPukar}
               title={
                 isFrustratedOnCooldown
                   ? `Frustration is on cooldown (${frustrationRemainingSecs}s remaining)`
                   : 'Express your frustration!'
               }
               className={`h-9 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm ${
-                isFrustratedOnCooldown
+                isFrustratedOnCooldown || isChoosingPukar
                   ? 'bg-stone-300/80 text-stone-500 border border-stone-400 cursor-not-allowed opacity-75'
                   : 'bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border border-rose-700 active:scale-95 shadow-orange-500/20 cursor-pointer'
               }`}
@@ -668,7 +679,20 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
         tabIndex={0}
         aria-label="Hand Cards"
       >
-        {displayCards.length === 0 ? (
+        {isChoosingPukar ? (
+          <div
+            data-testid="pukar-selection-pending-tray"
+            className="h-full flex flex-col items-center justify-center gap-2 py-4 animate-pulse select-none text-center"
+          >
+            <div className="flex items-center justify-center gap-2 text-amber-300 font-black text-base sm:text-lg tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]">
+              <span role="img" aria-label="sparkles">✨</span>
+              <span>Selecting Pukar Deck...</span>
+            </div>
+            <p className="text-amber-100/80 text-xs sm:text-sm font-semibold max-w-md text-center">
+              Choose which Auspicious Pukar deck will bless your hand from the prompt above to receive your 13 cards.
+            </p>
+          </div>
+        ) : displayCards.length === 0 ? (
           <div className="py-8 text-center text-amber-200/80 text-base font-bold">
             Hand is empty
           </div>

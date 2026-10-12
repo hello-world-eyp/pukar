@@ -75,3 +75,45 @@ describe('UnclePukarChoiceModal Component', () => {
     expect(html).toContain('Pukar Deck #3');
   });
 });
+
+describe('PlayerHand during Pukar Selection', () => {
+  const sampleCard = { id: 'c-1', suit: 'SPADES' as const, rank: 10 as const };
+
+  it('renders pending tray and hides cards/actions when isChoosingPukar is true', async () => {
+    const { PlayerHand } = await import('../../src/ui/components/PlayerHand');
+    const html = renderToString(
+      <PlayerHand
+        cards={[]}
+        isChoosingPukar={true}
+        playerName="Sid"
+        playerTeam="A"
+        actionsSlot={<div data-testid="test-action-slot">Meld Controls</div>}
+      />
+    );
+
+    expect(html).toContain('Selecting Pukar Deck...');
+    expect(html).toContain('data-testid="pukar-selection-pending-tray"');
+    expect(html).toContain('Choose which Auspicious Pukar deck will bless your hand');
+    expect(html).not.toContain('data-testid="hand-card-slot-0"');
+    expect(html).not.toContain('data-testid="test-action-slot"');
+  });
+
+  it('renders cards normally when isChoosingPukar is false or omitted', async () => {
+    const { PlayerHand } = await import('../../src/ui/components/PlayerHand');
+    const html = renderToString(
+      <PlayerHand
+        cards={[sampleCard]}
+        isChoosingPukar={false}
+        playerName="Sid"
+        playerTeam="A"
+        actionsSlot={<div data-testid="test-action-slot">Meld Controls</div>}
+      />
+    );
+
+    expect(html).not.toContain('data-testid="pukar-selection-pending-tray"');
+    expect(html).toContain('data-testid="hand-card-slot-0"');
+    expect(html).toContain('data-testid="test-action-slot"');
+    expect(html).toContain('1 card');
+  });
+});
+

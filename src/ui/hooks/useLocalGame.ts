@@ -58,6 +58,7 @@ export function useLocalGame({
   // Dev automation bridge for visual screenshots and testing
   if (typeof window !== 'undefined') {
     (window as any).__PUKAR_GAME__ = {
+      ...(window as any).__PUKAR_GAME__,
       gameState,
       setGameState,
     };
@@ -298,6 +299,13 @@ export function useLocalGame({
       clearAllNotifications,
     ]
   );
+
+  if (typeof window !== 'undefined') {
+    (window as any).__PUKAR_GAME__ = {
+      ...(window as any).__PUKAR_GAME__,
+      handleAction,
+    };
+  }
 
   // Card Selection Handlers
   const handleToggleCardSelection = useCallback((cardId: string) => {

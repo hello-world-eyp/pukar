@@ -59,11 +59,16 @@ export const PukarSlamOverlay: React.FC<PukarSlamOverlayProps> = ({
 }) => {
   const [particles] = useState<BurstParticle[]>(() => generateParticles());
 
+  const onCloseRef = React.useRef(onClose);
+  onCloseRef.current = onClose;
+  const onImpactRef = React.useRef(onImpact);
+  onImpactRef.current = onImpact;
+
   useEffect(() => {
     // Trigger slam impact ripple after initial drop descent (~180ms)
     const impactTimer = setTimeout(() => {
       try {
-        onImpact?.();
+        onImpactRef.current?.();
       } catch (err) {
         console.error('Error invoking onImpact callback:', err);
       }
@@ -72,7 +77,7 @@ export const PukarSlamOverlay: React.FC<PukarSlamOverlayProps> = ({
     // Auto-dismiss
     const dismissTimer = setTimeout(() => {
       try {
-        onClose?.();
+        onCloseRef.current?.();
       } catch (err) {
         console.error('Error invoking onClose callback:', err);
       }
@@ -82,7 +87,7 @@ export const PukarSlamOverlay: React.FC<PukarSlamOverlayProps> = ({
       clearTimeout(impactTimer);
       clearTimeout(dismissTimer);
     };
-  }, [onImpact, onClose, autoDismissMs]);
+  }, [autoDismissMs]);
 
   return (
     <div
@@ -198,6 +203,7 @@ export const PukarSlamOverlay: React.FC<PukarSlamOverlayProps> = ({
               {/* Dismiss hint */}
               <button
                 type="button"
+                data-testid="btn-pukar-slam-continue"
                 onClick={onClose}
                 className="mt-6 px-8 sm:px-10 py-3 sm:py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-sm sm:text-base uppercase tracking-wider shadow-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
               >

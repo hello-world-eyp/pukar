@@ -803,7 +803,12 @@ function handleSelectPukarDeck(
 
   // Index 0 means the player confirms keeping the first/default deck
   if (deckIndex === 0) {
-    return { state };
+    return {
+      state: {
+        ...state,
+        newlyPickedUpCardIds: activePlayer.hand.map((c) => c.id),
+      },
+    };
   }
 
   if (deckIndex < 0) {
