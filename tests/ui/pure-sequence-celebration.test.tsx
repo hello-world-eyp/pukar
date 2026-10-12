@@ -21,9 +21,9 @@ describe('PureSequenceCelebrationModal Component', () => {
     expect(html).toContain('Replay (10s)');
     expect(html).toContain('Download 10s Video');
     expect(html).toContain('Continue Game');
-    expect(html).toContain('<canvas');
-    expect(html).toContain('width="1280"');
-    expect(html).toContain('height="720"');
+    expect(html).toContain('<video');
+    expect(html).toContain('data-testid="pure-sequence-celebration-video"');
+    expect(html).toContain('/assets/celebration/500-points-celebration.mp4');
   });
 
   it('renders DevInspector preview button when onPreviewCelebration is provided', () => {
