@@ -124,6 +124,9 @@ export function App({
     initialScreen ??
     (detectedUrlRoomCode
       ? 'MULTIPLAYER_HUB'
+      : typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('screen') === 'game'
+      ? 'GAME'
       : initialState
       ? 'GAME'
       : initialMode === 'LOCAL'

@@ -363,6 +363,11 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 cardSize={cardSize}
                 isRippling={isRippling}
                 compactMeldHeaders={compactMeldHeaders}
+                allHandCards={allHandCards}
+                onAddToMeld={onAddToMeld}
+                canAdd={canAdd}
+                isOwnTeam={isOwnTeam}
+                selectedCards={selectedCards}
               />
             );
           })
@@ -372,7 +377,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   );
 };
 
-interface MeldCardItemProps {
+export interface MeldCardItemProps {
   meld: Meld;
   evaluation: ReturnType<typeof evaluateMeldScore>;
   isSelected: boolean;
@@ -387,9 +392,52 @@ interface MeldCardItemProps {
   onAutoAdd?: () => void;
   isRippling?: boolean;
   compactMeldHeaders?: boolean;
+  allHandCards?: Card[];
+  onAddToMeld?: (meldId: string, cardIds: string[]) => void;
+  canAdd?: boolean;
+  isOwnTeam?: boolean;
+  selectedCards?: Card[];
 }
 
-const MeldCardItem: React.FC<MeldCardItemProps> = ({
+/**
+ * Pure validation helper for drag-and-drop targeting on a table meld.
+ * Checks phase, team ownership, pure 13 completeness, hand exhaustion rule, and meld rules.
+ */
+export function canDropCardsOnMeld({
+  meld,
+  cardsInFlight,
+  allHandCards,
+  canAdd = true,
+  isOwnTeam = true,
+}: {
+  meld: Meld;
+  cardsInFlight: Card[];
+  allHandCards?: Card[];
+  canAdd?: boolean;
+  isOwnTeam?: boolean;
+}): { valid: boolean; error?: string } {
+  try {
+    const isCompleteSequence = meld.isPure13 || evaluateMeldScore(meld).points === 500;
+    if (isCompleteSequence) {
+      return { valid: false, error: 'Sequence is complete' };
+    }
+    if (!canAdd || !isOwnTeam) {
+      return { valid: false, error: 'Cannot add to sequence right now' };
+    }
+    if (!cardsInFlight || cardsInFlight.length === 0) {
+      return { valid: false, error: 'No cards in flight' };
+    }
+    if (allHandCards && allHandCards.length <= cardsInFlight.length) {
+      return { valid: false, error: 'Cannot meld all cards; must keep at least 1 card in hand' };
+    }
+    return canAddCardsToMeld(meld, cardsInFlight);
+  } catch (err) {
+    console.error('Error validating drop cards on meld:', err);
+    return { valid: false, error: 'Validation error' };
+  }
+}
+
+export const MeldCardItem: React.FC<MeldCardItemProps> = ({
   meld,
   evaluation,
   isSelected,
@@ -404,6 +452,11 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
   onAutoAdd,
   isRippling = false,
   compactMeldHeaders,
+  allHandCards,
+  onAddToMeld,
+  canAdd = true,
+  isOwnTeam = true,
+  selectedCards,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
 
@@ -534,6 +587,120 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
 
   const isCompleteSequence = isPure13 || evaluation.points === 500;
   const [isAbsorbing, setIsAbsorbing] = useState(false);
+  const [isDragOverTarget, setIsDragOverTarget] = useState(false);
+  const [dragHoverCardCount, setDragHoverCardCount] = useState(0);
+
+  const getCardsBeingDragged = (e: React.DragEvent): Card[] => {
+    try {
+      if (!allHandCards || allHandCards.length === 0) return [];
+
+      let cardIds: string[] = [];
+      if (typeof window !== 'undefined' && (window as any).__pukarActiveDragCardIds) {
+        cardIds = (window as any).__pukarActiveDragCardIds;
+      }
+
+      if (!cardIds || cardIds.length === 0) {
+        const rawIds = e.dataTransfer?.getData('card-ids');
+        if (rawIds) {
+          try {
+            cardIds = JSON.parse(rawIds);
+          } catch {}
+        }
+      }
+
+      if (!cardIds || cardIds.length === 0) {
+        const singleId = e.dataTransfer?.getData('card-id');
+        if (singleId) {
+          cardIds = [singleId];
+        }
+      }
+
+      if (!cardIds || cardIds.length === 0) {
+        const jsonStr = e.dataTransfer?.getData('application/json');
+        if (jsonStr) {
+          try {
+            const parsed = JSON.parse(jsonStr);
+            if (Array.isArray(parsed.cardIds)) {
+              cardIds = parsed.cardIds;
+            } else if (parsed.id) {
+              cardIds = [parsed.id];
+            }
+          } catch {}
+        }
+      }
+
+      if ((!cardIds || cardIds.length === 0) && selectedCards && selectedCards.length > 0) {
+        return selectedCards;
+      }
+
+      if (!cardIds || cardIds.length === 0) return [];
+
+      const handMap = new Map(allHandCards.map((c) => [c.id, c]));
+      return cardIds.map((id) => handMap.get(id)).filter((c): c is Card => c !== undefined);
+    } catch {
+      return [];
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    const cardsInFlight = getCardsBeingDragged(e);
+    const dropCheck = canDropCardsOnMeld({
+      meld,
+      cardsInFlight,
+      allHandCards,
+      canAdd,
+      isOwnTeam,
+    });
+
+    if (dropCheck.valid) {
+      e.preventDefault();
+      try {
+        e.dataTransfer.dropEffect = 'copy';
+      } catch {}
+      if (!isDragOverTarget) {
+        setIsDragOverTarget(true);
+        setDragHoverCardCount(cardsInFlight.length);
+      }
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOverTarget(false);
+      setDragHoverCardCount(0);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    setIsDragOverTarget(false);
+    setDragHoverCardCount(0);
+
+    if (!onAddToMeld) return;
+
+    try {
+      const cardsInFlight = getCardsBeingDragged(e);
+      const dropCheck = canDropCardsOnMeld({
+        meld,
+        cardsInFlight,
+        allHandCards,
+        canAdd,
+        isOwnTeam,
+      });
+
+      if (dropCheck.valid) {
+        e.preventDefault();
+        setIsAbsorbing(true);
+        setTimeout(() => setIsAbsorbing(false), 550);
+        onAddToMeld(meld.id, cardsInFlight.map((c) => c.id));
+      }
+    } catch (err) {
+      console.error('Error handling meld drop:', err);
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('dragend'));
+      }
+    }
+  };
 
   const handleItemClick = () => {
     if (isCompleteSequence) {
@@ -556,6 +723,8 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
 
   const containerClasses = isCompleteSequence
     ? 'bg-stone-200/50 border-2 border-stone-300/90 text-stone-600 opacity-65 filter grayscale-[45%] shadow-inner cursor-not-allowed hover:opacity-75'
+    : isDragOverTarget
+    ? 'border-2 border-emerald-400 ring-4 ring-emerald-400/80 shadow-2xl shadow-emerald-500/30 bg-emerald-50/95 scale-[1.02] cursor-copy transition-all'
     : isEligibleToAutoAdd
     ? 'border-2 border-yellow-400 ring-4 ring-yellow-400/70 shadow-2xl shadow-yellow-500/30 bg-yellow-50/90 cursor-pointer hover:scale-[1.015] hover:border-yellow-300 hover:ring-yellow-300 transition-all'
     : isSelected
@@ -569,9 +738,14 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       data-testid={`meld-item-${meld.id}`}
       data-selected={isSelected ? 'true' : undefined}
       data-can-add={isEligibleToAutoAdd ? 'true' : undefined}
-      data-highlight-yellow={isEligibleToAutoAdd ? 'true' : undefined}
+      data-highlight-yellow={isEligibleToAutoAdd && !isDragOverTarget ? 'true' : undefined}
+      data-drag-over={isDragOverTarget ? 'true' : undefined}
       data-complete={isCompleteSequence ? 'true' : undefined}
       onClick={handleItemClick}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       title={
         isCompleteSequence
           ? 'Complete Sequence (500 pts) • Full 13-card sequence; no cards can be added'
@@ -580,13 +754,28 @@ const MeldCardItem: React.FC<MeldCardItemProps> = ({
       className={`relative group rounded-xl p-2 sm:p-2.5 transition-all ${
         isCompleteSequence
           ? 'cursor-not-allowed'
+          : isDragOverTarget
+          ? 'cursor-copy'
           : canSelect || isEligibleToAutoAdd
           ? 'cursor-pointer'
           : ''
       } ${containerClasses} ${absorbClass}`}
     >
+      {/* Emerald Drag-and-Drop Drop Target Floating Badge */}
+      {isDragOverTarget && (
+        <div
+          data-testid={`drop-add-prompt-${meld.id}`}
+          className="absolute -top-3.5 right-3 z-30 pointer-events-none flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-400 border-2 border-emerald-600 text-slate-950 text-xs font-black shadow-lg animate-bounce max-w-[90%] truncate"
+        >
+          <PlusCircle className="w-3.5 h-3.5 text-emerald-950 shrink-0" />
+          <span className="truncate">
+            {`Drop to add (${dragHoverCardCount} ${dragHoverCardCount === 1 ? 'card' : 'cards'})`}
+          </span>
+        </div>
+      )}
+
       {/* Yellow Auto-Add Floating Banner (Positioned absolute so height never shifts on card selection) */}
-      {isEligibleToAutoAdd && (
+      {!isDragOverTarget && isEligibleToAutoAdd && (
         <div
           data-testid={`auto-add-prompt-${meld.id}`}
           className="absolute -top-3.5 right-3 z-30 pointer-events-none flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-300 border-2 border-yellow-500 text-stone-950 text-xs font-black shadow-lg animate-pulse max-w-[90%] truncate"

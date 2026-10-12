@@ -256,6 +256,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   // Automatically reset drag state whenever hand cards change or perspective switches
   React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__pukarActiveDragCardIds = null;
+    }
     setIsDragging(false);
     setDraggedIndex(null);
     setDraggedCardId(null);
@@ -266,6 +269,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
     const handleGlobalDragClean = () => {
+      (window as any).__pukarActiveDragCardIds = null;
       setIsDragging(false);
       setDraggedIndex(null);
       setDraggedCardId(null);
@@ -409,7 +413,23 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', String(index));
       e.dataTransfer.setData('card-id', card.id);
-      e.dataTransfer.setData('application/json', JSON.stringify({ index, id: card.id }));
+
+      const isCardSelected = selectedCardIds && selectedCardIds.includes(card.id);
+      const draggedCardIds =
+        isCardSelected && selectedCardIds && selectedCardIds.length > 0
+          ? selectedCardIds
+          : [card.id];
+
+      e.dataTransfer.setData('card-ids', JSON.stringify(draggedCardIds));
+      e.dataTransfer.setData(
+        'application/json',
+        JSON.stringify({ index, id: card.id, cardIds: draggedCardIds })
+      );
+
+      if (typeof window !== 'undefined') {
+        (window as any).__pukarActiveDragCardIds = draggedCardIds;
+      }
+
       setIsDragging(true);
       setDraggedIndex(index);
       setDraggedCardId(card.id);
@@ -452,6 +472,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const handleDragEnd = () => {
+    if (typeof window !== 'undefined') {
+      (window as any).__pukarActiveDragCardIds = null;
+    }
     setIsDragging(false);
     setDraggedIndex(null);
     setDraggedCardId(null);
