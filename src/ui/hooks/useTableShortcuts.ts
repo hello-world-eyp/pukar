@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { GameAction } from '../../engine/types';
 
 export interface UseTableShortcutsProps {
@@ -7,6 +7,9 @@ export interface UseTableShortcutsProps {
 }
 
 export function useTableShortcuts({ currentScreen, onAction }: UseTableShortcutsProps) {
+  const onActionRef = useRef(onAction);
+  onActionRef.current = onAction;
+
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
     if (currentScreen !== 'GAME') return;
@@ -29,7 +32,7 @@ export function useTableShortcuts({ currentScreen, onAction }: UseTableShortcuts
         const now = Date.now();
         if (now - lastJTime <= 1200) {
           lastJTime = 0;
-          onAction({ type: 'OPTIMIZE_DECK_ORDER' });
+          onActionRef.current({ type: 'OPTIMIZE_DECK_ORDER' });
         } else {
           lastJTime = now;
         }
@@ -42,5 +45,5 @@ export function useTableShortcuts({ currentScreen, onAction }: UseTableShortcuts
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currentScreen, onAction]);
+  }, [currentScreen]);
 }

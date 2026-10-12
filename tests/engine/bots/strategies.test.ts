@@ -49,6 +49,11 @@ describe('Bot Personality Strategies', () => {
 
     it('prefers drawing stock when pile has fewer than 3 cards and no immediate meld', () => {
       const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'HEARTS', 5),
+        makeCard('h2', 'HEARTS', 7),
+        makeCard('h3', 'HEARTS', 9),
+      ];
       state.discardPile = [makeCard('dp1', 'SPADES', 4)];
 
       const plan = decideFastChachiTurn(state, 1, createEmptyMemory());

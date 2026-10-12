@@ -292,7 +292,7 @@ export function useLocalGame({
     [
       isMultiplayerActive,
       isViewingActivePlayer,
-      multiplayerHook,
+      multiplayerHook.dispatchAction,
       gameState,
       triggerSound,
       setErrorMessage,

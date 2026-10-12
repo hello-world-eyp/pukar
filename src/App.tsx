@@ -271,7 +271,7 @@ export function App({
     gameState: activeGameState as GameState,
     botConfig,
     handleAction,
-    turnDelayMs: 650,
+    turnDelayMs: 250,
   });
 
   // ---------------------------------------------------------------------------
@@ -304,13 +304,19 @@ export function App({
       : ((activeGameState as SanitizedGameState).pukarPoolCount ?? 0);
 
   const isClaimingPlayer =
-    appMode !== 'MULTIPLAYER' ||
-    (multiplayerHook.mySeatIndex !== null &&
-      ((unclePukarChoiceData?.playerIndex !== undefined &&
-        multiplayerHook.mySeatIndex === unclePukarChoiceData.playerIndex) ||
-        (pukarSlamEvent?.playerIndex !== undefined &&
-          multiplayerHook.mySeatIndex === pukarSlamEvent.playerIndex) ||
-        multiplayerHook.mySeatIndex === activeTurnIndex));
+    appMode === 'BOTS'
+      ? (unclePukarChoiceData?.playerIndex !== undefined
+          ? unclePukarChoiceData.playerIndex === 0
+          : pukarSlamEvent?.playerIndex !== undefined
+          ? pukarSlamEvent.playerIndex === 0
+          : activeTurnIndex === 0)
+      : appMode !== 'MULTIPLAYER' ||
+        (multiplayerHook.mySeatIndex !== null &&
+          ((unclePukarChoiceData?.playerIndex !== undefined &&
+            multiplayerHook.mySeatIndex === unclePukarChoiceData.playerIndex) ||
+            (pukarSlamEvent?.playerIndex !== undefined &&
+              multiplayerHook.mySeatIndex === pukarSlamEvent.playerIndex) ||
+            multiplayerHook.mySeatIndex === activeTurnIndex));
 
   const isPukarSelectionPending = Boolean(
     (unclePukarChoiceData?.isOpen || (pukarSlamEvent && remainingPukars >= 1)) &&
@@ -1147,7 +1153,7 @@ export function App({
               // to the specific player who earned the Pukar. Other players must not see it.
               const isClaimingPlayer =
                 appMode === 'BOTS'
-                  ? (eventInfo?.playerIndex === undefined || eventInfo?.playerIndex === 0)
+                  ? (eventInfo?.playerIndex !== undefined ? eventInfo.playerIndex === 0 : activeTurnIndex === 0)
                   : appMode !== 'MULTIPLAYER' ||
                     (multiplayerHook.mySeatIndex !== null &&
                       eventInfo?.playerIndex !== undefined &&
@@ -1184,7 +1190,7 @@ export function App({
       {unclePukarChoiceData &&
         unclePukarChoiceData.isOpen &&
         (appMode === 'BOTS'
-          ? (unclePukarChoiceData.playerIndex === undefined || unclePukarChoiceData.playerIndex === 0)
+          ? (unclePukarChoiceData.playerIndex !== undefined ? unclePukarChoiceData.playerIndex === 0 : activeTurnIndex === 0)
           : appMode !== 'MULTIPLAYER' ||
             (multiplayerHook.mySeatIndex !== null &&
               (unclePukarChoiceData.playerIndex === undefined ||

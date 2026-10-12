@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useCallback } from 'react';
 import { GameAction, GameState } from '../../engine/types';
 import { BotGameConfig, BotMemory } from '../../engine/bots/types';
 import {
@@ -28,9 +28,12 @@ export function useBotGame({
   gameState,
   botConfig,
   handleAction,
-  turnDelayMs = 650,
+  turnDelayMs = 250,
 }: UseBotGameProps) {
-  const [botStatus, setBotStatus] = useState<BotStatus | null>(() => {
+  const handleActionRef = useRef(handleAction);
+  handleActionRef.current = handleAction;
+
+  const botStatus = useMemo<BotStatus | null>(() => {
     if (appMode !== 'BOTS' || !botConfig || gameState.isRoundOver) return null;
     const currentIdx = gameState.currentPlayerIndex;
     const currentSeat = botConfig.seats.find((s) => s.seatIndex === currentIdx);
@@ -41,7 +44,8 @@ export function useBotGame({
       personality: currentSeat.personality,
       phase: gameState.phase === 'DRAW' ? 'DRAW' : gameState.phase === 'DISCARD' ? 'DISCARD' : 'MELD',
     };
-  });
+  }, [appMode, botConfig, gameState]);
+
   const botMemoryRef = useRef<BotMemory>(createInitialBotMemory());
   const prevStateRef = useRef<GameState>(gameState);
   const isExecutingRef = useRef<boolean>(false);
@@ -95,7 +99,6 @@ export function useBotGame({
   useEffect(() => {
     // Only active in BOTS mode
     if (appMode !== 'BOTS' || !botConfig || gameState.isRoundOver) {
-      setBotStatus(null);
       isExecutingRef.current = false;
       return;
     }
@@ -103,9 +106,8 @@ export function useBotGame({
     const currentIdx = gameState.currentPlayerIndex;
     const currentSeat = botConfig.seats.find((s) => s.seatIndex === currentIdx);
 
-    // If active player is human, clear bot status and yield control
+    // If active player is human, yield control
     if (!currentSeat || currentSeat.isHuman) {
-      setBotStatus(null);
       isExecutingRef.current = false;
       return;
     }
@@ -118,18 +120,11 @@ export function useBotGame({
     if (isExecutingRef.current) return;
     isExecutingRef.current = true;
 
-    setBotStatus({
-      isThinking: true,
-      botName: currentSeat.name,
-      personality,
-      phase: currentPhase === 'DRAW' ? 'DRAW' : currentPhase === 'DISCARD' ? 'DISCARD' : 'MELD',
-    });
-
     const timer = setTimeout(() => {
       try {
         if (currentPhase === 'DRAW') {
           const plan = decideBotTurn(gameState, currentIdx, personality, botMemoryRef.current);
-          handleAction(plan.drawAction);
+          handleActionRef.current(plan.drawAction);
         } else if (currentPhase === 'MELD') {
           const plan = decideBotTurn(gameState, currentIdx, personality, botMemoryRef.current);
 
@@ -137,7 +132,7 @@ export function useBotGame({
           if (gameState.pukarPool.length >= 1 && gameState.players[currentIdx]?.hand.length === 13) {
             const chosenDeck = selectBotPukarDeck(gameState, currentIdx, personality);
             if (chosenDeck > 0) {
-              handleAction({ type: 'SELECT_PUKAR_DECK', deckIndex: chosenDeck });
+              handleActionRef.current({ type: 'SELECT_PUKAR_DECK', deckIndex: chosenDeck });
               isExecutingRef.current = false;
               return;
             }
@@ -145,21 +140,21 @@ export function useBotGame({
 
           // If there are meld actions to play, play the first one
           if (plan.meldActions.length > 0) {
-            handleAction(plan.meldActions[0]);
+            handleActionRef.current(plan.meldActions[0]);
           } else {
             // No melds left, proceed to discard
-            handleAction(plan.discardAction);
+            handleActionRef.current(plan.discardAction);
           }
         } else if (currentPhase === 'DISCARD') {
           const plan = decideBotTurn(gameState, currentIdx, personality, botMemoryRef.current);
-          handleAction(plan.discardAction);
+          handleActionRef.current(plan.discardAction);
         }
       } catch (err) {
         console.error('Error during bot turn execution:', err);
         // Failsafe discard so game never deadlocks
         const hand = gameState.players[currentIdx]?.hand ?? [];
         if (hand.length > 0) {
-          handleAction({ type: 'DISCARD_CARD', cardId: hand[0].id });
+          handleActionRef.current({ type: 'DISCARD_CARD', cardId: hand[0].id });
         }
       } finally {
         isExecutingRef.current = false;
@@ -174,7 +169,6 @@ export function useBotGame({
     appMode,
     botConfig,
     gameState,
-    handleAction,
     turnDelayMs,
   ]);
 

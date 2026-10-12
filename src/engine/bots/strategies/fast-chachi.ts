@@ -42,8 +42,10 @@ export function decideFastChachiTurn(
       const newMelds = findPotentialNewMelds(testHand, {
         requirePure: myTeamMelds.length === 0,
       });
-      const hasExtremeMeld = newMelds.some((m) =>
-        m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
+      const hasExtremeMeld = newMelds.some(
+        (m) =>
+          m.cards.some((c) => c.id === top.id) &&
+          m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
       );
 
       if (hasExtremeMeld) {

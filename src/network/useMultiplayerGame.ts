@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { SocketClient } from './socket-client';
 import { LobbySeat, ServerMessage } from '../../server/types';
 import { GameAction, SanitizedGameState } from '../engine/types';
@@ -259,24 +259,48 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
     setErrorMessage(null);
   }, []);
 
-  return {
-    connectionStatus,
-    roomCode,
-    isHost,
-    isInLobby: roomCode !== null && !isInGame,
-    isInGame,
-    lobbySeats,
-    gameState,
-    mySeatIndex,
-    myPlayerId,
-    errorMessage,
-    createRoom,
-    joinRoom,
-    selectSeat,
-    startGame,
-    dispatchAction,
-    kickPlayer,
-    leaveRoom,
-    clearError,
-  };
+  const isInLobby = roomCode !== null && !isInGame;
+
+  return useMemo(
+    () => ({
+      connectionStatus,
+      roomCode,
+      isHost,
+      isInLobby,
+      isInGame,
+      lobbySeats,
+      gameState,
+      mySeatIndex,
+      myPlayerId,
+      errorMessage,
+      createRoom,
+      joinRoom,
+      selectSeat,
+      startGame,
+      dispatchAction,
+      kickPlayer,
+      leaveRoom,
+      clearError,
+    }),
+    [
+      connectionStatus,
+      roomCode,
+      isHost,
+      isInLobby,
+      isInGame,
+      lobbySeats,
+      gameState,
+      mySeatIndex,
+      myPlayerId,
+      errorMessage,
+      createRoom,
+      joinRoom,
+      selectSeat,
+      startGame,
+      dispatchAction,
+      kickPlayer,
+      leaveRoom,
+      clearError,
+    ]
+  );
 }
