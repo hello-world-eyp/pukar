@@ -77,7 +77,11 @@ describe('Bot Match Simulation & Engine Integration', () => {
         }
 
         // Check if bot emptied hand mid-meld and claimed a Pukar
-        if (state.pukarPool.length >= 1 && state.players[activeIdx].hand.length === 13) {
+        if (
+          state.initialHandSizeThisTurn === 0 &&
+          state.pukarPool.length >= 1 &&
+          state.players[activeIdx].hand.length === 13
+        ) {
           const chosenIndex = selectBotPukarDeck(state, activeIdx, personality);
           if (chosenIndex > 0) {
             const selectResult = pukarReducer(state, {

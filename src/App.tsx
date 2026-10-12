@@ -303,13 +303,18 @@ export function App({
       ? activeGameState.pukarPool.length
       : ((activeGameState as SanitizedGameState).pukarPoolCount ?? 0);
 
+  const humanSeatIndex =
+    appMode === 'BOTS'
+      ? botConfig?.seats.find((s) => s.isHuman)?.seatIndex ?? 0
+      : null;
+
   const isClaimingPlayer =
     appMode === 'BOTS'
       ? (unclePukarChoiceData?.playerIndex !== undefined
-          ? unclePukarChoiceData.playerIndex === 0
+          ? unclePukarChoiceData.playerIndex === humanSeatIndex
           : pukarSlamEvent?.playerIndex !== undefined
-          ? pukarSlamEvent.playerIndex === 0
-          : activeTurnIndex === 0)
+          ? pukarSlamEvent.playerIndex === humanSeatIndex
+          : activeTurnIndex === humanSeatIndex)
       : appMode !== 'MULTIPLAYER' ||
         (multiplayerHook.mySeatIndex !== null &&
           ((unclePukarChoiceData?.playerIndex !== undefined &&
@@ -1151,9 +1156,16 @@ export function App({
             if (remainingPukars >= 1) {
               // In multiplayer, the Uncle Pukar deck selection modal must ONLY be shown
               // to the specific player who earned the Pukar. Other players must not see it.
+              const currentHumanSeat =
+                appMode === 'BOTS'
+                  ? botConfig?.seats.find((s) => s.isHuman)?.seatIndex ?? 0
+                  : null;
+
               const isClaimingPlayer =
                 appMode === 'BOTS'
-                  ? (eventInfo?.playerIndex !== undefined ? eventInfo.playerIndex === 0 : activeTurnIndex === 0)
+                  ? (eventInfo?.playerIndex !== undefined
+                      ? eventInfo.playerIndex === currentHumanSeat
+                      : activeTurnIndex === currentHumanSeat)
                   : appMode !== 'MULTIPLAYER' ||
                     (multiplayerHook.mySeatIndex !== null &&
                       eventInfo?.playerIndex !== undefined &&
@@ -1190,7 +1202,9 @@ export function App({
       {unclePukarChoiceData &&
         unclePukarChoiceData.isOpen &&
         (appMode === 'BOTS'
-          ? (unclePukarChoiceData.playerIndex !== undefined ? unclePukarChoiceData.playerIndex === 0 : activeTurnIndex === 0)
+          ? (unclePukarChoiceData.playerIndex !== undefined
+              ? unclePukarChoiceData.playerIndex === (botConfig?.seats.find((s) => s.isHuman)?.seatIndex ?? 0)
+              : activeTurnIndex === (botConfig?.seats.find((s) => s.isHuman)?.seatIndex ?? 0))
           : appMode !== 'MULTIPLAYER' ||
             (multiplayerHook.mySeatIndex !== null &&
               (unclePukarChoiceData.playerIndex === undefined ||

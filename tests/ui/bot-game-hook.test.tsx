@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderToString } from 'react-dom/server';
 import { App } from '../../src/App';
+import { UnclePukarChoiceModal } from '../../src/ui/components/UnclePukarChoiceModal';
 import { useBotGame } from '../../src/ui/hooks/useBotGame';
 import { useTableShortcuts } from '../../src/ui/hooks/useTableShortcuts';
 import { useMultiplayerGame } from '../../src/network/useMultiplayerGame';
@@ -256,6 +256,117 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       // handleAction2 (latest ref) was called, timer was NOT canceled by reference recreation!
       expect(handleAction2).toHaveBeenCalledTimes(1);
     });
+
+    it('does not trigger SELECT_PUKAR_DECK on normal turns when bot reaches 13 cards without claiming Pukar', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.phase = 'MELD';
+      // Hand has 13 cards from a normal turn (e.g. started with 13, drew to 14, melded 1 to 13)
+      state.initialHandSizeThisTurn = 13;
+      expect(state.pukarPool.length).toBeGreaterThanOrEqual(1);
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      const handleAction = vi.fn((act) => {
+        dispatchedActions.push(act);
+        return true;
+      });
+
+      runHook(() =>
+        useBotGame({
+          appMode: 'BOTS',
+          gameState: state,
+          botConfig,
+          handleAction,
+        })
+      );
+
+      vi.advanceTimersByTime(250);
+
+      // Verify SELECT_PUKAR_DECK was NOT dispatched
+      expect(dispatchedActions.some((a) => a.type === 'SELECT_PUKAR_DECK')).toBe(false);
+      expect(handleAction).toHaveBeenCalled();
+    });
+
+    it('proceeds to discard when a meld action is rejected, preventing deadlock', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.phase = 'MELD';
+
+      // Give bot cards that form a meld
+      state.players[1].hand = [
+        { id: 'c1', suit: 'SPADES', rank: 14 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c2', suit: 'SPADES', rank: 2 as any, isNaturalJoker: false, isJoker: true },
+        { id: 'c3', suit: 'SPADES', rank: 3 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c4', suit: 'HEARTS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+      ];
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      const handleAction = vi.fn((act) => {
+        dispatchedActions.push(act);
+        if (act.type === 'PLAY_NEW_MELD') {
+          return false; // Reject the meld action!
+        }
+        return true;
+      });
+
+      runHook(() =>
+        useBotGame({
+          appMode: 'BOTS',
+          gameState: state,
+          botConfig,
+          handleAction,
+        })
+      );
+
+      vi.advanceTimersByTime(250);
+
+      // Because meld was rejected (returned false), it immediately attempted discard!
+      expect(dispatchedActions.length).toBe(2);
+      expect(dispatchedActions[0].type).toBe('PLAY_NEW_MELD');
+      expect(dispatchedActions[1].type).toBe('DISCARD_CARD');
+    });
+
+    it('failsafe discard avoids discarding single picked up card', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.phase = 'DISCARD';
+      state.cardsPickedUpThisTurn = ['c_picked'];
+      state.initialHandSizeThisTurn = 13;
+      state.players[1].hand = [
+        { id: 'c_picked', suit: 'HEARTS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c_other', suit: 'SPADES', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+      ];
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      const handleAction = vi.fn((act) => {
+        dispatchedActions.push(act);
+        // Force failure on primary discard to test failsafe
+        return false;
+      });
+
+      runHook(() =>
+        useBotGame({
+          appMode: 'BOTS',
+          gameState: state,
+          botConfig,
+          handleAction,
+        })
+      );
+
+      vi.advanceTimersByTime(250);
+
+      // Failsafe discard must have chosen c_other, avoiding c_picked
+      const discardActions = dispatchedActions.filter((a) => a.type === 'DISCARD_CARD');
+      expect(discardActions.length).toBeGreaterThanOrEqual(1);
+      const lastDiscard = discardActions[discardActions.length - 1];
+      expect(lastDiscard.cardId).toBe('c_other');
+    });
   });
 
   describe('useTableShortcuts listener stabilization', () => {
@@ -351,6 +462,49 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       // Top card is part of the extreme meld, so Fast Chachi takes it!
       expect(plan.drawAction.type).toBe('TAKE_DISCARD');
     });
+
+    it('does not take discard when top card completes a set (three-of-a-kind) of Kings instead of a sequence run', () => {
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.phase = 'DRAW';
+      // Hand already opened a pure meld
+      state.melds = {
+        A: [],
+        B: [
+          {
+            id: 'm_open',
+            team: 'B',
+            type: 'RUN',
+            suit: 'SPADES',
+            cards: [makeCard('o1', 'SPADES', 5), makeCard('o2', 'SPADES', 6), makeCard('o3', 'SPADES', 7)],
+            slots: [],
+            isClean: true,
+            isPure: true,
+            isPure13: false,
+            points: 10,
+          },
+        ],
+      };
+
+      // Hand has K♠ and K♦
+      state.players[1].hand = [
+        makeCard('k1', 'SPADES', 13),
+        makeCard('k2', 'DIAMONDS', 13),
+        makeCard('j1', 'CLUBS', 6),
+      ];
+
+      // Discard top card is K♣ (completing a SET of Kings, NOT a run)
+      state.discardPile = [makeCard('k3', 'CLUBS', 13)];
+
+      const plan = decideFastChachiTurn(state, 1, {
+        cardLog: [],
+        bottomPickupsByPlayer: {},
+        discardsByPlayer: {},
+      });
+
+      // A set of Kings is not an extreme run, so Fast Chachi does NOT take it (draws stock)
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
   });
 
   describe('useMultiplayerGame memoization stability', () => {
@@ -365,29 +519,224 @@ describe('useBotGame & Bot Pacing Fixes', () => {
   });
 
   describe('App BOTS mode Uncle Pukar modal isolation', () => {
+    function setupStatefulReactHooks() {
+      const internals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+      const stateSlots: any[] = [];
+      const refSlots: any[] = [];
+      let stateIdx = 0;
+      let refIdx = 0;
+
+      const resetIndices = () => {
+        stateIdx = 0;
+        refIdx = 0;
+      };
+
+      if (internals) {
+        internals.H = {
+          useState: (init: any) => {
+            const slot = stateIdx++;
+            if (stateSlots[slot] === undefined) {
+              stateSlots[slot] = typeof init === 'function' ? init() : init;
+            }
+            const setter = (val: any) => {
+              stateSlots[slot] = typeof val === 'function' ? val(stateSlots[slot]) : val;
+            };
+            return [stateSlots[slot], setter];
+          },
+          useEffect: () => {},
+          useRef: (init: any) => {
+            const slot = refIdx++;
+            if (!refSlots[slot]) {
+              refSlots[slot] = { current: init };
+            }
+            return refSlots[slot];
+          },
+          useCallback: (fn: any) => fn,
+          useMemo: (fn: any) => fn(),
+          useId: () => 'test-id',
+        };
+      }
+
+      return { resetIndices, stateSlots, refSlots };
+    }
+
+    function findElement(element: any, predicate: (el: any) => boolean): any {
+      if (!element || typeof element !== 'object') return null;
+      if (predicate(element)) return element;
+      if (element.props && element.props.children) {
+        const children = Array.isArray(element.props.children)
+          ? element.props.children
+          : [element.props.children];
+        for (const child of children) {
+          const found = findElement(child, predicate);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
     it('does not show Uncle Pukar modal when a bot earns Pukar in BOTS mode', () => {
+      const harness = setupStatefulReactHooks();
       const state = dealInitialState(4);
       state.currentPlayerIndex = 1; // Bot turn
       const botConfig = createTestBotConfig();
 
-      const html = renderToString(
-        <App
-          initialState={state}
-          initialMode="BOTS"
-          initialScreen="GAME"
-          initialBotConfig={botConfig}
-          initialPukarSlamEvent={{
-            team: 'B',
-            playerName: 'Fast Chachi',
-            points: 50,
-            playerIndex: 1, // Bot
-          }}
-        />
-      );
+      const tree1 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+        initialPukarSlamEvent: {
+          team: 'B',
+          playerName: 'Fast Chachi',
+          points: 50,
+          playerIndex: 1, // Bot
+        },
+      });
 
-      // Uncle Pukar modal should NOT be rendered for bot
-      expect(html).not.toContain('Auspicious Pukar Selection');
-      expect(html).not.toContain('Pick a Lucky Pukar Deck');
+      const pukarSlam = findElement(
+        tree1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlam).not.toBeNull();
+
+      // Trigger slam overlay dismissal
+      pukarSlam.props.onClose();
+
+      // Pass 2: Re-render
+      harness.resetIndices();
+      const tree2 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+      });
+
+      // Uncle Pukar modal should NOT be opened for bot
+      const modal = findElement(tree2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modal).toBeNull();
+    });
+
+    it('shows Uncle Pukar modal when human player earns Pukar', () => {
+      const harness = setupStatefulReactHooks();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 0; // Human turn
+      const botConfig = createTestBotConfig();
+
+      const tree1 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+        initialPukarSlamEvent: {
+          team: 'A',
+          playerName: 'You',
+          points: 50,
+          playerIndex: 0, // Human
+        },
+      });
+
+      const pukarSlam = findElement(
+        tree1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlam).not.toBeNull();
+
+      // Trigger slam overlay dismissal
+      pukarSlam.props.onClose();
+
+      // Pass 2: Re-render
+      harness.resetIndices();
+      const tree2 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+      });
+
+      // Uncle Pukar modal should be opened for human
+      const modal = findElement(tree2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modal).not.toBeNull();
+      expect(modal.props.isOpen).toBe(true);
+      expect(modal.props.playerName).toBe('You');
+    });
+
+    it('correctly isolates modal to dynamic human seat', () => {
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 2;
+      // Configure Seat 2 as human instead of Seat 0
+      const botConfig: BotGameConfig = {
+        playerCount: 4,
+        seats: [
+          { seatIndex: 0, name: 'Smart Chacha', personality: 'smart_chacha', isHuman: false },
+          { seatIndex: 1, name: 'Fast Chachi', personality: 'fast_chachi', isHuman: false },
+          { seatIndex: 2, name: 'You', personality: 'smart_chacha', isHuman: true },
+          { seatIndex: 3, name: 'The long-term guy', personality: 'the_long_term_guy', isHuman: false },
+        ],
+      };
+
+      // 1. Bot (Seat 0) earned Pukar -> onClose -> modal must be null
+      const harnessBot = setupStatefulReactHooks();
+      const treeBot1 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+        initialPukarSlamEvent: {
+          team: 'A',
+          playerName: 'Smart Chacha',
+          points: 50,
+          playerIndex: 0,
+        },
+      });
+      const pukarSlamBot = findElement(
+        treeBot1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlamBot).not.toBeNull();
+      pukarSlamBot.props.onClose();
+
+      harnessBot.resetIndices();
+      const treeBot2 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+      });
+      expect(findElement(treeBot2, (el) => el.type === UnclePukarChoiceModal)).toBeNull();
+
+      // 2. Human (Seat 2) earned Pukar -> onClose -> modal must be shown
+      const harnessHuman = setupStatefulReactHooks();
+      const treeHuman1 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+        initialPukarSlamEvent: {
+          team: 'A',
+          playerName: 'You',
+          points: 50,
+          playerIndex: 2,
+        },
+      });
+      const pukarSlamHuman = findElement(
+        treeHuman1,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+      expect(pukarSlamHuman).not.toBeNull();
+      pukarSlamHuman.props.onClose();
+
+      harnessHuman.resetIndices();
+      const treeHuman2 = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+      });
+      const modalHuman = findElement(treeHuman2, (el) => el.type === UnclePukarChoiceModal);
+      expect(modalHuman).not.toBeNull();
+      expect(modalHuman.props.isOpen).toBe(true);
+      expect(modalHuman.props.playerName).toBe('You');
     });
   });
 });

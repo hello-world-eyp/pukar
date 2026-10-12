@@ -19,7 +19,7 @@ export interface UseBotGameProps {
   appMode: 'LOCAL' | 'MULTIPLAYER' | 'BOTS';
   gameState: GameState;
   botConfig: BotGameConfig | null;
-  handleAction: (action: GameAction) => void;
+  handleAction: (action: GameAction) => boolean | void;
   turnDelayMs?: number;
 }
 
@@ -49,6 +49,7 @@ export function useBotGame({
   const botMemoryRef = useRef<BotMemory>(createInitialBotMemory());
   const prevStateRef = useRef<GameState>(gameState);
   const isExecutingRef = useRef<boolean>(false);
+  const pukarDeckSelectedRef = useRef<boolean>(false);
 
   // Reset bot memory when a fresh game or new match configuration starts
   useEffect(() => {
@@ -116,6 +117,11 @@ export function useBotGame({
     const personality = currentSeat.personality;
     const currentPhase = gameState.phase;
 
+    // Reset pukar selection latch when starting a fresh turn in DRAW phase
+    if (currentPhase === 'DRAW') {
+      pukarDeckSelectedRef.current = false;
+    }
+
     // Avoid double execution on re-renders
     if (isExecutingRef.current) return;
     isExecutingRef.current = true;
@@ -124,12 +130,22 @@ export function useBotGame({
       try {
         if (currentPhase === 'DRAW') {
           const plan = decideBotTurn(gameState, currentIdx, personality, botMemoryRef.current);
-          handleActionRef.current(plan.drawAction);
+          const success = handleActionRef.current(plan.drawAction);
+          if (success === false && plan.drawAction.type === 'TAKE_DISCARD') {
+            // Fallback to stock if discard pickup was rejected
+            handleActionRef.current({ type: 'DRAW_FROM_STOCK' });
+          }
         } else if (currentPhase === 'MELD') {
           const plan = decideBotTurn(gameState, currentIdx, personality, botMemoryRef.current);
 
-          // If bot claimed Pukar and multiple decks exist, select best deck
-          if (gameState.pukarPool.length >= 1 && gameState.players[currentIdx]?.hand.length === 13) {
+          // If bot claimed Pukar (initialHandSizeThisTurn === 0) and multiple decks exist, select best deck
+          if (
+            gameState.initialHandSizeThisTurn === 0 &&
+            gameState.pukarPool.length >= 1 &&
+            gameState.players[currentIdx]?.hand.length === 13 &&
+            !pukarDeckSelectedRef.current
+          ) {
+            pukarDeckSelectedRef.current = true;
             const chosenDeck = selectBotPukarDeck(gameState, currentIdx, personality);
             if (chosenDeck > 0) {
               handleActionRef.current({ type: 'SELECT_PUKAR_DECK', deckIndex: chosenDeck });
@@ -140,21 +156,57 @@ export function useBotGame({
 
           // If there are meld actions to play, play the first one
           if (plan.meldActions.length > 0) {
-            handleActionRef.current(plan.meldActions[0]);
+            const success = handleActionRef.current(plan.meldActions[0]);
+            if (success === false) {
+              // Meld action was rejected: proceed directly to discard to avoid deadlock
+              handleActionRef.current(plan.discardAction);
+            }
           } else {
             // No melds left, proceed to discard
-            handleActionRef.current(plan.discardAction);
+            const success = handleActionRef.current(plan.discardAction);
+            if (success === false) {
+              // Failsafe discard
+              const hand = gameState.players[currentIdx]?.hand ?? [];
+              const disallowedId =
+                gameState.cardsPickedUpThisTurn?.length === 1 &&
+                gameState.initialHandSizeThisTurn !== 1
+                  ? gameState.cardsPickedUpThisTurn[0]
+                  : null;
+              const fallbackCard = hand.find((c) => c.id !== disallowedId) ?? hand[0];
+              if (fallbackCard) {
+                handleActionRef.current({ type: 'DISCARD_CARD', cardId: fallbackCard.id });
+              }
+            }
           }
         } else if (currentPhase === 'DISCARD') {
           const plan = decideBotTurn(gameState, currentIdx, personality, botMemoryRef.current);
-          handleActionRef.current(plan.discardAction);
+          const success = handleActionRef.current(plan.discardAction);
+          if (success === false) {
+            // Failsafe discard
+            const hand = gameState.players[currentIdx]?.hand ?? [];
+            const disallowedId =
+              gameState.cardsPickedUpThisTurn?.length === 1 &&
+              gameState.initialHandSizeThisTurn !== 1
+                ? gameState.cardsPickedUpThisTurn[0]
+                : null;
+            const fallbackCard = hand.find((c) => c.id !== disallowedId) ?? hand[0];
+            if (fallbackCard) {
+              handleActionRef.current({ type: 'DISCARD_CARD', cardId: fallbackCard.id });
+            }
+          }
         }
       } catch (err) {
         console.error('Error during bot turn execution:', err);
         // Failsafe discard so game never deadlocks
         const hand = gameState.players[currentIdx]?.hand ?? [];
         if (hand.length > 0) {
-          handleActionRef.current({ type: 'DISCARD_CARD', cardId: hand[0].id });
+          const disallowedId =
+            gameState.cardsPickedUpThisTurn?.length === 1 &&
+            gameState.initialHandSizeThisTurn !== 1
+              ? gameState.cardsPickedUpThisTurn[0]
+              : null;
+          const fallbackCard = hand.find((c) => c.id !== disallowedId) ?? hand[0];
+          handleActionRef.current({ type: 'DISCARD_CARD', cardId: fallbackCard.id });
         }
       } finally {
         isExecutingRef.current = false;

@@ -44,6 +44,7 @@ export function decideFastChachiTurn(
       });
       const hasExtremeMeld = newMelds.some(
         (m) =>
+          m.type === 'RUN' &&
           m.cards.some((c) => c.id === top.id) &&
           m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
       );
