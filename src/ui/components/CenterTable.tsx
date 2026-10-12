@@ -18,6 +18,8 @@ export interface CenterTableProps {
   onPeekDiscard?: () => void;
   className?: string;
   isRippling?: boolean;
+  canDropToDiscard?: boolean;
+  onDropToDiscard?: (cardId: string) => void;
 }
 
 /**
@@ -69,14 +71,63 @@ export const CenterTable: React.FC<CenterTableProps> = ({
   onPeekDiscard,
   className = '',
   isRippling = false,
+  canDropToDiscard = false,
+  onDropToDiscard,
 }) => {
   const [internalPeekOpen, setInternalPeekOpen] = useState(false);
+  const [isDragOverDiscard, setIsDragOverDiscard] = useState(false);
 
   const actualStockCount = stockDeckCount ?? stockDeck?.length ?? 0;
   const actualPukarCount = pukarPoolCount ?? pukarPool?.length ?? 0;
   const drawStockAllowed = canDrawStock !== undefined ? canDrawStock : canDraw;
   const drawDiscardAllowed =
     canDrawDiscard !== undefined ? canDrawDiscard : canDraw && discardPile.length > 0;
+
+  const handleDiscardDragOver = (e: React.DragEvent) => {
+    if (!canDropToDiscard) return;
+    e.preventDefault();
+    try {
+      e.dataTransfer.dropEffect = 'move';
+      if (!isDragOverDiscard) {
+        setIsDragOverDiscard(true);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleDiscardDragEnter = (e: React.DragEvent) => {
+    if (!canDropToDiscard) return;
+    e.preventDefault();
+    setIsDragOverDiscard(true);
+  };
+
+  const handleDiscardDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOverDiscard(false);
+    }
+  };
+
+  const handleDiscardDrop = (e: React.DragEvent) => {
+    if (!canDropToDiscard) return;
+    e.preventDefault();
+    setIsDragOverDiscard(false);
+    try {
+      let cardId = e.dataTransfer.getData('card-id');
+      if (!cardId) {
+        const jsonStr = e.dataTransfer.getData('application/json');
+        if (jsonStr) {
+          const parsed = JSON.parse(jsonStr);
+          cardId = parsed.id;
+        }
+      }
+      if (cardId && onDropToDiscard) {
+        onDropToDiscard(cardId);
+      }
+    } catch (err) {
+      console.error('Error handling discard drop:', err);
+    }
+  };
 
   // Recently discarded cards shown as a fan (up to 6 cards)
   const recentCards = useMemo(() => {
@@ -211,9 +262,31 @@ export const CenterTable: React.FC<CenterTableProps> = ({
           {/* 2. DISCARD PILE (MIDDLE) */}
           <div
             aria-label="Discard Pile"
-            className="relative flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[195px] sm:min-h-[210px]"
+            data-testid="discard-pile-drop-zone"
+            data-is-drag-over={isDragOverDiscard ? 'true' : undefined}
+            onDragOver={handleDiscardDragOver}
+            onDragEnter={handleDiscardDragEnter}
+            onDragLeave={handleDiscardDragLeave}
+            onDrop={handleDiscardDrop}
+            className={`relative flex flex-col items-center justify-between p-2.5 sm:p-3 rounded-2xl table-well-light min-h-[195px] sm:min-h-[210px] transition-all duration-200 ${
+              isDragOverDiscard
+                ? 'ring-4 ring-amber-400 bg-amber-100/90 scale-[1.02] shadow-2xl shadow-amber-400/40 border-amber-500'
+                : ''
+            }`}
           >
             <span className="sr-only">Discard Pile</span>
+
+            {/* Drag-over drop indicator badge */}
+            {isDragOverDiscard && (
+              <div
+                data-testid="discard-drop-indicator"
+                className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-amber-500/25 backdrop-blur-[1px] rounded-2xl border-2 border-dashed border-amber-500 animate-pulse pointer-events-none"
+              >
+                <div className="px-3 py-1.5 rounded-full bg-amber-500 text-slate-950 font-black text-xs sm:text-sm shadow-xl flex items-center gap-1.5">
+                  <span>🎯 Release to Discard</span>
+                </div>
+              </div>
+            )}
 
             {/* Corner Zoom Button - takes zero vertical layout space */}
             <button

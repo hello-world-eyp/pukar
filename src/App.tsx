@@ -597,6 +597,12 @@ export function App({
                     onDrawStock={() => handleAction({ type: 'DRAW_FROM_STOCK' })}
                     onDrawDiscard={() => handleAction({ type: 'TAKE_DISCARD' })}
                     onPeekDiscard={() => setIsDiscardModalOpen(true)}
+                    canDropToDiscard={
+                      (activeGameState.phase === 'MELD' || activeGameState.phase === 'DISCARD') &&
+                      isViewingActivePlayer &&
+                      activeGameState.roundStatus !== 'ROUND_OVER'
+                    }
+                    onDropToDiscard={(cardId) => handleAction({ type: 'DISCARD_CARD', cardId })}
                     isRippling={isTableRippling}
                   />
                 </div>

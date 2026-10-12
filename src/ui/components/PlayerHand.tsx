@@ -378,6 +378,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     try {
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', String(index));
+      e.dataTransfer.setData('card-id', card.id);
       e.dataTransfer.setData('application/json', JSON.stringify({ index, id: card.id }));
       setIsDragging(true);
       setDraggedIndex(index);
