@@ -250,8 +250,37 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
   // Drag and Drop interaction state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Automatically reset drag state whenever hand cards change or perspective switches
+  React.useEffect(() => {
+    setIsDragging(false);
+    setDraggedIndex(null);
+    setDraggedCardId(null);
+    setDragOverIndex(null);
+  }, [cards]);
+
+  // Window-level safety cleanup: always clear drag state if drag ends or mouse releases anywhere
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleGlobalDragClean = () => {
+      setIsDragging(false);
+      setDraggedIndex(null);
+      setDraggedCardId(null);
+      setDragOverIndex(null);
+    };
+
+    window.addEventListener('dragend', handleGlobalDragClean);
+    window.addEventListener('drop', handleGlobalDragClean);
+    window.addEventListener('mouseup', handleGlobalDragClean);
+    return () => {
+      window.removeEventListener('dragend', handleGlobalDragClean);
+      window.removeEventListener('drop', handleGlobalDragClean);
+      window.removeEventListener('mouseup', handleGlobalDragClean);
+    };
+  }, []);
 
   // Ref to suppress accidental click/selection right after dropping a card
   const dragJustEndedRef = useRef(false);
@@ -259,6 +288,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   // Touch drag state ref for tablet / mobile touchscreens
   const touchStateRef = useRef<{
     startIndex: number;
+    cardId: string;
     startX: number;
     startY: number;
     hasMoved: boolean;
@@ -382,6 +412,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       e.dataTransfer.setData('application/json', JSON.stringify({ index, id: card.id }));
       setIsDragging(true);
       setDraggedIndex(index);
+      setDraggedCardId(card.id);
     } catch (err) {
       console.error('Error in handleDragStart:', err);
     }
@@ -423,6 +454,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   const handleDragEnd = () => {
     setIsDragging(false);
     setDraggedIndex(null);
+    setDraggedCardId(null);
     setDragOverIndex(null);
     dragJustEndedRef.current = true;
     setTimeout(() => {
@@ -431,11 +463,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   // Mobile / Tablet Touch Drag handlers
-  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+  const handleTouchStart = (e: React.TouchEvent, index: number, card: Card) => {
     if (disabled || e.touches.length !== 1) return;
     const touch = e.touches[0];
     touchStateRef.current = {
       startIndex: index,
+      cardId: card.id,
       startX: touch.clientX,
       startY: touch.clientY,
       hasMoved: false,
@@ -452,6 +485,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       touchStateRef.current.hasMoved = true;
       setIsDragging(true);
       setDraggedIndex(touchStateRef.current.startIndex);
+      setDraggedCardId(touchStateRef.current.cardId);
     }
 
     if (touchStateRef.current.hasMoved) {
@@ -467,21 +501,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const handleTouchEnd = () => {
-    if (!touchStateRef.current) return;
+    if (!touchStateRef.current) {
+      handleDragEnd();
+      return;
+    }
     const { startIndex, hasMoved } = touchStateRef.current;
     touchStateRef.current = null;
 
     if (hasMoved && dragOverIndex !== null && dragOverIndex !== startIndex) {
       handleMoveCard(startIndex, dragOverIndex);
-      dragJustEndedRef.current = true;
-      setTimeout(() => {
-        dragJustEndedRef.current = false;
-      }, 150);
     }
-
-    setIsDragging(false);
-    setDraggedIndex(null);
-    setDragOverIndex(null);
+    handleDragEnd();
   };
 
   const handleCardClick = (card: Card) => {
@@ -628,7 +658,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);
               const isDisallowedFromDiscard = cannotDiscardSet.has(card.id);
-              const isBeingDragged = isDragging && draggedIndex === index;
+              const isBeingDragged =
+                isDragging && (draggedCardId ? draggedCardId === card.id : draggedIndex === index);
               const isDropTarget = isDragging && dragOverIndex === index && draggedIndex !== index;
               const isHovered = hoveredCardIndex === index;
 
@@ -678,13 +709,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   onDragLeave={(e) => handleDragLeave(e, index)}
                   onDrop={(e) => handleDrop(e, index)}
                   onDragEnd={handleDragEnd}
-                  onTouchStart={(e) => handleTouchStart(e, index)}
+                  onTouchStart={(e) => handleTouchStart(e, index, card)}
                   onTouchMove={handleTouchMove}
                   onTouchEnd={handleTouchEnd}
+                  onTouchCancel={handleTouchEnd}
                   style={animStyle}
                   className={`relative transition-all duration-150 transform ${animationClasses} ${
                     isBeingDragged
-                      ? 'opacity-40 scale-95 cursor-grabbing z-30'
+                      ? 'opacity-60 scale-95 ring-2 ring-amber-400 cursor-grabbing z-30'
                       : isDropTarget
                       ? 'scale-105 z-20 cursor-grabbing'
                       : isHovered

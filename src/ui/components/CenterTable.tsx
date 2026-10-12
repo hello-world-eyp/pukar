@@ -126,6 +126,10 @@ export const CenterTable: React.FC<CenterTableProps> = ({
       }
     } catch (err) {
       console.error('Error handling discard drop:', err);
+    } finally {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('dragend'));
+      }
     }
   };
 
