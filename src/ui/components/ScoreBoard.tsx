@@ -33,7 +33,7 @@ export interface ScoreBoardProps {
   onToggleMute?: () => void;
   onOpenRules?: () => void;
   onRestartGame?: () => void;
-  appMode?: 'LOCAL' | 'MULTIPLAYER';
+  appMode?: 'LOCAL' | 'MULTIPLAYER' | 'BOTS';
   onOpenModeSelector?: () => void;
   onExitToMenu?: () => void;
 }

@@ -18,18 +18,21 @@ import { PureSequenceCelebrationModal } from './ui/components/PureSequenceCelebr
 import { UnclePukarChoiceModal } from './ui/components/UnclePukarChoiceModal';
 import { FrustrationOverlay } from './ui/components/FrustrationOverlay';
 import { GameSetupModal } from './ui/components/GameSetupModal';
+import { BotSetupModal } from './ui/components/BotSetupModal';
 import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
 import { MainMenu } from './ui/components/MainMenu';
 import { MultiplayerHub } from './ui/components/multiplayer/MultiplayerHub';
 import { MultiplayerStatusBar } from './ui/components/multiplayer/MultiplayerStatusBar';
 import { useMultiplayerGame } from './network/useMultiplayerGame';
 import { UseMultiplayerGameReturn } from './network/types';
+import { BotGameConfig } from './engine/bots/types';
 import {
   useGameAudio,
   useGameModals,
   useGameNotifications,
   useLocalGame,
   useTableShortcuts,
+  useBotGame,
 } from './ui/hooks';
 import {
   HelpCircle,
@@ -39,12 +42,14 @@ import {
   X,
   Trophy,
   Info,
+  Bot,
 } from 'lucide-react';
 
 export interface AppProps {
   initialState?: GameState;
-  initialMode?: 'LOCAL' | 'MULTIPLAYER';
+  initialMode?: 'LOCAL' | 'MULTIPLAYER' | 'BOTS';
   initialScreen?: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB';
+  initialBotConfig?: BotGameConfig;
   multiplayerGameHook?: UseMultiplayerGameReturn;
   initialUrlRoomCode?: string;
   initialPukarBanner?: {
@@ -93,6 +98,7 @@ export function App({
   initialState,
   initialMode,
   initialScreen,
+  initialBotConfig,
   multiplayerGameHook,
   initialUrlRoomCode,
   initialPukarBanner,
@@ -115,10 +121,12 @@ export function App({
   // ---------------------------------------------------------------------------
   // Application Mode & Navigation State
   // ---------------------------------------------------------------------------
-  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER'>(
+  const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER' | 'BOTS'>(
     initialMode ?? (detectedUrlRoomCode ? 'MULTIPLAYER' : 'LOCAL')
   );
   const [isModeModalOpen, setIsModeModalOpen] = useState(false);
+  const [botConfig, setBotConfig] = useState<BotGameConfig | null>(initialBotConfig ?? null);
+  const [isBotSetupModalOpen, setIsBotSetupModalOpen] = useState(false);
 
   const defaultInitialScreen: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB' =
     initialScreen ??
@@ -129,7 +137,7 @@ export function App({
       ? 'GAME'
       : initialState
       ? 'GAME'
-      : initialMode === 'LOCAL'
+      : initialMode === 'LOCAL' || initialMode === 'BOTS'
       ? 'GAME'
       : initialMode === 'MULTIPLAYER'
       ? multiplayerGameHook?.isInGame
@@ -257,6 +265,15 @@ export function App({
     onAction: handleAction,
   });
 
+  // 6. Bot game orchestrator (active when appMode === 'BOTS')
+  const { botStatus } = useBotGame({
+    appMode,
+    gameState: activeGameState as GameState,
+    botConfig,
+    handleAction,
+    turnDelayMs: 650,
+  });
+
   // ---------------------------------------------------------------------------
   // Responsive layout tracking
   // ---------------------------------------------------------------------------
@@ -307,6 +324,8 @@ export function App({
     try {
       if (appMode === 'LOCAL') {
         setIsSetupModalOpen(true);
+      } else if (appMode === 'BOTS') {
+        setIsBotSetupModalOpen(true);
       }
     } catch (err) {
       console.error('Error opening setup modal:', err);
@@ -328,6 +347,27 @@ export function App({
     }
   };
 
+  const handleStartBotGame = (config: BotGameConfig, _playerName: string) => {
+    try {
+      const names = config.seats.map((s) => s.name);
+      setBotConfig(config);
+      setAppMode('BOTS');
+      handleAction({
+        type: 'RESET_GAME',
+        playerCount: config.playerCount,
+        playerNames: names,
+      });
+      setIsBotSetupModalOpen(false);
+      setViewedPlayerIndex(null);
+      setSelectedCardIds([]);
+      setSelectedMeldId(null);
+      setCurrentScreen('GAME');
+    } catch (err) {
+      console.error('Error starting game with bots:', err);
+      setIsBotSetupModalOpen(false);
+    }
+  };
+
   return (
     <div
       data-testid="pukar-app"
@@ -338,6 +378,9 @@ export function App({
           onPlayOnline={() => {
             setAppMode('MULTIPLAYER');
             setCurrentScreen('MULTIPLAYER_HUB');
+          }}
+          onPlayBots={() => {
+            setIsBotSetupModalOpen(true);
           }}
           onPlayLocal={() => {
             setAppMode('LOCAL');
@@ -368,6 +411,8 @@ export function App({
             onNewGame={
               appMode === 'LOCAL'
                 ? () => handleOpenResetModal(activeGameState.playerCount)
+                : appMode === 'BOTS'
+                ? () => setIsBotSetupModalOpen(true)
                 : undefined
             }
             onExitToMenu={() => {
@@ -451,6 +496,30 @@ export function App({
             >
               <X className="w-4 h-4" />
             </button>
+          </div>
+        )}
+
+        {/* Bot Thinking / Action Status Banner */}
+        {appMode === 'BOTS' && botStatus && botStatus.isThinking && (
+          <div
+            data-testid="bot-thinking-banner"
+            role="status"
+            className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-indigo-950/90 border border-indigo-500/70 text-indigo-200 shadow-lg shadow-indigo-950/50 text-xs sm:text-sm animate-pulse"
+          >
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-indigo-400 shrink-0" />
+              <span className="font-bold text-white">{botStatus.botName}</span>
+              <span className="text-indigo-300 font-medium">
+                {botStatus.phase === 'DRAW'
+                  ? 'is deciding whether to draw from stock or discard pile...'
+                  : botStatus.phase === 'MELD'
+                  ? 'is arranging sequences on the table...'
+                  : 'is discarding a card to the pile...'}
+              </span>
+            </div>
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+              AI Turn
+            </span>
           </div>
         )}
 
@@ -757,7 +826,7 @@ export function App({
           </section>
 
           {/* 5. Dev Inspector & Hot-Seat Switcher (Hidden in Multiplayer mode for fairness) */}
-          {appMode === 'LOCAL' && (
+          {(appMode === 'LOCAL' || appMode === 'BOTS') && (
             <section aria-label="Hot-Seat Tools & Dev Inspector" className="shrink-0">
               <DevInspector
                 players={gameState.players}
@@ -803,6 +872,10 @@ export function App({
       {/* 0. Mode Selector Modal */}
       <ModeSelectorModal
         isOpen={isModeModalOpen}
+        onSelectBots={() => {
+          setIsModeModalOpen(false);
+          setIsBotSetupModalOpen(true);
+        }}
         onSelectLocal={() => {
           setAppMode('LOCAL');
           setSelectedCardIds([]);
@@ -880,6 +953,15 @@ export function App({
             (gameState.scores?.A ?? 0) > 0 ||
             (gameState.scores?.B ?? 0) > 0)
         }
+      />
+
+      {/* Bot Match Setup Modal */}
+      <BotSetupModal
+        isOpen={isBotSetupModalOpen}
+        onClose={() => setIsBotSetupModalOpen(false)}
+        onStartBotGame={handleStartBotGame}
+        initialPlayerCount={gameState.playerCount}
+        initialPlayerName={gameState.players[0]?.name === 'Player 1' ? 'You' : gameState.players[0]?.name}
       />
 
       {/* 5. Joker Designation Prompt Modal */}
@@ -1064,18 +1146,20 @@ export function App({
               // In multiplayer, the Uncle Pukar deck selection modal must ONLY be shown
               // to the specific player who earned the Pukar. Other players must not see it.
               const isClaimingPlayer =
-                appMode !== 'MULTIPLAYER' ||
-                (multiplayerHook.mySeatIndex !== null &&
-                  eventInfo?.playerIndex !== undefined &&
-                  multiplayerHook.mySeatIndex === eventInfo.playerIndex) ||
-                Boolean(
-                  multiplayerHook.myPlayerId &&
-                    eventInfo?.playerId &&
-                    multiplayerHook.myPlayerId === eventInfo.playerId
-                ) ||
-                (multiplayerHook.mySeatIndex !== null &&
-                  Boolean(eventInfo?.playerName) &&
-                  activeGameState.players[multiplayerHook.mySeatIndex]?.name === eventInfo?.playerName);
+                appMode === 'BOTS'
+                  ? (eventInfo?.playerIndex === undefined || eventInfo?.playerIndex === 0)
+                  : appMode !== 'MULTIPLAYER' ||
+                    (multiplayerHook.mySeatIndex !== null &&
+                      eventInfo?.playerIndex !== undefined &&
+                      multiplayerHook.mySeatIndex === eventInfo.playerIndex) ||
+                    Boolean(
+                      multiplayerHook.myPlayerId &&
+                        eventInfo?.playerId &&
+                        multiplayerHook.myPlayerId === eventInfo.playerId
+                    ) ||
+                    (multiplayerHook.mySeatIndex !== null &&
+                      Boolean(eventInfo?.playerName) &&
+                      activeGameState.players[multiplayerHook.mySeatIndex]?.name === eventInfo?.playerName);
 
               if (isClaimingPlayer) {
                 setUnclePukarChoiceData({
@@ -1099,12 +1183,14 @@ export function App({
       {/* Sid's Auspicious Pukar Time Deck Selection Modal */}
       {unclePukarChoiceData &&
         unclePukarChoiceData.isOpen &&
-        (appMode !== 'MULTIPLAYER' ||
-          (multiplayerHook.mySeatIndex !== null &&
-            (unclePukarChoiceData.playerIndex === undefined ||
-              multiplayerHook.mySeatIndex === unclePukarChoiceData.playerIndex) &&
-            (unclePukarChoiceData.playerId === undefined ||
-              multiplayerHook.myPlayerId === unclePukarChoiceData.playerId))) && (
+        (appMode === 'BOTS'
+          ? (unclePukarChoiceData.playerIndex === undefined || unclePukarChoiceData.playerIndex === 0)
+          : appMode !== 'MULTIPLAYER' ||
+            (multiplayerHook.mySeatIndex !== null &&
+              (unclePukarChoiceData.playerIndex === undefined ||
+                multiplayerHook.mySeatIndex === unclePukarChoiceData.playerIndex) &&
+              (unclePukarChoiceData.playerId === undefined ||
+                multiplayerHook.myPlayerId === unclePukarChoiceData.playerId))) && (
         <UnclePukarChoiceModal
           isOpen={unclePukarChoiceData.isOpen}
           availableDecksCount={unclePukarChoiceData.availableDecksCount}

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Users, Wifi, MonitorPlay, X } from 'lucide-react';
+import { Users, Wifi, MonitorPlay, Bot, X } from 'lucide-react';
 
 export interface ModeSelectorModalProps {
   isOpen: boolean;
   onSelectLocal: () => void;
+  onSelectBots?: () => void;
   onSelectMultiplayer: () => void;
   onClose: () => void;
 }
@@ -11,6 +12,7 @@ export interface ModeSelectorModalProps {
 export const ModeSelectorModal: React.FC<ModeSelectorModalProps> = ({
   isOpen,
   onSelectLocal,
+  onSelectBots,
   onSelectMultiplayer,
   onClose,
 }) => {
@@ -63,12 +65,37 @@ export const ModeSelectorModal: React.FC<ModeSelectorModalProps> = ({
             Choose Game Mode
           </h2>
           <p className="text-xs text-stone-400 mt-1">
-            Play locally on one screen or join friends on LAN / Online
+            Play with smart AI bots, hot-seat locally, or join friends online
           </p>
         </div>
 
         <div className="grid grid-cols-1 gap-3">
+          {onSelectBots && (
+            <button
+              type="button"
+              data-testid="btn-mode-bots"
+              onClick={() => {
+                onSelectBots();
+                onClose();
+              }}
+              className="group flex items-start gap-4 p-4 rounded-2xl bg-indigo-950/40 hover:bg-indigo-950/70 border border-indigo-800/50 hover:border-indigo-500/60 transition-all text-left cursor-pointer"
+            >
+              <div className="p-3 rounded-xl bg-indigo-500/20 text-indigo-400 group-hover:scale-110 transition-transform">
+                <Bot className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="font-extrabold text-sm text-indigo-200 group-hover:text-indigo-100">
+                  Play With Bots (AI Arena)
+                </div>
+                <div className="text-xs text-stone-400 mt-0.5">
+                  Play against smart AI bots with distinct personalities and card tracking.
+                </div>
+              </div>
+            </button>
+          )}
+
           <button
+            type="button"
             data-testid="btn-mode-local"
             onClick={() => {
               onSelectLocal();
@@ -90,6 +117,7 @@ export const ModeSelectorModal: React.FC<ModeSelectorModalProps> = ({
           </button>
 
           <button
+            type="button"
             data-testid="btn-mode-multiplayer"
             onClick={() => {
               onSelectMultiplayer();

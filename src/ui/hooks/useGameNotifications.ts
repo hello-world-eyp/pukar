@@ -27,7 +27,7 @@ export interface UseGameNotificationsProps {
   initialJokerPickupBanner?: JokerPickupData | null;
   initialExhaustNotification?: string | null;
   initialPureSequenceCelebration?: PureSequenceCelebrationData | null;
-  appMode: 'LOCAL' | 'MULTIPLAYER';
+  appMode: 'LOCAL' | 'MULTIPLAYER' | 'BOTS';
   multiplayerHook: UseMultiplayerGameReturn;
   triggerSound: (effect: SoundEffect) => void;
 }

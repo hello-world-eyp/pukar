@@ -7,10 +7,12 @@ import {
   VolumeX,
   Crown,
   ArrowRight,
+  Bot,
 } from 'lucide-react';
 
 export interface MainMenuProps {
   onPlayOnline: () => void;
+  onPlayBots?: () => void;
   onPlayLocal: () => void;
   onOpenRules: () => void;
   isMuted?: boolean;
@@ -19,6 +21,7 @@ export interface MainMenuProps {
 
 export const MainMenu: React.FC<MainMenuProps> = ({
   onPlayOnline,
+  onPlayBots,
   onPlayLocal,
   onOpenRules,
   isMuted = false,
@@ -102,8 +105,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           </p>
         </div>
 
-        {/* The Two Main Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 w-full max-w-4xl">
+        {/* The Three Main Options */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 w-full max-w-6xl">
           {/* OPTION 1: PLAY ONLINE PUKAR */}
           <div
             data-testid="card-mode-online"
@@ -129,8 +132,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </h2>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                Host a room or join friends across phones, laptops, and tablets. Configure teams,
-                customize player names, and enjoy real-time card synchronization.
+                Host a room or join friends across phones, laptops, and tablets with live synchronization.
               </p>
 
               <div className="space-y-2 mb-6">
@@ -160,7 +162,62 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </button>
           </div>
 
-          {/* OPTION 2: PLAY LOCAL GAME (PASS & PLAY) */}
+          {/* OPTION 2: PLAY WITH BOTS (AI ARENA) */}
+          <div
+            data-testid="card-mode-bots"
+            className="group relative bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border-2 border-indigo-500/40 hover:border-indigo-400/90 rounded-3xl p-6 sm:p-7 shadow-2xl hover:shadow-indigo-950/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+          >
+            {/* Subtle radial glow */}
+            <div className="absolute -top-16 -right-16 w-44 h-44 bg-indigo-500/15 rounded-full blur-3xl group-hover:bg-indigo-500/25 transition-all pointer-events-none" />
+
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                  AI Arena Mode
+                </span>
+                <span className="text-xs font-bold text-slate-400">Single Player</span>
+              </div>
+
+              <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-indigo-500/30 transition-transform">
+                <Bot className="w-7 h-7" />
+              </div>
+
+              <h2 className="text-2xl font-black text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                Play With Bots
+              </h2>
+
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
+                Challenge intelligent AI bots with distinct personalities: Smart Chacha, The Jadugar, Fast Chachi, and The long-term guy.
+              </p>
+
+              <div className="space-y-2 mb-6">
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span>Choose partner and opponent bot profiles</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span>Distinct AI strategies &amp; smart playstyles</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                  <span>4 or 6 Player full match simulation</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              data-testid="btn-menu-bots"
+              onClick={onPlayBots || onPlayLocal}
+              className="w-full h-12 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-500 hover:from-indigo-500 hover:to-violet-400 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/60 hover:shadow-indigo-900/80 transition-all cursor-pointer group-hover:translate-y-[-1px]"
+            >
+              <span>Play With Bots</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* OPTION 3: PLAY LOCAL GAME (PASS & PLAY) */}
           <div
             data-testid="card-mode-local"
             className="group relative bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border-2 border-amber-500/40 hover:border-amber-400/90 rounded-3xl p-6 sm:p-7 shadow-2xl hover:shadow-amber-950/50 transition-all duration-300 flex flex-col justify-between overflow-hidden"
@@ -185,8 +242,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </h2>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                Play together on a single screen with hot-seat switching. Select 4 or 6 players,
-                customize team names, and practice strategy with dev inspector tools.
+                Play together on a single screen with hot-seat switching and dev inspector tools.
               </p>
 
               <div className="space-y-2 mb-6">

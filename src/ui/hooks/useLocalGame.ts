@@ -20,7 +20,7 @@ import { JokerPromptData } from './useGameModals';
 
 export interface UseLocalGameProps {
   initialState?: GameState;
-  appMode: 'LOCAL' | 'MULTIPLAYER';
+  appMode: 'LOCAL' | 'MULTIPLAYER' | 'BOTS';
   multiplayerHook: UseMultiplayerGameReturn;
   triggerSound: (effect: SoundEffect) => void;
   setErrorMessage: (msg: string | null) => void;
@@ -76,9 +76,12 @@ export function useLocalGame({
   const activePlayer = activeGameState.players[activeTurnIndex];
 
   // In multiplayer: perspective is strictly locked to mySeatIndex
+  // In bot mode: perspective is locked to seat 0 (human player), unless explicitly viewed via dev inspector
   // In local mode: perspective can switch via hotseat controls
   const currentViewIndex = isMultiplayerActive
     ? (multiplayerHook.mySeatIndex ?? 0)
+    : appMode === 'BOTS'
+    ? (viewedPlayerIndex ?? 0)
     : (viewedPlayerIndex ?? activeTurnIndex);
 
   const viewingPlayer =
