@@ -74,6 +74,63 @@ export function sortCardsByRank(cards: Card[], direction: SortDirection = 'desc'
   }
 }
 
+export interface HandOverlapResult {
+  overlapMargin: number; // in pixels (<= 0 when overlapping, 0 when normal)
+  visibleCardWidth: number; // in pixels
+  isOverlapping: boolean;
+}
+
+/**
+ * Calculates adaptive negative margin for hand cards so that 14 to 26 cards
+ * dynamically fan out and fit within available tray width without horizontal scrolling.
+ * Guarantees that at least `minVisibleWidth` (default 28px: enough to see the rank + suit pip column)
+ * remains exposed for every card.
+ */
+export function calculateHandOverlap({
+  cardCount,
+  containerWidth,
+  cardWidth = 96,
+  minVisibleWidth = 28,
+  naturalGap = 8,
+}: {
+  cardCount: number;
+  containerWidth: number;
+  cardWidth?: number;
+  minVisibleWidth?: number;
+  naturalGap?: number;
+}): HandOverlapResult {
+  if (cardCount <= 1 || containerWidth <= 0) {
+    return {
+      overlapMargin: 0,
+      visibleCardWidth: cardWidth,
+      isOverlapping: false,
+    };
+  }
+
+  // Total width without overlap:
+  const naturalTotalWidth = cardWidth * cardCount + naturalGap * (cardCount - 1);
+  if (naturalTotalWidth <= containerWidth) {
+    return {
+      overlapMargin: 0,
+      visibleCardWidth: cardWidth,
+      isOverlapping: false,
+    };
+  }
+
+  // Calculate target overlap per card using Math.floor to ensure total width never exceeds containerWidth
+  // Total width = cardWidth * cardCount + (cardCount - 1) * overlapMargin <= containerWidth
+  const rawOverlap = Math.floor((containerWidth - cardWidth * cardCount) / (cardCount - 1));
+  const minOverlap = minVisibleWidth - cardWidth; // e.g. 28 - 96 = -68px
+  const overlapMargin = Math.min(0, Math.max(minOverlap, rawOverlap));
+  const visibleCardWidth = cardWidth + overlapMargin;
+
+  return {
+    overlapMargin,
+    visibleCardWidth,
+    isOverlapping: overlapMargin < 0,
+  };
+}
+
 export interface PlayerHandProps {
   cards: Card[];
   selectedCardIds?: string[];
@@ -101,6 +158,8 @@ export interface PlayerHandProps {
   onTriggerFrustration?: () => void;
   cardsPickedUpThisTurn?: string[];
   initialHandSizeThisTurn?: number;
+  containerWidth?: number;
+  minVisibleCardWidth?: number;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -130,12 +189,46 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   isHovering = false,
   frustrationCooldownUntil,
   onTriggerFrustration,
+  containerWidth,
+  minVisibleCardWidth,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection] = useState<SortDirection>(initialSortDirection);
 
   // Live timer for frustration cooldown countdown
   const [now, setNow] = useState(() => Date.now());
+
+  // Inner tray measurement & fanning state
+  const trayRef = useRef<HTMLDivElement | null>(null);
+  const [measuredTrayWidth, setMeasuredTrayWidth] = useState<number>(0);
+  const [hoveredCardIndex, setHoveredCardIndex] = useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateWidth = () => {
+      if (trayRef.current) {
+        // clientWidth minus horizontal padding (p-2.5 sm:p-3 = ~20-24px total)
+        const measured = trayRef.current.clientWidth - 24;
+        if (measured > 0) {
+          setMeasuredTrayWidth(measured);
+        }
+      }
+    };
+
+    updateWidth();
+    window.addEventListener('resize', updateWidth);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && trayRef.current) {
+      ro = new ResizeObserver(updateWidth);
+      ro.observe(trayRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateWidth);
+      ro?.disconnect();
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!frustrationCooldownUntil || frustrationCooldownUntil <= Date.now()) return;
@@ -233,6 +326,28 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }
     return new Set<string>(cardsPickedUpThisTurn);
   }, [cardsPickedUpThisTurn, initialHandSizeThisTurn]);
+
+  const effectiveContainerWidth =
+    containerWidth !== undefined
+      ? containerWidth
+      : measuredTrayWidth > 0
+      ? measuredTrayWidth
+      : typeof window !== 'undefined'
+      ? Math.max(600, window.innerWidth - 64)
+      : 1200;
+
+  const effectiveCardWidth =
+    cardSize === 'sm' ? 64 : cardSize === 'lg' ? 120 : effectiveContainerWidth >= 640 ? 96 : 80;
+
+  const overlapInfo = useMemo(() => {
+    return calculateHandOverlap({
+      cardCount: displayCards.length,
+      containerWidth: effectiveContainerWidth,
+      cardWidth: effectiveCardWidth,
+      minVisibleWidth: minVisibleCardWidth ?? 28,
+      naturalGap: 8,
+    });
+  }, [displayCards.length, effectiveContainerWidth, effectiveCardWidth, minVisibleCardWidth]);
 
   // Card reordering logic
   const handleMoveCard = useCallback(
@@ -494,6 +609,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
       {/* CARDS DISPLAY CONTAINER (RECESSED WOODEN TRAY SLOT) */}
       <div
+        ref={trayRef}
         className="w-full h-[164px] sm:h-[192px] min-h-[164px] sm:min-h-[192px] max-h-[164px] sm:max-h-[192px] wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto overflow-y-hidden pb-3 pt-5 sm:pt-6 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner"
         tabIndex={0}
         aria-label="Hand Cards"
@@ -503,13 +619,17 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             Hand is empty
           </div>
         ) : (
-          <div className="flex items-end gap-1.5 sm:gap-2 min-w-max px-2 py-1">
+          <div
+            data-is-overlapping={overlapInfo.isOverlapping ? 'true' : undefined}
+            className={`flex items-end ${overlapInfo.isOverlapping ? 'gap-0' : 'gap-1.5 sm:gap-2'} min-w-max px-2 py-1`}
+          >
             {displayCards.map((card, index) => {
               const isSelected = selectedSet.has(card.id);
               const isNew = newCardSet.has(card.id);
               const isDisallowedFromDiscard = cannotDiscardSet.has(card.id);
               const isBeingDragged = isDragging && draggedIndex === index;
               const isDropTarget = isDragging && dragOverIndex === index && draggedIndex !== index;
+              const isHovered = hoveredCardIndex === index;
 
               const animationClasses = isRippling
                 ? 'animate-card-ripple'
@@ -517,11 +637,30 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 ? 'animate-card-deal-in'
                 : '';
 
-              const animStyle: React.CSSProperties = isRippling
-                ? { animationDelay: `${(index % 12) * 50}ms` }
-                : isNew
-                ? { animationDelay: `${(index % 8) * 40}ms` }
-                : {};
+              const slotMarginLeft =
+                overlapInfo.isOverlapping && index > 0 ? `${overlapInfo.overlapMargin}px` : undefined;
+
+              const slotZIndex = isHovered
+                ? 50
+                : isDropTarget
+                ? 45
+                : isSelected
+                ? 40
+                : isBeingDragged
+                ? 30
+                : overlapInfo.isOverlapping
+                ? index + 1
+                : undefined;
+
+              const animStyle: React.CSSProperties = {
+                ...(isRippling
+                  ? { animationDelay: `${(index % 12) * 50}ms` }
+                  : isNew
+                  ? { animationDelay: `${(index % 8) * 40}ms` }
+                  : {}),
+                ...(slotMarginLeft ? { marginLeft: slotMarginLeft } : {}),
+                ...(slotZIndex !== undefined ? { zIndex: slotZIndex } : {}),
+              };
 
               return (
                 <div
@@ -529,6 +668,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   data-card-index={index}
                   data-testid={`hand-card-slot-${index}`}
                   draggable={!disabled}
+                  onMouseEnter={() => setHoveredCardIndex(index)}
+                  onMouseLeave={() => setHoveredCardIndex((prev) => (prev === index ? null : prev))}
+                  onFocus={() => setHoveredCardIndex(index)}
+                  onBlur={() => setHoveredCardIndex((prev) => (prev === index ? null : prev))}
                   onDragStart={(e) => handleDragStart(e, index, card)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragLeave={(e) => handleDragLeave(e, index)}
@@ -543,11 +686,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                       ? 'opacity-40 scale-95 cursor-grabbing z-30'
                       : isDropTarget
                       ? 'scale-105 z-20 cursor-grabbing'
+                      : isHovered
+                      ? '-translate-y-4 shadow-2xl z-50 cursor-grab'
                       : isSelected
-                      ? '-translate-y-3.5 z-20'
+                      ? '-translate-y-3.5 z-20 cursor-grab'
                       : isNew
-                      ? '-translate-y-1 hover:-translate-y-2 cursor-grab'
-                      : 'hover:-translate-y-1 cursor-grab'
+                      ? '-translate-y-1 hover:-translate-y-4 hover:z-30 cursor-grab'
+                      : 'hover:-translate-y-4 hover:z-30 cursor-grab'
                   }`}
                   title={
                     isDisallowedFromDiscard

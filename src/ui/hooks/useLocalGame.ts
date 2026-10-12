@@ -55,6 +55,14 @@ export function useLocalGame({
   // Perspective / Hot-seat view state (null = follow active turn) for LOCAL mode
   const [viewedPlayerIndex, setViewedPlayerIndex] = useState<number | null>(null);
 
+  // Dev automation bridge for visual screenshots and testing
+  if (typeof window !== 'undefined') {
+    (window as any).__PUKAR_GAME__ = {
+      gameState,
+      setGameState,
+    };
+  }
+
   // Active vs Viewed Player Resolution & State Source
   const isMultiplayerActive =
     appMode === 'MULTIPLAYER' && multiplayerHook.isInGame && !!multiplayerHook.gameState;
