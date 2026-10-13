@@ -294,7 +294,7 @@ export function findPotentialAdditionsToMelds(
 export function findBestMeldPlan(
   hand: Card[],
   teamMelds: Meld[],
-  options?: { disallowedCardId?: string }
+  options?: { disallowedCardId?: string; preserveDiscardCard?: boolean }
 ): {
   meldsToPlay: CandidateMeld[];
   additionsToPlay: CandidateAddition[];
@@ -311,12 +311,23 @@ export function findBestMeldPlan(
   for (const meld of potentialMelds) {
     const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
     if (!hasOverlap) {
+      // A single meld action cannot meld all cards in hand
+      if (meld.cards.length >= hand.length) {
+        continue;
+      }
+
+      const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
+      const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
+
+      if (options?.preserveDiscardCard && remainingHand.length === 0) {
+        continue;
+      }
+
       // If a single picked up card cannot legally be discarded,
       // preserve at least 1 other card in hand to be discarded.
       if (options?.disallowedCardId) {
-        const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
-        const remainingNonDisallowed = hand.filter(
-          (c) => !potentialUsed.has(c.id) && c.id !== options.disallowedCardId
+        const remainingNonDisallowed = remainingHand.filter(
+          (c) => c.id !== options.disallowedCardId
         );
         if (remainingNonDisallowed.length === 0 && hand.length > 1) {
           continue;
@@ -336,10 +347,21 @@ export function findBestMeldPlan(
   for (const add of potentialAdditions) {
     const hasOverlap = add.cards.some((c) => usedCardIds.has(c.id));
     if (!hasOverlap) {
+      // A single addition action cannot meld all cards in hand
+      if (add.cards.length >= hand.length) {
+        continue;
+      }
+
+      const potentialUsed = new Set([...usedCardIds, ...add.cards.map((c) => c.id)]);
+      const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
+
+      if (options?.preserveDiscardCard && remainingHand.length === 0) {
+        continue;
+      }
+
       if (options?.disallowedCardId) {
-        const potentialUsed = new Set([...usedCardIds, ...add.cards.map((c) => c.id)]);
-        const remainingNonDisallowed = hand.filter(
-          (c) => !potentialUsed.has(c.id) && c.id !== options.disallowedCardId
+        const remainingNonDisallowed = remainingHand.filter(
+          (c) => c.id !== options.disallowedCardId
         );
         if (remainingNonDisallowed.length === 0 && hand.length > 1) {
           continue;

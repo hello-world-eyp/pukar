@@ -57,6 +57,13 @@ export function decideFastChachiTurn(
     }
   }
 
+  // Fallback: If stock deck is exhausted and discard pile has cards, must take discard pile
+  if (state.stockDeck.length === 0 && state.discardPile.length > 0) {
+    drawAction = { type: 'TAKE_DISCARD' };
+  } else if (state.discardPile.length === 0 && state.stockDeck.length > 0) {
+    drawAction = { type: 'DRAW_FROM_STOCK' };
+  }
+
   // 2. MELD PHASE DECISION (Favor extreme runs A-2-3 and A-K-Q)
   const disallowedCardId =
     (state.cardsPickedUpThisTurn &&
@@ -68,7 +75,10 @@ export function decideFastChachiTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
-  const meldPlan = findBestMeldPlan(hand, myTeamMelds, { disallowedCardId });
+  const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
+    disallowedCardId,
+    preserveDiscardCard: true,
+  });
 
   // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first
   meldPlan.meldsToPlay.sort((a, b) => {

@@ -64,6 +64,13 @@ export function decideTheLongTermGuyTurn(
     }
   }
 
+  // Fallback: If stock deck is exhausted and discard pile has cards, must take discard pile
+  if (state.stockDeck.length === 0 && state.discardPile.length > 0) {
+    drawAction = { type: 'TAKE_DISCARD' };
+  } else if (state.discardPile.length === 0 && state.stockDeck.length > 0) {
+    drawAction = { type: 'DRAW_FROM_STOCK' };
+  }
+
   // 2. MELD PHASE DECISION
   // The long-term guy prioritizes ADDING to existing team sequences first!
   const disallowedCardId =
@@ -84,10 +91,17 @@ export function decideTheLongTermGuyTurn(
   for (const addition of potentialAdditions) {
     const hasOverlap = addition.cards.some((c) => usedCardIds.has(c.id));
     if (!hasOverlap) {
+      const potentialUsed = new Set([...usedCardIds, ...addition.cards.map((c) => c.id)]);
+      const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
+
+      // Rule: Must keep at least 1 card in hand to discard
+      if (remainingCards.length === 0) {
+        continue;
+      }
+
       if (disallowedCardId) {
-        const potentialUsed = new Set([...usedCardIds, ...addition.cards.map((c) => c.id)]);
-        const remainingNonDisallowed = hand.filter(
-          (c) => !potentialUsed.has(c.id) && c.id !== disallowedCardId
+        const remainingNonDisallowed = remainingCards.filter(
+          (c) => c.id !== disallowedCardId
         );
         if (remainingNonDisallowed.length === 0 && hand.length > 1) {
           continue;
@@ -114,10 +128,17 @@ export function decideTheLongTermGuyTurn(
     const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
     if (hasOverlap) continue;
 
+    const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
+    const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
+
+    // Rule: Must keep at least 1 card in hand to discard
+    if (remainingCards.length === 0) {
+      continue;
+    }
+
     if (disallowedCardId) {
-      const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
-      const remainingNonDisallowed = hand.filter(
-        (c) => !potentialUsed.has(c.id) && c.id !== disallowedCardId
+      const remainingNonDisallowed = remainingCards.filter(
+        (c) => c.id !== disallowedCardId
       );
       if (remainingNonDisallowed.length === 0 && hand.length > 1) {
         continue;

@@ -171,27 +171,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Your Name */}
-          <div className="flex flex-col gap-2">
-            <label htmlFor="human-player-name" className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Your Name
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                id="human-player-name"
-                data-testid="input-human-player-name"
-                type="text"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                maxLength={18}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-sm font-semibold text-white focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400"
-                placeholder="Enter your name"
-              />
-            </div>
-          </div>
-
-          {/* 3. Team Configurations */}
+          {/* 2. Team Configurations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Team A (Your Team) */}
             <div className="bg-cyan-950/30 border border-cyan-800/50 rounded-2xl p-4 flex flex-col gap-3">
@@ -201,9 +181,23 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
               </div>
 
               {/* Seat 0 (You) */}
-              <div className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-                <span className="text-slate-400 font-semibold">Seat 1 (You)</span>
-                <span className="font-bold text-cyan-300">{playerName.trim() || 'You'}</span>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="human-player-name" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  You (Player 1)
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" />
+                  <input
+                    id="human-player-name"
+                    data-testid="input-human-player-name"
+                    type="text"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
+                    maxLength={18}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
+                    placeholder="Enter your name"
+                  />
+                </div>
               </div>
 
               {/* Seat 2 (Partner 1) */}
@@ -212,13 +206,13 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   Partner Bot
                 </label>
                 <div className="relative">
-                  <Bot className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
+                  <Bot className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" />
                   <select
                     id="select-bot-partner-1"
                     data-testid="select-bot-partner-1"
                     value={seat2Personality}
                     onChange={(e) => setSeat2Personality(e.target.value as BotPersonality)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-indigo-400"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-cyan-400"
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
@@ -236,13 +230,13 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     2nd Partner Bot
                   </label>
                   <div className="relative">
-                    <Bot className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400 pointer-events-none" />
+                    <Bot className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-cyan-400 pointer-events-none" />
                     <select
                       id="select-bot-partner-2"
                       data-testid="select-bot-partner-2"
                       value={seat4Personality}
                       onChange={(e) => setSeat4Personality(e.target.value as BotPersonality)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-indigo-400"
+                      className="w-full bg-slate-950 border border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs sm:text-sm font-semibold text-white focus:outline-none focus:border-cyan-400"
                     >
                       {botOptions.map((opt) => (
                         <option key={opt.id} value={opt.id}>

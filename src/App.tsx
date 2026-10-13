@@ -271,7 +271,7 @@ export function App({
     gameState: activeGameState as GameState,
     botConfig,
     handleAction,
-    turnDelayMs: 250,
+    turnDelayMs: 1400,
   });
 
   // ---------------------------------------------------------------------------

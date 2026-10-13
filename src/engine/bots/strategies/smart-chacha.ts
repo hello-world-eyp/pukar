@@ -100,6 +100,13 @@ export function decideSmartChachaTurn(
     }
   }
 
+  // Fallback: If stock deck is exhausted and discard pile has cards, must take discard pile
+  if (state.stockDeck.length === 0 && state.discardPile.length > 0) {
+    drawAction = { type: 'TAKE_DISCARD' };
+  } else if (state.discardPile.length === 0 && state.stockDeck.length > 0) {
+    drawAction = { type: 'DRAW_FROM_STOCK' };
+  }
+
   // 2. MELD PHASE DECISION
   const disallowedCardId =
     (state.cardsPickedUpThisTurn &&
@@ -111,7 +118,10 @@ export function decideSmartChachaTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
-  const meldPlan = findBestMeldPlan(hand, myTeamMelds, { disallowedCardId });
+  const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
+    disallowedCardId,
+    preserveDiscardCard: true,
+  });
   const meldActions: GameAction[] = [];
 
   for (const newMeld of meldPlan.meldsToPlay) {

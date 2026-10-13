@@ -175,6 +175,15 @@ function handleDrawFromStock(state: GameState): {
     return { state, error: `Cannot draw: current phase is ${state.phase}` };
   }
   if (state.stockDeck.length === 0) {
+    if (state.discardPile.length === 0) {
+      return {
+        state: {
+          ...state,
+          roundStatus: 'ROUND_OVER',
+          isRoundOver: true,
+        },
+      };
+    }
     return { state, error: 'Stock deck is empty' };
   }
 
@@ -238,6 +247,15 @@ function handleTakeDiscard(state: GameState): {
     return { state, error: `Cannot draw: current phase is ${state.phase}` };
   }
   if (state.discardPile.length === 0) {
+    if (state.stockDeck.length === 0) {
+      return {
+        state: {
+          ...state,
+          roundStatus: 'ROUND_OVER',
+          isRoundOver: true,
+        },
+      };
+    }
     return { state, error: 'Discard pile is empty' };
   }
 
