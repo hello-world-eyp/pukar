@@ -680,13 +680,34 @@ export function evaluateDiscardPilePickup(
       if (isDirectAdd || isTightPairOrRun || pileLength >= 2) {
         return true;
       }
+    } else if (options.personality === 'SMART_CHACHA') {
+      // Smart Chacha understands that a good connecting card often comes bundled with
+      // 2-3 unhelpful opponent cards, which bloats the hand with deadwood.
+      // - If pile is small (<= 2 cards), taking it is clean and beneficial (hand has room).
+      // - If pile has 3+ cards: only take if there are multiple connecting cards (totalConnectingInPile >= 2)
+      //   AND Smart Chacha has enough cards to absorb them (hand.length > 4).
+      //   If totalConnectingInPile <= 1, that good card comes with 2-3 unhelpful opponent cards,
+      //   which is NOT beneficial!
+      if (pileLength <= 2 && hand.length > 3) {
+        return true;
+      }
+      if (pileLength >= 3 && totalConnectingInPile >= 2 && hand.length > 4) {
+        return true;
+      }
     } else {
       return true;
     }
   }
 
   if (totalConnectingInPile >= 2) {
-    return true;
+    if (options.personality === 'SMART_CHACHA') {
+      // Smart Chacha does not bloat his hand when close to Pukar (<= 4 cards)
+      if (hand.length > 4) {
+        return true;
+      }
+    } else {
+      return true;
+    }
   }
 
   // 4. Opponent Denial (Smart Chacha)
@@ -705,8 +726,11 @@ export function evaluateDiscardPilePickup(
       break;
 
     case 'SMART_CHACHA':
-      if (pileLength >= 3) return true;
-      if (pileLength >= 2 && totalConnectingInPile >= 1) return true;
+      // Smart Chacha never hoards piles of opponent deadwood on volume alone.
+      // Only takes multi-card piles if there are multiple strong connectors and hand is not lean.
+      if (pileLength >= 3 && totalConnectingInPile >= 2 && hand.length > 4) {
+        return true;
+      }
       break;
 
     case 'THE_JADUGAR':

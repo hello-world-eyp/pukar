@@ -243,6 +243,7 @@ describe('Bot Personality Strategies', () => {
         makeCard('h1', 'SPADES', 7),
         makeCard('h2', 'CLUBS', 4),
         makeCard('h3', 'DIAMONDS', 10),
+        makeCard('h4', 'HEARTS', 12),
       ];
       state.discardPile = [
         makeCard('dp1', 'HEARTS', 3),
@@ -256,8 +257,9 @@ describe('Bot Personality Strategies', () => {
       expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
     });
 
-    it('Smart Chacha and The Long-Term Guy pick up discard pile when it has 3 or more cards', () => {
+    it('The Long-Term Guy hoards 3+ cards while Smart Chacha leaves unhelpful opponent junk in discard', () => {
       const state = createTestState();
+      // Smart Chacha has 2 cards (lean hand) and pile is 3 unhelpful opponent cards
       state.players[1].hand = [
         makeCard('h1', 'SPADES', 4),
         makeCard('h2', 'HEARTS', 9),
@@ -268,11 +270,171 @@ describe('Bot Personality Strategies', () => {
         makeCard('dp3', 'CLUBS', 11),
       ];
 
+      // Smart Chacha understands that taking 3 unhelpful opponent cards bloats his hand and hurts the team
       const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
-      expect(planChacha.drawAction.type).toBe('TAKE_DISCARD');
+      expect(planChacha.drawAction.type).toBe('DRAW_FROM_STOCK');
 
+      // The Long-Term Guy hoards cards across suits to feed long sequences
       const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
       expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('Smart Chacha avoids passing cards through discard pile when pile already has 2+ cards from opponents', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      // Player 1 is Smart Chacha (Team B). Player 2 is Opponent (Team A). Player 3 is Partner (Team B).
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 5), makeCard('opp2', 'DIAMONDS', 9)]; // Opponent close to Pukar (2 cards)
+      state.players[3].team = 'B';
+      state.players[3].hand = [
+        makeCard('p1', 'SPADES', 4),
+        makeCard('p2', 'SPADES', 5),
+        makeCard('p3', 'HEARTS', 10),
+        makeCard('p4', 'CLUBS', 8),
+        makeCard('p5', 'DIAMONDS', 6),
+      ]; // Partner has 5 cards
+
+      // Team B has a Spades run on table: 3♠, 4♠, 5♠
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('m1', 'SPADES', 3),
+            makeCard('m2', 'SPADES', 4),
+            makeCard('m3', 'SPADES', 5),
+          ],
+          slots: [
+            { card: makeCard('m1', 'SPADES', 3), representedRank: 3, isWildcard: false },
+            { card: makeCard('m2', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('m3', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Smart Chacha has 6♠ (which would extend Spades run) and safe junk 9♦
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+
+      // Discard pile already contains 2 cards from opponents
+      state.discardPile = [
+        makeCard('dp1', 'HEARTS', 8),
+        makeCard('dp2', 'CLUBS', 12),
+      ];
+
+      // Smart Chacha realizes passing 6♠ now forces partner to pick up 2 other unhelpful opponent cards!
+      // So Smart Chacha does NOT pass 6♠, and discards 9♦ instead!
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('c2');
+    });
+
+    it('Smart Chacha avoids passing cards through discard pile when partner is close to Pukar (<= 4 cards)', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 5), makeCard('opp2', 'DIAMONDS', 9)]; // Opponent 2 cards
+      state.players[3].team = 'B';
+      state.players[3].hand = [
+        makeCard('p1', 'SPADES', 4),
+        makeCard('p2', 'SPADES', 5),
+      ]; // Partner only has 2 cards (close to Pukar!)
+
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('m1', 'SPADES', 3),
+            makeCard('m2', 'SPADES', 4),
+            makeCard('m3', 'SPADES', 5),
+          ],
+          slots: [
+            { card: makeCard('m1', 'SPADES', 3), representedRank: 3, isWildcard: false },
+            { card: makeCard('m2', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('m3', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Smart Chacha has 6♠ and safe junk 9♦
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+
+      // Discard pile has 1 card
+      state.discardPile = [makeCard('dp1', 'HEARTS', 8)];
+
+      // Partner is close to Pukar (2 cards), so bloating them with extra cards ruins their sprint!
+      // Smart Chacha does not pass 6♠; discards 9♦ instead!
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('c2');
+    });
+
+    it('Smart Chacha safely passes a helpful card when discard pile is clean (<= 1 card) and partner has room', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 5), makeCard('opp2', 'DIAMONDS', 9)]; // Opponent 2 cards (selective)
+      state.players[3].team = 'B';
+      state.players[3].hand = [
+        makeCard('p1', 'CLUBS', 4),
+        makeCard('p2', 'CLUBS', 5),
+        makeCard('p3', 'HEARTS', 10),
+        makeCard('p4', 'CLUBS', 8),
+        makeCard('p5', 'DIAMONDS', 6),
+      ]; // Partner has 5 cards (building hand)
+
+      state.melds.B = []; // No Spades meld on table yet
+
+      // Memory logs that partner (Player 3) picked up 5♠ from the bottom recently
+      const memory: BotMemory = {
+        cardLog: [
+          {
+            cardId: 'p-5s',
+            suit: 'SPADES',
+            rank: 5,
+            playerIndex: 3,
+            action: 'PICKUP_BOTTOM',
+            timestamp: Date.now(),
+          },
+        ],
+        bottomPickupsByPlayer: {
+          3: [makeCard('p-5s', 'SPADES', 5)],
+        },
+        discardsByPlayer: {},
+      };
+
+      // Smart Chacha has 6♠ (connects with partner's 5♠) and 9♦
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+
+      // Discard pile is completely empty (clean pile!)
+      state.discardPile = [];
+
+      // Since pile is clean and partner has room, Smart Chacha passes 6♠ to partner!
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      expect(plan.discardAction.cardId).toBe('c1');
     });
 
     it('The Jadugar picks up discard pile when it has 4 or more cards', () => {

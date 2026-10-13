@@ -131,16 +131,54 @@ export function decideSmartChachaTurn(
   const nextPlayer = state.players[nextPlayerIdx];
   const partnerLikelyWants = new Set<string>();
 
-  // If next player is an opponent close to Pukar (<= 3 cards), they won't pick up non-matching cards
-  // Smart Chacha can try to pass safe cards that partner might need
-  if (nextPlayer.team !== team && nextPlayer.hand.length <= 3) {
+  const partnerIdx = state.players.findIndex((p, idx) => idx !== botIndex && p.team === team);
+  const partner = partnerIdx >= 0 ? state.players[partnerIdx] : null;
+
+  // Smart Chacha Passing Intelligence:
+  // Understands that for the partner to receive a passed card, the partner must pick up
+  // the entire discard pile ("the bottom").
+  // If the discard pile already contains 2-3 cards from opponents, that good card comes
+  // bundled with 2-3 unhelpful opponent cards, which is NOT beneficial for the partner!
+  // Furthermore, if the partner is close to Pukar (<= 4 cards), bloating their hand with
+  // opponent cards delays or ruins their Pukar sprint.
+  const currentDiscardPileLen = state.discardPile.length;
+  const isOpponentSelective = nextPlayer.team !== team && nextPlayer.hand.length <= 3;
+  const isPartnerCloseToPukar = partner ? partner.hand.length <= 4 : false;
+  const isDiscardPileCleanForPartner = currentDiscardPileLen <= 1;
+
+  if (isOpponentSelective && isDiscardPileCleanForPartner && !isPartnerCloseToPukar && partner) {
+    // 1. Partner's logged bottom pickups (partner is building unmelded runs in hand)
+    const partnerPickups = memory.bottomPickupsByPlayer[partnerIdx] || [];
+    for (const card of partnerPickups) {
+      if (card.suit) {
+        const ranksToAdd = [card.rank - 1, card.rank + 1, card.rank - 2, card.rank + 2];
+        for (const r of ranksToAdd) {
+          if (r >= 3 && r <= 14) {
+            const key = `${card.suit}_${r}`;
+            if (!opponentWants.has(key)) {
+              partnerLikelyWants.add(key);
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Table melds (for cards that connect 1-2 ranks away)
     const partnerMelds = myTeamMelds;
     for (const pm of partnerMelds) {
       if (pm.type === 'RUN' && pm.suit) {
         const ranks = pm.slots.map((s) => s.representedRank);
         ranks.forEach((r) => {
-          if (r > 2) partnerLikelyWants.add(`${pm.suit}_${r - 1}`);
-          if (r < 14) partnerLikelyWants.add(`${pm.suit}_${r + 1}`);
+          const lowerRank = r - 1;
+          const upperRank = r + 1;
+          const lowerKey = `${pm.suit}_${lowerRank}`;
+          const upperKey = `${pm.suit}_${upperRank}`;
+          if (lowerRank > 2 && !opponentWants.has(lowerKey)) {
+            partnerLikelyWants.add(lowerKey);
+          }
+          if (upperRank < 14 && !opponentWants.has(upperKey)) {
+            partnerLikelyWants.add(upperKey);
+          }
         });
       }
     }
