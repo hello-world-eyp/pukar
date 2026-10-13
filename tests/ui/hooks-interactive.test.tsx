@@ -345,5 +345,112 @@ describe('Hooks Interactive Execution & Edge Cases (Stage 3)', () => {
       expect(setErrorMessage).toHaveBeenCalledWith('Not your turn to play');
       expect(triggerSound).toHaveBeenCalledWith('error');
     });
+
+    it('triggers normal card place sound (meld) and NOT thud (pukar) when picking up a joker in local play', () => {
+      const initialState = dealInitialState(4);
+      const setErrorMessage = vi.fn();
+      const triggerSound = vi.fn();
+      const setJokerPickupBanner = vi.fn();
+
+      const card5 = { id: 'c-5s', suit: 'SPADES' as const, rank: 5 as const, isNaturalJoker: false, isJoker: false };
+      const cardJoker = { id: 'c-joker', suit: null, rank: 0 as const, isNaturalJoker: true, isJoker: true };
+      const card7 = { id: 'c-7s', suit: 'SPADES' as const, rank: 7 as const, isNaturalJoker: false, isJoker: false };
+      const card6 = { id: 'c-6s', suit: 'SPADES' as const, rank: 6 as const, isNaturalJoker: false, isJoker: false };
+
+      const tableMeld = {
+        id: 'meld-1',
+        team: 'A' as const,
+        type: 'RUN' as const,
+        suit: 'SPADES' as const,
+        cards: [card5, cardJoker, card7],
+        slots: [
+          { card: card5, representedRank: 5, isWildcard: false },
+          { card: cardJoker, representedRank: 6, representedSuit: 'SPADES' as const, isWildcard: true },
+          { card: card7, representedRank: 7, isWildcard: false },
+        ],
+      };
+
+      const customState = {
+        ...initialState,
+        phase: 'MELD' as const,
+        melds: {
+          ...initialState.melds,
+          A: [tableMeld],
+        },
+        players: initialState.players.map((p, idx) =>
+          idx === 0 ? { ...p, hand: [card6, ...p.hand] } : p
+        ),
+      };
+
+      const game = withHookRunner(() =>
+        useLocalGame({
+          initialState: customState,
+          appMode: 'LOCAL',
+          multiplayerHook: dummyMultiplayerHook,
+          triggerSound,
+          setErrorMessage,
+          triggerPukarCelebration: vi.fn(),
+          setExhaustNotification: vi.fn(),
+          setJokerPickupBanner,
+          clearAllNotifications: vi.fn(),
+          setJokerPromptData: vi.fn(),
+        })
+      );
+
+      const success = game.handleAction({
+        type: 'ADD_TO_MELD',
+        meldId: 'meld-1',
+        cardIds: ['c-6s'],
+      });
+
+      expect(success).toBe(true);
+      expect(setJokerPickupBanner).toHaveBeenCalledWith({ playerName: 'Player 1' });
+      // Crucial requirement: Joker pickup must play normal card place voice ('meld'), NEVER thud ('pukar')
+      expect(triggerSound).toHaveBeenCalledWith('meld');
+      expect(triggerSound).not.toHaveBeenCalledWith('pukar');
+    });
+
+    it('triggers thud sound (pukar) ONLY when Pukar is claimed (+50 pts)', () => {
+      const initialState = dealInitialState(4);
+      const triggerSound = vi.fn();
+      const triggerPukarCelebration = vi.fn();
+
+      // Hand with 1 card so discard triggers Pukar claim
+      const lastCard = { id: 'c-last', suit: 'HEARTS' as const, rank: 9 as const, isNaturalJoker: false, isJoker: false };
+      const customState = {
+        ...initialState,
+        phase: 'MELD' as const,
+        turnPhase: 'MELD' as const,
+        players: initialState.players.map((p, idx) =>
+          idx === 0 ? { ...p, hand: [lastCard] } : p
+        ),
+      };
+
+      const game = withHookRunner(() =>
+        useLocalGame({
+          initialState: customState,
+          appMode: 'LOCAL',
+          multiplayerHook: dummyMultiplayerHook,
+          triggerSound,
+          setErrorMessage: vi.fn(),
+          triggerPukarCelebration,
+          setExhaustNotification: vi.fn(),
+          setJokerPickupBanner: vi.fn(),
+          clearAllNotifications: vi.fn(),
+          setJokerPromptData: vi.fn(),
+        })
+      );
+
+      // Discard last card -> claims Pukar (+50 pts)
+      const success = game.handleAction({
+        type: 'DISCARD_CARD',
+        cardId: 'c-last',
+      });
+
+      expect(success).toBe(true);
+      expect(triggerPukarCelebration).toHaveBeenCalled();
+      // Pukar claim MUST trigger the heavy thud voice ('pukar')
+      expect(triggerSound).toHaveBeenCalledWith('pukar');
+    });
   });
 });

@@ -176,7 +176,7 @@ export function useGameNotifications({
       setJokerPickupBanner({
         playerName: actor?.name ?? `Player ${current.currentPlayerIndex + 1}`,
       });
-      triggerSound('pukar');
+      triggerSound('meld');
     }
 
     // Detect Pure 13-Card Sequence (500 pts) in multiplayer

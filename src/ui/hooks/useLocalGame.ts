@@ -241,7 +241,7 @@ export function useLocalGame({
           setJokerPickupBanner({
             playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
           });
-          triggerSound('pukar');
+          triggerSound('meld');
         }
 
         // Detect Pure 13-Card Sequence (500 pts) in local play
