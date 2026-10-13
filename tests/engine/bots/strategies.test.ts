@@ -612,6 +612,212 @@ describe('Bot Personality Strategies', () => {
       expect(plan.discardAction.cardId).toBe('c1');
     });
 
+    it('Smart Chacha avoids giving a card partner needs when intermediate opponent can intercept it', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A'; // Intermediate opponent sitting between Chacha and Partner
+      state.players[2].hand = [
+        makeCard('opp1', 'HEARTS', 5),
+        makeCard('opp2', 'DIAMONDS', 9),
+        makeCard('opp3', 'CLUBS', 4),
+        makeCard('opp4', 'HEARTS', 11),
+      ];
+      state.players[3].team = 'B'; // Partner
+      state.players[3].hand = [
+        makeCard('p1', 'CLUBS', 4),
+        makeCard('p2', 'CLUBS', 5),
+        makeCard('p3', 'HEARTS', 10),
+        makeCard('p4', 'CLUBS', 8),
+        makeCard('p5', 'DIAMONDS', 6),
+      ];
+
+      // Opponent table meld contains 7♠, 8♠, 9♠ -> 6♠ can be added to opponent run!
+      state.melds.A = [
+        {
+          id: 'meld-a-spades',
+          team: 'A',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('s7', 'SPADES', 7),
+            makeCard('s8', 'SPADES', 8),
+            makeCard('s9', 'SPADES', 9),
+          ],
+          slots: [
+            { card: makeCard('s7', 'SPADES', 7), representedRank: 7, isWildcard: false },
+            { card: makeCard('s8', 'SPADES', 8), representedRank: 8, isWildcard: false },
+            { card: makeCard('s9', 'SPADES', 9), representedRank: 9, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Memory shows partner picked up 5♠
+      const memory: BotMemory = {
+        cardLog: [],
+        bottomPickupsByPlayer: {
+          3: [makeCard('p-5s', 'SPADES', 5)],
+        },
+        discardsByPlayer: {},
+      };
+
+      // Chacha has 6♠ (partner wants, but opponent can intercept!) and 9♦ (unrelated deadwood)
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+      state.discardPile = [];
+
+      // Smart Chacha MUST protect 6♠ from discard because opponent would intercept it!
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      expect(plan.discardAction.cardId).toBe('c2');
+    });
+
+    it('Smart Chacha passes card partner needs even if opponent has normal hand size (> 3 cards), as long as opponent cannot intercept and pile is clean', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A'; // Opponent has 6 cards (not <= 3 cards!)
+      state.players[2].hand = [
+        makeCard('opp1', 'HEARTS', 5),
+        makeCard('opp2', 'DIAMONDS', 9),
+        makeCard('opp3', 'CLUBS', 4),
+        makeCard('opp4', 'HEARTS', 11),
+        makeCard('opp5', 'CLUBS', 12),
+        makeCard('opp6', 'HEARTS', 3),
+      ];
+      state.players[3].team = 'B'; // Partner
+      state.players[3].hand = [
+        makeCard('p1', 'CLUBS', 4),
+        makeCard('p2', 'CLUBS', 5),
+        makeCard('p3', 'HEARTS', 10),
+        makeCard('p4', 'CLUBS', 8),
+        makeCard('p5', 'DIAMONDS', 6),
+      ];
+
+      // Opponent has no Spades meld
+      state.melds.A = [];
+
+      const memory: BotMemory = {
+        cardLog: [],
+        bottomPickupsByPlayer: {
+          3: [makeCard('p-5s', 'SPADES', 5)],
+        },
+        discardsByPlayer: {},
+      };
+
+      // Chacha has 6♠ (partner wants, opponent cannot intercept) and K♦ (rank 13 deadwood, score 40)
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 13),
+      ];
+      state.discardPile = [];
+
+      // Opponent cannot intercept and pile is clean, so Smart Chacha actively passes 6♠ (score -10 vs K♦ score 40)!
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      expect(plan.discardAction.cardId).toBe('c1');
+    });
+
+    it('Smart Chacha avoids giving a card partner needs when intermediate opponent logged to want it from pickups', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A'; // Opponent
+      state.players[2].hand = [
+        makeCard('opp1', 'HEARTS', 5),
+        makeCard('opp2', 'DIAMONDS', 9),
+        makeCard('opp3', 'CLUBS', 4),
+        makeCard('opp4', 'HEARTS', 11),
+      ];
+      state.players[3].team = 'B'; // Partner
+      state.players[3].hand = [
+        makeCard('p1', 'CLUBS', 4),
+        makeCard('p2', 'CLUBS', 5),
+        makeCard('p3', 'HEARTS', 10),
+        makeCard('p4', 'CLUBS', 8),
+        makeCard('p5', 'DIAMONDS', 6),
+      ];
+      state.melds.A = [];
+      state.melds.B = [];
+
+      // Memory logs that:
+      // - Partner picked up 5♠ (needs 6♠)
+      // - BUT Opponent picked up 7♠ (also needs 6♠!)
+      const memory: BotMemory = {
+        cardLog: [],
+        bottomPickupsByPlayer: {
+          2: [makeCard('opp-7s', 'SPADES', 7)],
+          3: [makeCard('p-5s', 'SPADES', 5)],
+        },
+        discardsByPlayer: {},
+      };
+
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 13), // Deadwood K♦
+      ];
+      state.discardPile = [];
+
+      // Because opponent wants 6♠ (intercept risk!), Smart Chacha protects 6♠ and discards K♦!
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      expect(plan.discardAction.cardId).toBe('c2');
+    });
+
+    it('Smart Chacha identifies partner needs for a SET and safely passes rank match when safe', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [
+        makeCard('opp1', 'HEARTS', 5),
+        makeCard('opp2', 'DIAMONDS', 9),
+        makeCard('opp3', 'CLUBS', 4),
+        makeCard('opp4', 'HEARTS', 11),
+      ];
+      state.players[3].team = 'B'; // Partner
+      state.players[3].hand = [
+        makeCard('p1', 'CLUBS', 4),
+        makeCard('p2', 'CLUBS', 5),
+        makeCard('p3', 'HEARTS', 10),
+        makeCard('p4', 'CLUBS', 8),
+        makeCard('p5', 'DIAMONDS', 6),
+      ];
+      state.melds.A = [];
+      state.melds.B = [];
+
+      // Partner picked up 8♦ (building 8s or diamonds)
+      const memory: BotMemory = {
+        cardLog: [],
+        bottomPickupsByPlayer: {
+          3: [makeCard('p-8d', 'DIAMONDS', 8)],
+        },
+        discardsByPlayer: {},
+      };
+
+      // Chacha has 8♣ (matches partner's 8 rank for a set) and K♠ (rank 13 deadwood)
+      state.players[1].hand = [
+        makeCard('c1', 'CLUBS', 8),
+        makeCard('c2', 'SPADES', 13),
+      ];
+      state.discardPile = [];
+
+      // Clean pile, opponent doesn't want 8s, so Chacha passes 8♣ to help partner's set!
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      expect(plan.discardAction.cardId).toBe('c1');
+    });
+
     it('The Jadugar picks up discard pile when it has 4 or more cards', () => {
       const state = createTestState();
       state.players[1].hand = [

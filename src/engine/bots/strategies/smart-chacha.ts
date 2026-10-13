@@ -35,12 +35,15 @@ export function predictOpponentWants(
           if (card.rank > 2) wants.add(`${card.suit}_${card.rank - 1}`);
           if (card.rank < 14) wants.add(`${card.suit}_${card.rank + 1}`);
           if (card.rank < 13) wants.add(`${card.suit}_${card.rank + 2}`);
+          if (card.rank > 3) wants.add(`${card.suit}_${card.rank - 2}`);
         }
+        // Set connector (same rank across suits)
+        wants.add(`RANK_${card.rank}`);
       }
     }
   });
 
-  // 2. Analyze opponents' table sequences (open ends of runs)
+  // 2. Analyze opponents' table sequences and sets
   const oppMelds = state.melds[opponentTeam] || [];
   for (const meld of oppMelds) {
     if (meld.type === 'RUN' && meld.suit) {
@@ -51,10 +54,65 @@ export function predictOpponentWants(
         if (minRank > 2) wants.add(`${meld.suit}_${minRank - 1}`);
         if (maxRank < 14) wants.add(`${meld.suit}_${maxRank + 1}`);
       }
+    } else if (meld.type === 'SET' && meld.slots.length > 0) {
+      const setRank = meld.slots[0].representedRank;
+      wants.add(`RANK_${setRank}`);
     }
   }
 
   return wants;
+}
+
+export function predictPartnerNeeds(
+  memory: BotMemory,
+  state: GameState,
+  botTeam: Team,
+  botIndex: number
+): { partnerNeeds: Set<string>; partnerDiscards: Set<string> } {
+  const partnerNeeds = new Set<string>();
+  const partnerDiscards = new Set<string>();
+
+  const partnerIndices: number[] = [];
+  state.players.forEach((player, idx) => {
+    if (idx !== botIndex && player.team === botTeam) {
+      partnerIndices.push(idx);
+    }
+  });
+
+  for (const partnerIdx of partnerIndices) {
+    // 1. Cards partner discarded (deadwood partner does NOT want)
+    const discards = memory.discardsByPlayer[partnerIdx] || [];
+    for (const card of discards) {
+      if (card.suit) {
+        partnerDiscards.add(`${card.suit}_${card.rank}`);
+      }
+      partnerDiscards.add(`RANK_${card.rank}`);
+    }
+
+    // 2. Cards partner picked up from bottom (partner is building runs / sets in hand)
+    const pickups = memory.bottomPickupsByPlayer[partnerIdx] || [];
+    for (const card of pickups) {
+      if (card.suit) {
+        // Run connectors
+        const runRanks = [card.rank - 2, card.rank - 1, card.rank + 1, card.rank + 2];
+        for (const r of runRanks) {
+          if (r >= 2 && r <= 14) {
+            partnerNeeds.add(`${card.suit}_${r}`);
+          }
+        }
+        partnerNeeds.add(`${card.suit}_${card.rank}`);
+      }
+      // Set connectors
+      partnerNeeds.add(`RANK_${card.rank}`);
+    }
+  }
+
+  // Remove known discards from partner needs
+  for (const discardKey of partnerDiscards) {
+    partnerNeeds.delete(discardKey);
+  }
+
+  return { partnerNeeds, partnerDiscards };
 }
 
 export function decideSmartChachaTurn(
@@ -134,8 +192,6 @@ export function decideSmartChachaTurn(
   // 3. DISCARD PHASE DECISION
   const remainingHand = hand.filter((c) => !meldPlan.usedCardIds.has(c.id));
   const candidatePool = remainingHand.length > 0 ? remainingHand : hand;
-  const nextPlayerIdx = (botIndex + 1) % state.playerCount;
-  const nextPlayer = state.players[nextPlayerIdx];
   const partnerLikelyWants = new Set<string>();
   const protectedCardIds = new Set<string>();
   const opponentTeam: Team = team === 'A' ? 'B' : 'A';
@@ -143,80 +199,105 @@ export function decideSmartChachaTurn(
   const partnerIdx = state.players.findIndex((p, idx) => idx !== botIndex && p.team === team);
   const partner = partnerIdx >= 0 ? state.players[partnerIdx] : null;
 
-  // Smart Chacha Passing Intelligence:
-  // 1. For partner to receive a passed card, partner must pick up the entire discard pile ("the bottom").
-  //    If the discard pile already contains >= 2 cards from opponents, that card is bundled with junk.
-  // 2. Rule: Smart Chacha must NEVER throw cards that connect to or can be added to an existing team sequence
-  //    to their partner UNLESS the partner is on less than 3 cards (< 3 cards), because opponents would simply pick it up!
+  // Smart Chacha Passing & Protection Intelligence:
+  // 1. Partner needs are predicted from partner's bottom pickups, discards, and table melds.
+  // 2. Discard Pile Cleanliness:
+  //    For partner to receive a card, partner must pick up the entire discard pile ("the bottom").
+  //    If the discard pile already contains >= 2 cards from opponents, passing a card forces partner
+  //    to pick up unwanted opponent junk, which is not beneficial for them!
+  // 3. Opponent Interception:
+  //    The intermediate player (or opponents generally) sit between Smart Chacha and partner.
+  //    If opponent can intercept or benefit from a card (opponent table melds or predicted wants),
+  //    Smart Chacha MUST NOT give it away; Smart Chacha protects it in hand!
+  // 4. Partner hand size (< 3 cards vs >= 3 cards):
+  //    - If partner is on < 3 cards: ONLY pass a card if it directly connects to a team table sequence
+  //      so partner can scoop and go out cleanly! Never pass a hand card that bloats their hand.
+  //    - If partner is on >= 3 cards: Do NOT pass table sequence cards (opponents would pick them up).
+  //      Instead, pass hand building cards that partner needs when pile is clean and safe!
   const currentDiscardPileLen = state.discardPile.length;
-  const isOpponentSelective = nextPlayer.team !== team && nextPlayer.hand.length <= 3;
   const isDiscardPileCleanForPartner = currentDiscardPileLen <= 1;
   const isPartnerOnLessThan3Cards = partner ? partner.hand.length < 3 : false;
-  const isPartnerBuildingInHand = partner ? partner.hand.length > 4 : false;
 
-  // 1. Partner's logged bottom pickups (partner is building unmelded runs in hand)
-  if (isOpponentSelective && isDiscardPileCleanForPartner && isPartnerBuildingInHand && partner) {
-    const partnerPickups = memory.bottomPickupsByPlayer[partnerIdx] || [];
-    for (const card of partnerPickups) {
-      if (card.suit) {
-        const ranksToAdd = [card.rank - 1, card.rank + 1, card.rank - 2, card.rank + 2];
-        for (const r of ranksToAdd) {
-          if (r >= 3 && r <= 14) {
-            const key = `${card.suit}_${r}`;
-            if (!opponentWants.has(key)) {
-              partnerLikelyWants.add(key);
+  const { partnerNeeds } = predictPartnerNeeds(memory, state, team, botIndex);
+
+  for (const card of candidatePool) {
+    const cardKey = card.suit ? `${card.suit}_${card.rank}` : `RANK_${card.rank}`;
+    const rankKey = `RANK_${card.rank}`;
+
+    // Can opponent intercept or benefit from this card?
+    const opponentCanIntercept =
+      opponentWants.has(cardKey) ||
+      opponentWants.has(rankKey) ||
+      (state.melds[opponentTeam] || []).some((m) => canAddCardsToMeld(m, [card]).valid) ||
+      (state.melds[opponentTeam] || []).some((m) => {
+        if (m.type === 'RUN' && m.suit === card.suit) {
+          const ranks = m.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+          if (ranks.length > 0) {
+            const minR = ranks[0];
+            const maxR = ranks[ranks.length - 1];
+            return card.rank === minR - 1 || card.rank === maxR + 1;
+          }
+        }
+        return false;
+      });
+
+    // Does card connect to team table melds?
+    const isTeamMeldAdd = myTeamMelds.some((m) => canAddCardsToMeld(m, [card]).valid);
+    let isTeamMeldNeighbor = false;
+    if (card.suit) {
+      for (const tm of myTeamMelds) {
+        if (tm.type === 'RUN' && tm.suit === card.suit) {
+          const ranks = tm.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+          if (ranks.length > 0) {
+            const minR = ranks[0];
+            const maxR = ranks[ranks.length - 1];
+            if (card.rank === minR - 1 || card.rank === maxR + 1) {
+              isTeamMeldNeighbor = true;
+              break;
             }
           }
         }
       }
     }
-  }
 
-  // 2. Table melds / sequences:
-  // ONLY pass sequence cards if partner has less than 3 cards (< 3 cards) and pile is clean, so partner can scoop and go out!
-  if (isOpponentSelective && isDiscardPileCleanForPartner && isPartnerOnLessThan3Cards && partner) {
-    const partnerMelds = myTeamMelds;
-    for (const pm of partnerMelds) {
-      if (pm.type === 'RUN' && pm.suit) {
-        const ranks = pm.slots.map((s) => s.representedRank);
-        ranks.forEach((r) => {
-          const lowerRank = r - 1;
-          const upperRank = r + 1;
-          const lowerKey = `${pm.suit}_${lowerRank}`;
-          const upperKey = `${pm.suit}_${upperRank}`;
-          if (lowerRank > 2 && !opponentWants.has(lowerKey)) {
-            partnerLikelyWants.add(lowerKey);
-          }
-          if (upperRank < 14 && !opponentWants.has(upperKey)) {
-            partnerLikelyWants.add(upperKey);
-          }
-        });
-      }
-    }
-  } else {
-    // When partner has >= 3 cards (or no partner), sequence cards must NEVER be thrown into discard pile!
-    // Protect all cards in hand that can be added to an existing team meld,
-    // as well as open-end neighbors of team runs, from discard so opponents cannot scoop them up.
-    for (const card of candidatePool) {
-      if (myTeamMelds.some((m) => canAddCardsToMeld(m, [card]).valid)) {
+    const partnerNeedsCard =
+      partnerNeeds.has(cardKey) ||
+      partnerNeeds.has(rankKey) ||
+      isTeamMeldAdd ||
+      isTeamMeldNeighbor;
+
+    if (partnerNeedsCard) {
+      if (opponentCanIntercept) {
+        // Opponent would intercept: strictly avoid giving it! Hold in hand.
         protectedCardIds.add(card.id);
-      }
-    }
-
-    for (const meld of myTeamMelds) {
-      if (meld.type === 'RUN' && meld.suit) {
-        const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
-        if (ranks.length > 0) {
-          const minRank = ranks[0];
-          const maxRank = ranks[ranks.length - 1];
-          for (const card of candidatePool) {
-            if (card.suit === meld.suit) {
-              if (card.rank === minRank - 1 || card.rank === maxRank + 1) {
-                protectedCardIds.add(card.id);
-              }
-            }
-          }
+      } else if (!isDiscardPileCleanForPartner) {
+        // Discard pile is dirty (>= 2 opponent cards): avoid giving it!
+        protectedCardIds.add(card.id);
+      } else if (isPartnerOnLessThan3Cards) {
+        // Partner is on < 3 cards: only pass if it can be added to a table sequence so partner goes out!
+        if (isTeamMeldAdd && partner) {
+          partnerLikelyWants.add(cardKey);
+          partnerLikelyWants.add(card.id);
+        } else {
+          protectedCardIds.add(card.id);
         }
+      } else {
+        // Partner has >= 3 cards (building hand):
+        // If it's a table sequence card, do NOT throw it to partner (protect it so opponents don't scoop).
+        // Otherwise, it's a hand card partner needs: pass it to partner!
+        if (isTeamMeldAdd || isTeamMeldNeighbor) {
+          protectedCardIds.add(card.id);
+        } else if (partner) {
+          partnerLikelyWants.add(cardKey);
+          partnerLikelyWants.add(card.id);
+          partnerLikelyWants.add(rankKey);
+        }
+      }
+    } else {
+      // Not specifically flagged as partner need:
+      // Protect table sequence cards from discard
+      if (isTeamMeldAdd || isTeamMeldNeighbor) {
+        protectedCardIds.add(card.id);
       }
     }
   }
