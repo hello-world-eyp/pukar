@@ -35,7 +35,9 @@ export function updateBotMemory(
   if (action.type === 'DISCARD_CARD') {
     const cardId = action.cardId;
     const actorPlayer = prevState.players[actorIndex];
-    const discardedCard = actorPlayer?.hand?.find((c) => c.id === cardId);
+    const discardedCard =
+      _nextState?.discardPile?.find((c) => c.id === cardId) ??
+      actorPlayer?.hand?.find((c) => c.id === cardId);
 
     if (discardedCard) {
       updatedLog.push({

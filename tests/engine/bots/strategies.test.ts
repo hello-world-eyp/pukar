@@ -2,11 +2,16 @@ import { describe, it, expect } from 'vitest';
 import { Card, GameState, Meld, Rank, Suit } from '../../../src/engine/types';
 import { dealInitialState } from '../../../src/engine/deck';
 import { BotMemory } from '../../../src/engine/bots/types';
-import { decideSmartChachaTurn } from '../../../src/engine/bots/strategies/smart-chacha';
+import {
+  decideSmartChachaTurn,
+  predictOpponentWants,
+  predictPartnerNeeds,
+} from '../../../src/engine/bots/strategies/smart-chacha';
 import { decideTheJadugarTurn } from '../../../src/engine/bots/strategies/the-jadugar';
 import { decideFastChachiTurn } from '../../../src/engine/bots/strategies/fast-chachi';
 import { decideTheLongTermGuyTurn } from '../../../src/engine/bots/strategies/the-long-term-guy';
 import { findBestMeldPlan, findPotentialAdditionsToMelds } from '../../../src/engine/bots/hand-analyzer';
+import { createInitialBotMemory } from '../../../src/engine/bots/bot-player';
 
 describe('Bot Personality Strategies', () => {
   function makeCard(id: string, suit: Suit | null, rank: Rank, isNaturalJoker = false): Card {
@@ -1218,5 +1223,67 @@ describe('Bot Personality Strategies', () => {
       expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
     });
   });
+
+  describe('Bot Information Privacy & Cold-Start Hidden Information', () => {
+    it('at the start of the game, bot memory has zero cards logged and prediction sets are completely empty', () => {
+      const memory = createInitialBotMemory();
+      expect(memory.cardLog).toEqual([]);
+      expect(Object.keys(memory.bottomPickupsByPlayer)).toHaveLength(0);
+      expect(Object.keys(memory.discardsByPlayer)).toHaveLength(0);
+
+      const state = createTestState();
+      const oppWants = predictOpponentWants(memory, state, 'B');
+      expect(oppWants.size).toBe(0);
+
+      const { partnerNeeds, partnerDiscards } = predictPartnerNeeds(memory, state, 'B', 1);
+      expect(partnerNeeds.size).toBe(0);
+      expect(partnerDiscards.size).toBe(0);
+    });
+
+    it('all 4 bots execute cleanly without inspecting or depending on other players secret hand cards', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      // Set Player 1 (the bot) hand
+      state.players[1].hand = [
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('c8', 'CLUBS', 8),
+      ];
+
+      // MASK all other players hands (simulate strict hidden state / SanitizedGameState)
+      state.players[0].hand = undefined as any;
+      (state.players[0] as any).cardCount = 13;
+      state.players[2].hand = undefined as any;
+      (state.players[2] as any).cardCount = 13;
+      state.players[3].hand = undefined as any;
+      (state.players[3] as any).cardCount = 13;
+
+      const memory = createInitialBotMemory();
+
+      // 1. Smart Chacha
+      expect(() => decideSmartChachaTurn(state, 1, memory)).not.toThrow();
+      const planChacha = decideSmartChachaTurn(state, 1, memory);
+      expect(planChacha.discardAction.cardId).toBeDefined();
+
+      // 2. The Jadugar
+      expect(() => decideTheJadugarTurn(state, 1, memory)).not.toThrow();
+      const planJadugar = decideTheJadugarTurn(state, 1, memory);
+      expect(planJadugar.discardAction.cardId).toBeDefined();
+
+      // 3. Fast Chachi
+      expect(() => decideFastChachiTurn(state, 1, memory)).not.toThrow();
+      const planChachi = decideFastChachiTurn(state, 1, memory);
+      expect(planChachi.discardAction.cardId).toBeDefined();
+
+      // 4. The Long-Term Guy
+      expect(() => decideTheLongTermGuyTurn(state, 1, memory)).not.toThrow();
+      const planLT = decideTheLongTermGuyTurn(state, 1, memory);
+      expect(planLT.discardAction.cardId).toBeDefined();
+    });
+  });
 });
+
 

@@ -216,7 +216,10 @@ export function decideSmartChachaTurn(
   //      Instead, pass hand building cards that partner needs when pile is clean and safe!
   const currentDiscardPileLen = state.discardPile.length;
   const isDiscardPileCleanForPartner = currentDiscardPileLen <= 1;
-  const isPartnerOnLessThan3Cards = partner ? partner.hand.length < 3 : false;
+  const partnerCardCount = partner
+    ? ((partner as any).cardCount ?? partner.hand?.length ?? 0)
+    : 0;
+  const isPartnerOnLessThan3Cards = partnerCardCount > 0 && partnerCardCount < 3;
 
   const { partnerNeeds } = predictPartnerNeeds(memory, state, team, botIndex);
 
