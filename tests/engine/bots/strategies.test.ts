@@ -146,6 +146,132 @@ describe('Bot Personality Strategies', () => {
       // Should prioritize adding to the existing Spades sequence
       expect(plan.meldActions.some((a) => a.type === 'ADD_TO_MELD')).toBe(true);
     });
+
+    it('adds cards to existing table sequences with hand [10♦, K♥, 9♦, Q♥, Q♥] without emitting duplicate rank additions', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      // Hand matches user screenshot
+      state.players[1].hand = [
+        makeCard('d10', 'DIAMONDS', 10),
+        makeCard('hk', 'HEARTS', 13),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('hq1', 'HEARTS', 12),
+        makeCard('hq2', 'HEARTS', 12),
+      ];
+
+      // Table has Hearts run [9♥, 10♥, J♥]
+      state.melds.B = [
+        {
+          id: 'meld-b-hearts',
+          team: 'B',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: [
+            makeCard('h9', 'HEARTS', 9),
+            makeCard('h10', 'HEARTS', 10),
+            makeCard('hj', 'HEARTS', 11),
+          ],
+          slots: [
+            { card: makeCard('h9', 'HEARTS', 9), representedRank: 9, isWildcard: false },
+            { card: makeCard('h10', 'HEARTS', 10), representedRank: 10, isWildcard: false },
+            { card: makeCard('hj', 'HEARTS', 11), representedRank: 11, isWildcard: false },
+          ],
+        },
+      ];
+
+      const plan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      // Should add K♥ and Q♥_1 to the Hearts sequence
+      expect(plan.meldActions.length).toBe(1);
+      expect(plan.meldActions[0].type).toBe('ADD_TO_MELD');
+      const addAct = plan.meldActions[0] as { type: 'ADD_TO_MELD'; meldId: string; cardIds: string[] };
+      expect(addAct.cardIds).toContain('hk');
+      expect(addAct.cardIds.filter((id) => id === 'hq1' || id === 'hq2').length).toBe(1);
+      // Must NOT attempt to add the second Queen (which causes duplicate rank error)
+      expect(plan.meldActions.some((a, idx) => idx > 0 && a.type === 'ADD_TO_MELD')).toBe(false);
+    });
+
+    it('iteratively melds all multi-card sequence additions (e.g. 8♦, 9♦, 10♦ to J♦-Q♦-K♦) on the table', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      // Table has J♦, Q♦, K♦
+      state.melds.B = [
+        {
+          id: 'meld-b-diamonds',
+          team: 'B',
+          type: 'RUN',
+          suit: 'DIAMONDS',
+          cards: [
+            makeCard('dj', 'DIAMONDS', 11),
+            makeCard('dq', 'DIAMONDS', 12),
+            makeCard('dk', 'DIAMONDS', 13),
+          ],
+          slots: [
+            { card: makeCard('dj', 'DIAMONDS', 11), representedRank: 11, isWildcard: false },
+            { card: makeCard('dq', 'DIAMONDS', 12), representedRank: 12, isWildcard: false },
+            { card: makeCard('dk', 'DIAMONDS', 13), representedRank: 13, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Hand has 8♦, 9♦, 10♦, plus 2 junk cards (e.g. Q♥, Q♥)
+      state.players[1].hand = [
+        makeCard('d8', 'DIAMONDS', 8),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('d10', 'DIAMONDS', 10),
+        makeCard('hq1', 'HEARTS', 12),
+        makeCard('hq2', 'HEARTS', 12),
+      ];
+
+      const plan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      // All 3 diamonds cards (8♦, 9♦, 10♦) should be added across the turn
+      const addedCardIds = plan.meldActions.flatMap((a: any) => a.cardIds || []);
+      expect(addedCardIds).toContain('d8');
+      expect(addedCardIds).toContain('d9');
+      expect(addedCardIds).toContain('d10');
+    });
+
+    it('plays a new sequence even if a sequence in that suit already exists on the table', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      // Table already has a Spades run 3♠-4♠-5♠
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('s3', 'SPADES', 3),
+            makeCard('s4', 'SPADES', 4),
+            makeCard('s5', 'SPADES', 5),
+          ],
+          slots: [
+            { card: makeCard('s3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+            { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Hand has 9♠, 10♠, J♠ and 1 deadwood card
+      state.players[1].hand = [
+        makeCard('s9', 'SPADES', 9),
+        makeCard('s10', 'SPADES', 10),
+        makeCard('sj', 'SPADES', 11),
+        makeCard('hk', 'HEARTS', 13),
+      ];
+
+      const plan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      // Must NOT sit on 9♠-10♠-J♠ just because 3♠-4♠-5♠ already exists!
+      expect(plan.meldActions.some((a) => a.type === 'PLAY_NEW_MELD')).toBe(true);
+      const newMeldAct = plan.meldActions.find((a) => a.type === 'PLAY_NEW_MELD') as any;
+      expect(newMeldAct.cardIds).toContain('s9');
+      expect(newMeldAct.cardIds).toContain('s10');
+      expect(newMeldAct.cardIds).toContain('sj');
+    });
   });
 
   describe('Smart Chacha Strategy', () => {

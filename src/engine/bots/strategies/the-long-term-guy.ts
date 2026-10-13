@@ -3,13 +3,12 @@
  *
  * Characteristics:
  * - Systematic, long-sequence builder.
- * - One sequence per suit discipline: Aims to open at most one sequence of each suit, and
- *   continually feeds and expands that sequence towards Clean 7 (200 pts) and Pure 13 (500 pts).
- * - Second sequence gating: Opens a second sequence of the same suit ONLY if the existing sequence
- *   has already completed 7+ cards (100 or 200 pts) AND his opportunity to make 500 based on his own cards is limited.
+ * - Sequence expansion first: Prioritizes adding to existing team sequences to feed and
+ *   expand them iteratively towards Clean 7 (200 pts) and Pure 13 (500 pts).
+ * - Opens new valid sequences from remaining cards to advance towards Pukar.
  * - Balanced between steady sequence growth and patient completion.
  */
-import { GameAction, GameState, Suit } from '../../types';
+import { GameAction, GameState, Meld } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
 import {
   findPotentialNewMelds,
@@ -17,6 +16,7 @@ import {
   evaluateDeadwoodAndDiscard,
   evaluateDiscardPilePickup,
 } from '../hand-analyzer';
+import { canAddCardsToMeld } from '../../meld-validator';
 
 export function decideTheLongTermGuyTurn(
   state: GameState,
@@ -27,16 +27,6 @@ export function decideTheLongTermGuyTurn(
   const hand = player.hand || [];
   const team = player.team;
   const myTeamMelds = state.melds[team] || [];
-
-  // Group existing team runs by suit
-  const existingRunsBySuit = new Map<Suit, typeof myTeamMelds>();
-  for (const meld of myTeamMelds) {
-    if (meld.type === 'RUN' && meld.suit) {
-      const list = existingRunsBySuit.get(meld.suit) || [];
-      list.push(meld);
-      existingRunsBySuit.set(meld.suit, list);
-    }
-  }
 
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
@@ -75,21 +65,95 @@ export function decideTheLongTermGuyTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
+  const isDiscardPhase = state.phase === 'DISCARD' || state.turnPhase === 'DISCARD';
   const usedCardIds = new Set<string>();
   const meldActions: GameAction[] = [];
 
-  // Step 2a: Additions to existing team sequences
-  const potentialAdditions = findPotentialAdditionsToMelds(hand, myTeamMelds);
-  for (const addition of potentialAdditions) {
-    const hasOverlap = addition.cards.some((c) => usedCardIds.has(c.id));
-    if (!hasOverlap) {
-      const potentialUsed = new Set([...usedCardIds, ...addition.cards.map((c) => c.id)]);
+  if (!isDiscardPhase) {
+    const isCloseToPukar = hand.length <= 4;
+
+    // Step 2a: Additions to existing team sequences (iterative multi-pass with virtualMelds)
+    // Feeds and expands existing team sequences towards Clean 7 and Pure 13 first!
+    const virtualMelds: Meld[] = myTeamMelds.map((m) => ({
+      ...m,
+      cards: [...m.cards],
+      slots: [...m.slots],
+    }));
+
+    for (let iter = 0; iter < 10; iter++) {
+      const remainingCards = hand.filter((c) => !usedCardIds.has(c.id));
+      if (remainingCards.length <= 1) break;
+
+      const potentialAdditions = findPotentialAdditionsToMelds(
+        remainingCards,
+        virtualMelds,
+        { isCloseToPukar }
+      );
+      if (potentialAdditions.length === 0) break;
+
+      let addedInIter = false;
+      for (const addition of potentialAdditions) {
+        const hasOverlap = addition.cards.some((c) => usedCardIds.has(c.id));
+        if (hasOverlap) continue;
+
+        const potentialUsed = new Set([...usedCardIds, ...addition.cards.map((c) => c.id)]);
+        const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
+
+        // Rule: Must keep at least 1 card in hand to discard
+        if (remainingHand.length === 0) continue;
+
+        if (disallowedCardId) {
+          const remainingNonDisallowed = remainingHand.filter(
+            (c) => c.id !== disallowedCardId
+          );
+          if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+            continue;
+          }
+        }
+
+        const targetMeldIndex = virtualMelds.findIndex((m) => m.id === addition.meldId);
+        if (targetMeldIndex >= 0) {
+          const targetMeld = virtualMelds[targetMeldIndex];
+          const validation = canAddCardsToMeld(targetMeld, addition.cards);
+          if (validation.valid && validation.updatedSlots) {
+            virtualMelds[targetMeldIndex] = {
+              ...targetMeld,
+              cards: [...targetMeld.cards, ...addition.cards],
+              slots: validation.updatedSlots,
+            };
+            addition.cards.forEach((c) => usedCardIds.add(c.id));
+            meldActions.push({
+              type: 'ADD_TO_MELD',
+              meldId: addition.meldId,
+              cardIds: addition.cardIds,
+            });
+            addedInIter = true;
+            break;
+          }
+        }
+      }
+
+      if (!addedInIter) break;
+    }
+
+    // Step 2b: New melds from remaining uncommitted cards
+    const remainingHand = hand.filter((c) => !usedCardIds.has(c.id));
+    const requirePure = myTeamMelds.length === 0 && meldActions.length === 0;
+    const candidateMelds = findPotentialNewMelds(remainingHand, {
+      requirePure,
+      isCloseToPukar,
+    });
+    candidateMelds.sort((a, b) => b.score - a.score);
+
+    for (const meld of candidateMelds) {
+      const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
+      if (hasOverlap) continue;
+
+      const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
       const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
 
       // Rule: Must keep at least 1 card in hand to discard
-      if (remainingCards.length === 0) {
-        continue;
-      }
+      if (remainingCards.length === 0) continue;
 
       if (disallowedCardId) {
         const remainingNonDisallowed = remainingCards.filter(
@@ -100,72 +164,6 @@ export function decideTheLongTermGuyTurn(
         }
       }
 
-      addition.cards.forEach((c) => usedCardIds.add(c.id));
-      meldActions.push({
-        type: 'ADD_TO_MELD',
-        meldId: addition.meldId,
-        cardIds: addition.cardIds,
-      });
-    }
-  }
-
-  // Step 2b: New melds from remaining cards
-  const remainingHand = hand.filter((c) => !usedCardIds.has(c.id));
-  const candidateMelds = findPotentialNewMelds(remainingHand, {
-    requirePure: myTeamMelds.length === 0,
-  });
-
-  // Filter candidate melds according to the "One sequence per suit" rule:
-  for (const meld of candidateMelds) {
-    const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
-    if (hasOverlap) continue;
-
-    const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
-    const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
-
-    // Rule: Must keep at least 1 card in hand to discard
-    if (remainingCards.length === 0) {
-      continue;
-    }
-
-    if (disallowedCardId) {
-      const remainingNonDisallowed = remainingCards.filter(
-        (c) => c.id !== disallowedCardId
-      );
-      if (remainingNonDisallowed.length === 0 && hand.length > 1) {
-        continue;
-      }
-    }
-
-    if (meld.type === 'RUN' && meld.suit) {
-      const existingInSuit = existingRunsBySuit.get(meld.suit) || [];
-      if (existingInSuit.length === 0) {
-        // Suit not opened yet: Great! Open this suit sequence
-        meld.cards.forEach((c) => usedCardIds.add(c.id));
-        meldActions.push({
-          type: 'PLAY_NEW_MELD',
-          cardIds: meld.cards.map((c) => c.id),
-        });
-        existingRunsBySuit.set(meld.suit, [meld as any]);
-      } else {
-        // Suit ALREADY has a sequence!
-        // Only open a second sequence if existing run has >= 7 cards (100 or 200 made)
-        const primaryRun = existingInSuit[0];
-        const isComplete7 = (primaryRun.cards?.length ?? 0) >= 7;
-
-        // And check if opportunity to make 500 is limited (e.g. fewer than 10 cards available in that suit)
-        const suitedCardsInHand = hand.filter((c) => c.suit === meld.suit).length;
-        const oppFor500Limited = suitedCardsInHand < 5;
-
-        if (isComplete7 && oppFor500Limited) {
-          meld.cards.forEach((c) => usedCardIds.add(c.id));
-          meldActions.push({
-            type: 'PLAY_NEW_MELD',
-            cardIds: meld.cards.map((c) => c.id),
-          });
-        }
-      }
-    } else if (meld.type === 'SET' && myTeamMelds.length > 0) {
       meld.cards.forEach((c) => usedCardIds.add(c.id));
       meldActions.push({
         type: 'PLAY_NEW_MELD',
@@ -197,6 +195,6 @@ export function decideTheLongTermGuyTurn(
       cardId: cardToDiscard.id,
     },
     pukarDeckIndex: 0,
-    reasoning: 'The long-term guy: 1-sequence-per-suit discipline and patient expansion',
+    reasoning: 'The long-term guy: sequence expansion first and patient completion',
   };
 }
