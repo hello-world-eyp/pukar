@@ -57,6 +57,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
 
     const map = stateMap || new Map<number, any>();
     let stateIdx = 0;
+    let isReRendering = false;
 
     if (internals) {
       internals.H = {
@@ -68,7 +69,16 @@ describe('useBotGame & Bot Pacing Fixes', () => {
           const val = map.get(idx);
           const setter = (updater: any) => {
             const nextVal = typeof updater === 'function' ? updater(map.get(idx)) : updater;
+            if (Object.is(map.get(idx), nextVal)) return;
             map.set(idx, nextVal);
+            if (!isReRendering) {
+              isReRendering = true;
+              try {
+                runHook(hookFn, map);
+              } finally {
+                isReRendering = false;
+              }
+            }
           };
           return [val, setter];
         },
@@ -282,7 +292,8 @@ describe('useBotGame & Bot Pacing Fixes', () => {
         })
       );
 
-      vi.advanceTimersByTime(250);
+      // Advance timers across MELD and DISCARD subphases
+      vi.advanceTimersByTime(500);
 
       // Verify SELECT_PUKAR_DECK was NOT dispatched
       expect(dispatchedActions.some((a) => a.type === 'SELECT_PUKAR_DECK')).toBe(false);

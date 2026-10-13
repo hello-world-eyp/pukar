@@ -232,24 +232,12 @@ export function useBotGame({
             }
           }
 
-          if (meldRejected || plan.meldActions.length === 0) {
-            // No melds to play or meld was rejected: proceed to discard to finish turn
-            const success = handleActionRef.current(plan.discardAction);
-            if (success === false) {
-              const hand = currentState.players[botIdx]?.hand ?? [];
-              const disallowedId =
-                currentState.cardsPickedUpThisTurn?.length === 1 &&
-                currentState.initialHandSizeThisTurn !== 1
-                  ? currentState.cardsPickedUpThisTurn[0]
-                  : null;
-              const fallbackCard = hand.find((c) => !disallowedId || c.id !== disallowedId) ?? hand[0];
-              if (fallbackCard) {
-                handleActionRef.current({ type: 'DISCARD_CARD', cardId: fallbackCard.id });
-              }
-            }
+          if (meldRejected) {
+            // Meld action was rejected: proceed directly to discard to avoid deadlock
+            handleActionRef.current(plan.discardAction);
             setBotSubPhase('DRAW');
           } else {
-            // Melds played: move to DISCARD subphase
+            // Transition to DISCARD subphase so user sees "is discarding..." and gets full turn duration
             setBotSubPhase('DISCARD');
           }
         } else if (currentSubPhase === 'DISCARD') {
