@@ -6,6 +6,7 @@ import { decideSmartChachaTurn } from '../../../src/engine/bots/strategies/smart
 import { decideTheJadugarTurn } from '../../../src/engine/bots/strategies/the-jadugar';
 import { decideFastChachiTurn } from '../../../src/engine/bots/strategies/fast-chachi';
 import { decideTheLongTermGuyTurn } from '../../../src/engine/bots/strategies/the-long-term-guy';
+import { findBestMeldPlan } from '../../../src/engine/bots/hand-analyzer';
 
 describe('Bot Personality Strategies', () => {
   function makeCard(id: string, suit: Suit | null, rank: Rank, isNaturalJoker = false): Card {
@@ -349,7 +350,8 @@ describe('Bot Personality Strategies', () => {
       state.players[3].hand = [
         makeCard('p1', 'SPADES', 4),
         makeCard('p2', 'SPADES', 5),
-      ]; // Partner only has 2 cards (close to Pukar!)
+        makeCard('p3', 'CLUBS', 9),
+      ]; // Partner has 3 cards (>= 3 cards: do not pass sequence card)
 
       state.melds.B = [
         {
@@ -479,6 +481,194 @@ describe('Bot Personality Strategies', () => {
         expect(newMeldAction.cardIds).toContain('twoSpades');
         expect(newMeldAction.cardIds).not.toContain('twoDiamonds');
       }
+    });
+  });
+
+  describe('Smart Chacha Sequence Protection & Multi-Card Iterative Melds', () => {
+    it('Smart Chacha does NOT discard a card that can be added to an existing team sequence when partner has >= 3 cards, discarding deadwood instead', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 5), makeCard('opp2', 'DIAMONDS', 9)]; // Opponent selective (2 cards)
+      state.players[3].team = 'B';
+      state.players[3].hand = [
+        makeCard('p1', 'HEARTS', 4),
+        makeCard('p2', 'CLUBS', 7),
+        makeCard('p3', 'DIAMONDS', 10),
+        makeCard('p4', 'SPADES', 12),
+      ]; // Partner has 4 cards (>= 3 cards!)
+
+      // Team B has Spades run on table: 3♠, 4♠, 5♠
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('m1', 'SPADES', 3),
+            makeCard('m2', 'SPADES', 4),
+            makeCard('m3', 'SPADES', 5),
+          ],
+          slots: [
+            { card: makeCard('m1', 'SPADES', 3), representedRank: 3, isWildcard: false },
+            { card: makeCard('m2', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('m3', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Hand has 6♠ (can add to team sequence) and 9♦ (unrelated deadwood)
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+
+      // Discard pile is empty (clean)
+      state.discardPile = [];
+
+      // When partner has >= 3 cards, Smart Chacha must NEVER throw sequence cards into discard pile!
+      // Opponents would simply pick it up. Discards 9♦ instead of 6♠.
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('c2');
+    });
+
+    it('Smart Chacha protects sequence-connecting cards (within 1 rank) from discard when partner has >= 3 cards', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 5), makeCard('opp2', 'DIAMONDS', 9)]; // Opponent selective
+      state.players[3].team = 'B';
+      state.players[3].hand = [
+        makeCard('p1', 'HEARTS', 4),
+        makeCard('p2', 'CLUBS', 7),
+        makeCard('p3', 'DIAMONDS', 10),
+      ]; // Partner has 3 cards (>= 3 cards!)
+
+      // Team B has Spades run on table: 4♠, 5♠, 6♠
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('m1', 'SPADES', 4),
+            makeCard('m2', 'SPADES', 5),
+            makeCard('m3', 'SPADES', 6),
+          ],
+          slots: [
+            { card: makeCard('m1', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('m2', 'SPADES', 5), representedRank: 5, isWildcard: false },
+            { card: makeCard('m3', 'SPADES', 6), representedRank: 6, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Hand has 3♠ (connects to sequence at rank 4 - 1) and 9♦ (deadwood)
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 3),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+
+      state.discardPile = [];
+
+      // Since partner has >= 3 cards, 3♠ is protected from discard to deny opponents!
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('c2');
+    });
+
+    it('findBestMeldPlan iteratively melds all multi-card sequence additions (e.g. 8♠, 9♠, 10♠ to 5♠-6♠-7♠) so cards are placed on the table', () => {
+      const tableMeld = {
+        id: 'meld-spades',
+        team: 'B' as const,
+        type: 'RUN' as const,
+        suit: 'SPADES' as const,
+        cards: [
+          makeCard('m5', 'SPADES', 5),
+          makeCard('m6', 'SPADES', 6),
+          makeCard('m7', 'SPADES', 7),
+        ],
+        slots: [
+          { card: makeCard('m5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('m6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+          { card: makeCard('m7', 'SPADES', 7), representedRank: 7, isWildcard: false },
+        ],
+      };
+
+      const hand = [
+        makeCard('s4', 'SPADES', 4), // 4♠ (lower addition)
+        makeCard('s8', 'SPADES', 8), // 8♠ (upper addition)
+        makeCard('s9', 'SPADES', 9), // 9♠ (upper addition extending 8♠)
+        makeCard('hk', 'HEARTS', 13), // 1 deadwood card to preserve for discard
+      ];
+
+      const plan = findBestMeldPlan(hand, [tableMeld], { preserveDiscardCard: true });
+
+      // All 3 spades cards (4♠, 8♠, 9♠) should be added to the sequence!
+      expect(plan.usedCardIds.has('s4')).toBe(true);
+      expect(plan.usedCardIds.has('s8')).toBe(true);
+      expect(plan.usedCardIds.has('s9')).toBe(true);
+      // Deadwood card is preserved for discard
+      expect(plan.usedCardIds.has('hk')).toBe(false);
+      expect(plan.additionsToPlay.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('Smart Chacha passes a sequence card ONLY when partner is on less than 3 cards (< 3 cards) and conditions are clean', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[2].team = 'A';
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 5), makeCard('opp2', 'DIAMONDS', 9)]; // Opponent selective (2 cards)
+      state.players[3].team = 'B';
+      state.players[3].hand = [
+        makeCard('p1', 'HEARTS', 4),
+        makeCard('p2', 'CLUBS', 7),
+      ]; // Partner only has 2 cards (< 3 cards!)
+
+      // Team B has Spades run on table: 3♠, 4♠, 5♠
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('m1', 'SPADES', 3),
+            makeCard('m2', 'SPADES', 4),
+            makeCard('m3', 'SPADES', 5),
+          ],
+          slots: [
+            { card: makeCard('m1', 'SPADES', 3), representedRank: 3, isWildcard: false },
+            { card: makeCard('m2', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('m3', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          ],
+        },
+      ];
+
+      // Hand has 6♠ and 9♦
+      state.players[1].hand = [
+        makeCard('c1', 'SPADES', 6),
+        makeCard('c2', 'DIAMONDS', 9),
+      ];
+
+      // Discard pile is empty (clean)
+      state.discardPile = [];
+
+      // Partner is on less than 3 cards (< 3), so passing 6♠ allows partner to scoop and go out!
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('c1');
     });
   });
 });

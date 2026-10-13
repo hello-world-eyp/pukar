@@ -9,6 +9,7 @@
  */
 import { GameAction, GameState, Team } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
+import { canAddCardsToMeld } from '../../meld-validator';
 import {
   findBestMeldPlan,
   evaluateDeadwoodAndDiscard,
@@ -104,10 +105,13 @@ export function decideSmartChachaTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
-  const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
-    disallowedCardId,
-    preserveDiscardCard: true,
-  });
+  const isDiscardPhase = state.phase === 'DISCARD' || state.turnPhase === 'DISCARD';
+  const meldPlan = isDiscardPhase
+    ? { meldsToPlay: [], additionsToPlay: [], usedCardIds: new Set<string>() }
+    : findBestMeldPlan(hand, myTeamMelds, {
+        disallowedCardId,
+        preserveDiscardCard: true,
+      });
   const meldActions: GameAction[] = [];
 
   for (const newMeld of meldPlan.meldsToPlay) {
@@ -127,27 +131,28 @@ export function decideSmartChachaTurn(
 
   // 3. DISCARD PHASE DECISION
   const remainingHand = hand.filter((c) => !meldPlan.usedCardIds.has(c.id));
+  const candidatePool = remainingHand.length > 0 ? remainingHand : hand;
   const nextPlayerIdx = (botIndex + 1) % state.playerCount;
   const nextPlayer = state.players[nextPlayerIdx];
   const partnerLikelyWants = new Set<string>();
+  const protectedCardIds = new Set<string>();
 
   const partnerIdx = state.players.findIndex((p, idx) => idx !== botIndex && p.team === team);
   const partner = partnerIdx >= 0 ? state.players[partnerIdx] : null;
 
   // Smart Chacha Passing Intelligence:
-  // Understands that for the partner to receive a passed card, the partner must pick up
-  // the entire discard pile ("the bottom").
-  // If the discard pile already contains 2-3 cards from opponents, that good card comes
-  // bundled with 2-3 unhelpful opponent cards, which is NOT beneficial for the partner!
-  // Furthermore, if the partner is close to Pukar (<= 4 cards), bloating their hand with
-  // opponent cards delays or ruins their Pukar sprint.
+  // 1. For partner to receive a passed card, partner must pick up the entire discard pile ("the bottom").
+  //    If the discard pile already contains >= 2 cards from opponents, that card is bundled with junk.
+  // 2. Rule: Smart Chacha must NEVER throw cards that connect to or can be added to an existing team sequence
+  //    to their partner UNLESS the partner is on less than 3 cards (< 3 cards), because opponents would simply pick it up!
   const currentDiscardPileLen = state.discardPile.length;
   const isOpponentSelective = nextPlayer.team !== team && nextPlayer.hand.length <= 3;
-  const isPartnerCloseToPukar = partner ? partner.hand.length <= 4 : false;
   const isDiscardPileCleanForPartner = currentDiscardPileLen <= 1;
+  const isPartnerOnLessThan3Cards = partner ? partner.hand.length < 3 : false;
+  const isPartnerBuildingInHand = partner ? partner.hand.length > 4 : false;
 
-  if (isOpponentSelective && isDiscardPileCleanForPartner && !isPartnerCloseToPukar && partner) {
-    // 1. Partner's logged bottom pickups (partner is building unmelded runs in hand)
+  // 1. Partner's logged bottom pickups (partner is building unmelded runs in hand)
+  if (isOpponentSelective && isDiscardPileCleanForPartner && isPartnerBuildingInHand && partner) {
     const partnerPickups = memory.bottomPickupsByPlayer[partnerIdx] || [];
     for (const card of partnerPickups) {
       if (card.suit) {
@@ -162,8 +167,11 @@ export function decideSmartChachaTurn(
         }
       }
     }
+  }
 
-    // 2. Table melds (for cards that connect 1-2 ranks away)
+  // 2. Table melds / sequences:
+  // ONLY pass sequence cards if partner has less than 3 cards (< 3 cards) and pile is clean, so partner can scoop and go out!
+  if (isOpponentSelective && isDiscardPileCleanForPartner && isPartnerOnLessThan3Cards && partner) {
     const partnerMelds = myTeamMelds;
     for (const pm of partnerMelds) {
       if (pm.type === 'RUN' && pm.suit) {
@@ -182,15 +190,42 @@ export function decideSmartChachaTurn(
         });
       }
     }
+  } else {
+    // When partner has >= 3 cards (or no partner), sequence cards must NEVER be thrown into discard pile!
+    // Protect all cards in hand that can be added to an existing team meld,
+    // as well as open-end neighbors of team runs, from discard so opponents cannot scoop them up.
+    for (const card of candidatePool) {
+      if (myTeamMelds.some((m) => canAddCardsToMeld(m, [card]).valid)) {
+        protectedCardIds.add(card.id);
+      }
+    }
+
+    for (const meld of myTeamMelds) {
+      if (meld.type === 'RUN' && meld.suit) {
+        const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+        if (ranks.length > 0) {
+          const minRank = ranks[0];
+          const maxRank = ranks[ranks.length - 1];
+          for (const card of candidatePool) {
+            if (card.suit === meld.suit) {
+              if (card.rank === minRank - 1 || card.rank === maxRank + 1) {
+                protectedCardIds.add(card.id);
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   const discardEval = evaluateDeadwoodAndDiscard(
-    remainingHand.length > 0 ? remainingHand : hand,
+    candidatePool,
     new Set(),
     {
       disallowedCardId,
       opponentWants,
       partnerLikelyWants,
+      protectedCardIds,
     }
   );
 

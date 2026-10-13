@@ -27,6 +27,7 @@ export interface DiscardEvaluationOptions {
   opponentWants?: Set<string>; // set of "SUIT_RANK" keys, e.g. "SPADES_7" or card IDs
   preferredExtremeRuns?: boolean; // For Fast Chachi: bias towards extreme runs
   partnerLikelyWants?: Set<string>; // For Smart Chacha: cards to pass to partner
+  protectedCardIds?: Set<string>; // Cards that can be added to team melds: strictly protect from discard
 }
 
 export interface HandEvaluation {
@@ -397,14 +398,35 @@ export function findBestMeldPlan(
     }
   }
 
-  // Now evaluate additions from remaining uncommitted hand cards
-  const remainingCards = hand.filter((c) => !usedCardIds.has(c.id));
-  const potentialAdditions = findPotentialAdditionsToMelds(remainingCards, teamMelds, { isCloseToPukar });
+  // Now evaluate additions from remaining uncommitted hand cards iteratively
+  // so multi-card sequence extensions (e.g. 8♠, 9♠, 10♠) can be played in full
   const additionsToPlay: CandidateAddition[] = [];
+  const virtualMelds: Meld[] = teamMelds.map((m) => ({
+    ...m,
+    cards: [...m.cards],
+    slots: [...m.slots],
+  }));
 
-  for (const add of potentialAdditions) {
-    const hasOverlap = add.cards.some((c) => usedCardIds.has(c.id));
-    if (!hasOverlap) {
+  for (let iter = 0; iter < 10; iter++) {
+    const remainingCards = hand.filter((c) => !usedCardIds.has(c.id));
+    if (options?.preserveDiscardCard && remainingCards.length <= 1) {
+      break;
+    }
+
+    const potentialAdditions = findPotentialAdditionsToMelds(
+      remainingCards,
+      virtualMelds,
+      { isCloseToPukar }
+    );
+    if (potentialAdditions.length === 0) {
+      break;
+    }
+
+    let addedInIter = false;
+    for (const add of potentialAdditions) {
+      const hasOverlap = add.cards.some((c) => usedCardIds.has(c.id));
+      if (hasOverlap) continue;
+
       // A single addition action cannot meld all cards in hand
       if (add.cards.length >= hand.length) {
         continue;
@@ -428,6 +450,26 @@ export function findBestMeldPlan(
 
       additionsToPlay.push(add);
       add.cards.forEach((c) => usedCardIds.add(c.id));
+
+      const targetMeldIndex = virtualMelds.findIndex((m) => m.id === add.meldId);
+      if (targetMeldIndex >= 0) {
+        const targetMeld = virtualMelds[targetMeldIndex];
+        const validation = canAddCardsToMeld(targetMeld, add.cards);
+        if (validation.valid && validation.updatedSlots) {
+          virtualMelds[targetMeldIndex] = {
+            ...targetMeld,
+            cards: [...targetMeld.cards, ...add.cards],
+            slots: validation.updatedSlots,
+          };
+        }
+      }
+
+      addedInIter = true;
+      break;
+    }
+
+    if (!addedInIter) {
+      break;
     }
   }
 
@@ -497,8 +539,19 @@ export function evaluateDeadwoodAndDiscard(
       reason = 'Opponents predicted to need this card';
     }
 
-    // 4. Partner likely wants (Smart Chacha partner assist)
-    if (options?.partnerLikelyWants?.has(cardKey) || options?.partnerLikelyWants?.has(card.id)) {
+    // 4. Protected cards (can be added to existing team meld or sequence):
+    // Strictly penalize discard so bot retains sequence cards instead of gifting them to opponents
+    if (options?.protectedCardIds?.has(card.id)) {
+      score += 250;
+      reason = 'Can be added to team sequence (protected from discard)';
+    }
+
+    // 5. Partner likely wants (Smart Chacha partner assist)
+    // Only applied if card is NOT protected from discard
+    if (
+      !options?.protectedCardIds?.has(card.id) &&
+      (options?.partnerLikelyWants?.has(cardKey) || options?.partnerLikelyWants?.has(card.id))
+    ) {
       // Discarding to pass to partner: reduces discard score so it is favored to discard!
       score -= 60;
       reason = 'Passed to partner via discard pile';
