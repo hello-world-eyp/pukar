@@ -529,62 +529,63 @@ describe('useBotGame & Bot Pacing Fixes', () => {
     });
   });
 
-  describe('App BOTS mode Uncle Pukar modal isolation', () => {
-    function setupStatefulReactHooks() {
-      const internals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
-      const stateSlots: any[] = [];
-      const refSlots: any[] = [];
-      let stateIdx = 0;
-      let refIdx = 0;
+  function setupStatefulReactHooks() {
+    const internals = (React as any).__CLIENT_INTERNALS_DO_NOT_USE_OR_WARN_USERS_THEY_CANNOT_UPGRADE;
+    const stateSlots: any[] = [];
+    const refSlots: any[] = [];
+    let stateIdx = 0;
+    let refIdx = 0;
 
-      const resetIndices = () => {
-        stateIdx = 0;
-        refIdx = 0;
+    const resetIndices = () => {
+      stateIdx = 0;
+      refIdx = 0;
+    };
+
+    if (internals) {
+      internals.H = {
+        useState: (init: any) => {
+          const slot = stateIdx++;
+          if (stateSlots[slot] === undefined) {
+            stateSlots[slot] = typeof init === 'function' ? init() : init;
+          }
+          const setter = (val: any) => {
+            stateSlots[slot] = typeof val === 'function' ? val(stateSlots[slot]) : val;
+          };
+          return [stateSlots[slot], setter];
+        },
+        useEffect: () => {},
+        useRef: (init: any) => {
+          const slot = refIdx++;
+          if (!refSlots[slot]) {
+            refSlots[slot] = { current: init };
+          }
+          return refSlots[slot];
+        },
+        useCallback: (fn: any) => fn,
+        useMemo: (fn: any) => fn(),
+        useId: () => 'test-id',
       };
-
-      if (internals) {
-        internals.H = {
-          useState: (init: any) => {
-            const slot = stateIdx++;
-            if (stateSlots[slot] === undefined) {
-              stateSlots[slot] = typeof init === 'function' ? init() : init;
-            }
-            const setter = (val: any) => {
-              stateSlots[slot] = typeof val === 'function' ? val(stateSlots[slot]) : val;
-            };
-            return [stateSlots[slot], setter];
-          },
-          useEffect: () => {},
-          useRef: (init: any) => {
-            const slot = refIdx++;
-            if (!refSlots[slot]) {
-              refSlots[slot] = { current: init };
-            }
-            return refSlots[slot];
-          },
-          useCallback: (fn: any) => fn,
-          useMemo: (fn: any) => fn(),
-          useId: () => 'test-id',
-        };
-      }
-
-      return { resetIndices, stateSlots, refSlots };
     }
 
-    function findElement(element: any, predicate: (el: any) => boolean): any {
-      if (!element || typeof element !== 'object') return null;
-      if (predicate(element)) return element;
-      if (element.props && element.props.children) {
-        const children = Array.isArray(element.props.children)
-          ? element.props.children
-          : [element.props.children];
-        for (const child of children) {
-          const found = findElement(child, predicate);
-          if (found) return found;
-        }
+    return { resetIndices, stateSlots, refSlots };
+  }
+
+  function findElement(element: any, predicate: (el: any) => boolean): any {
+    if (!element || typeof element !== 'object') return null;
+    if (predicate(element)) return element;
+    if (element.props && element.props.children) {
+      const children = Array.isArray(element.props.children)
+        ? element.props.children
+        : [element.props.children];
+      for (const child of children) {
+        const found = findElement(child, predicate);
+        if (found) return found;
       }
-      return null;
     }
+    return null;
+  }
+
+  describe('App BOTS mode Uncle Pukar modal isolation', () => {
 
     it('does not show Uncle Pukar modal when a bot earns Pukar in BOTS mode', () => {
       const harness = setupStatefulReactHooks();
@@ -748,6 +749,122 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       expect(modalHuman).not.toBeNull();
       expect(modalHuman.props.isOpen).toBe(true);
       expect(modalHuman.props.playerName).toBe('You');
+    });
+  });
+
+  describe('Bot Pausing on Pukar Claim Modal Flow', () => {
+    it('halts bot execution when isPaused is true, not executing any action even after delay', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1; // Bot turn
+      state.phase = 'DRAW';
+      const botConfig = createTestBotConfig();
+      const handleAction = vi.fn();
+
+      const { result } = runHook(() =>
+        useBotGame({
+          appMode: 'BOTS',
+          gameState: state,
+          botConfig,
+          handleAction,
+          turnDelayMs: 1500,
+          isPaused: true,
+        })
+      );
+
+      // Verify isThinking is false while paused
+      expect(result.botStatus?.isThinking).toBe(false);
+
+      // Advance timers by 5,000ms (way beyond 1,500ms delay)
+      vi.advanceTimersByTime(5000);
+
+      // Bot did NOT start or take any action
+      expect(handleAction).not.toHaveBeenCalled();
+    });
+
+    it('resumes bot turn after isPaused transitions to false, with full turnDelayMs pacing before action', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1; // Bot turn
+      state.phase = 'DRAW';
+      const botConfig = createTestBotConfig();
+      const handleAction = vi.fn();
+      const stateMap = new Map<number, any>();
+
+      // Render 1: Paused (user looking at Pukar claim modal)
+      const { result: res1 } = runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: state,
+            botConfig,
+            handleAction,
+            turnDelayMs: 1500,
+            isPaused: true,
+          }),
+        stateMap
+      );
+      expect(res1.botStatus?.isThinking).toBe(false);
+
+      vi.advanceTimersByTime(2000);
+      expect(handleAction).not.toHaveBeenCalled();
+
+      // Render 2: Unpaused (user clicked "Continue Playing" on modal)
+      const { result: res2 } = runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: state,
+            botConfig,
+            handleAction,
+            turnDelayMs: 1500,
+            isPaused: false,
+          }),
+        stateMap
+      );
+
+      // Bot is now thinking, but has NOT started immediately!
+      expect(res2.botStatus?.isThinking).toBe(true);
+      expect(handleAction).not.toHaveBeenCalled();
+
+      // Advance 1,400ms (still within pacing delay)
+      vi.advanceTimersByTime(1400);
+      expect(handleAction).not.toHaveBeenCalled();
+
+      // Advance remaining 100ms (1,500ms total)
+      vi.advanceTimersByTime(100);
+      expect(handleAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes autoDismissMs=0 to PukarSlamOverlay in BOTS mode so modal stays until user clicks Continue Playing', () => {
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      const botConfig = createTestBotConfig();
+
+      setupStatefulReactHooks();
+      const tree = App({
+        initialState: state,
+        initialMode: 'BOTS',
+        initialScreen: 'GAME',
+        initialBotConfig: botConfig,
+        initialPukarSlamEvent: {
+          team: 'B',
+          playerName: 'Fast Chachi',
+          points: 50,
+          playerIndex: 1,
+        },
+      });
+
+      const pukarSlam = findElement(
+        tree,
+        (el) => Boolean(el.props?.onClose && el.props?.onImpact)
+      );
+
+      expect(pukarSlam).not.toBeNull();
+      // In BOTS mode, autoDismissMs is 0 so it does not auto-dismiss
+      expect(pukarSlam.props.autoDismissMs).toBe(0);
+      expect(pukarSlam.props.playerName).toBe('Fast Chachi');
+      expect(pukarSlam.props.points).toBe(50);
     });
   });
 });

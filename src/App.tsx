@@ -265,6 +265,16 @@ export function App({
     onAction: handleAction,
   });
 
+  // Determine if bot execution should pause (e.g. while overlays/modals are active)
+  const isBotPaused = Boolean(
+    pukarSlamEvent ||
+    unclePukarChoiceData?.isOpen ||
+    pureSequenceCelebration ||
+    activeGameState.activeFrustration ||
+    isRulesModalOpen ||
+    isDiscardModalOpen
+  );
+
   // 6. Bot game orchestrator (active when appMode === 'BOTS')
   const { botStatus } = useBotGame({
     appMode,
@@ -272,6 +282,7 @@ export function App({
     botConfig,
     handleAction,
     turnDelayMs: 1500,
+    isPaused: isBotPaused,
   });
 
   // ---------------------------------------------------------------------------
@@ -1145,6 +1156,7 @@ export function App({
           team={pukarSlamEvent.team}
           playerName={pukarSlamEvent.playerName}
           points={pukarSlamEvent.points}
+          autoDismissMs={appMode === 'BOTS' ? 0 : 2600}
           onClose={() => {
             const eventInfo = pukarSlamEvent;
             setPukarSlamEvent(null);

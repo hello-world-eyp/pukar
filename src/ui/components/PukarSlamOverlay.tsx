@@ -74,18 +74,21 @@ export const PukarSlamOverlay: React.FC<PukarSlamOverlayProps> = ({
       }
     }, 180);
 
-    // Auto-dismiss
-    const dismissTimer = setTimeout(() => {
-      try {
-        onCloseRef.current?.();
-      } catch (err) {
-        console.error('Error invoking onClose callback:', err);
-      }
-    }, autoDismissMs);
+    // Auto-dismiss (only if autoDismissMs is provided and > 0)
+    let dismissTimer: NodeJS.Timeout | null = null;
+    if (autoDismissMs && autoDismissMs > 0) {
+      dismissTimer = setTimeout(() => {
+        try {
+          onCloseRef.current?.();
+        } catch (err) {
+          console.error('Error invoking onClose callback:', err);
+        }
+      }, autoDismissMs);
+    }
 
     return () => {
       clearTimeout(impactTimer);
-      clearTimeout(dismissTimer);
+      if (dismissTimer) clearTimeout(dismissTimer);
     };
   }, [autoDismissMs]);
 

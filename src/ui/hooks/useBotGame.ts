@@ -23,6 +23,7 @@ export interface UseBotGameProps {
   botConfig: BotGameConfig | null;
   handleAction: (action: GameAction) => boolean | void;
   turnDelayMs?: number;
+  isPaused?: boolean;
 }
 
 export function useBotGame({
@@ -31,6 +32,7 @@ export function useBotGame({
   botConfig,
   handleAction,
   turnDelayMs = 250,
+  isPaused = false,
 }: UseBotGameProps) {
   const [botSubPhase, setBotSubPhase] = useState<BotSubPhase>(() =>
     gameState.phase === 'DISCARD' ? 'DISCARD' : gameState.phase === 'MELD' ? 'MELD' : 'DRAW'
@@ -48,12 +50,12 @@ export function useBotGame({
     const currentSeat = botConfig.seats.find((s) => s.seatIndex === currentIdx);
     if (!currentSeat || currentSeat.isHuman) return null;
     return {
-      isThinking: true,
+      isThinking: !isPaused,
       botName: currentSeat.name,
       personality: currentSeat.personality,
       phase: botSubPhase,
     };
-  }, [appMode, botConfig, gameState.isRoundOver, gameState.currentPlayerIndex, botSubPhase]);
+  }, [appMode, botConfig, gameState.isRoundOver, gameState.currentPlayerIndex, botSubPhase, isPaused]);
 
   const botMemoryRef = useRef<BotMemory>(createInitialBotMemory());
   const prevStateRef = useRef<GameState>(gameState);
@@ -124,6 +126,16 @@ export function useBotGame({
       return;
     }
 
+    // When paused (e.g., Pukar Slam overlay or selection modal is open), halt execution
+    if (isPaused) {
+      scheduledStepRef.current = null;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
+
     const currentIdx = gameState.currentPlayerIndex;
     const currentSeat = botConfig.seats.find((s) => s.seatIndex === currentIdx);
 
@@ -151,6 +163,10 @@ export function useBotGame({
     } else if (gameState.phase === 'DRAW' && botSubPhase !== 'DRAW') {
       pukarDeckSelectedRef.current = false;
       setBotSubPhase('DRAW');
+      return;
+    } else if (gameState.phase === 'MELD' && botSubPhase === 'DRAW') {
+      pukarDeckSelectedRef.current = false;
+      setBotSubPhase('MELD');
       return;
     } else if (gameState.phase === 'DISCARD' && botSubPhase !== 'DISCARD') {
       setBotSubPhase('DISCARD');
@@ -242,6 +258,10 @@ export function useBotGame({
           }
         } else if (currentSubPhase === 'DISCARD') {
           const plan = decideBotTurn(currentState, botIdx, botPersonality, botMemoryRef.current);
+          const isClaimingPukarToContinue =
+            currentState.players[botIdx]?.hand.length === 1 &&
+            currentState.pukarPool.length >= 1;
+
           const success = handleActionRef.current(plan.discardAction);
 
           if (success === false) {
@@ -258,7 +278,12 @@ export function useBotGame({
             }
           }
 
-          setBotSubPhase('DRAW');
+          if (isClaimingPukarToContinue) {
+            pukarDeckSelectedRef.current = false;
+            setBotSubPhase('MELD');
+          } else {
+            setBotSubPhase('DRAW');
+          }
         }
       } catch (err) {
         console.error('Error during bot turn execution:', err);
@@ -287,6 +312,7 @@ export function useBotGame({
     gameState.isRoundOver,
     botSubPhase,
     turnDelayMs,
+    isPaused,
   ]);
 
   const resetBotMemory = useCallback(() => {
