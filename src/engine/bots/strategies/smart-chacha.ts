@@ -12,8 +12,7 @@ import { BotMemory, BotTurnPlan } from '../types';
 import {
   findBestMeldPlan,
   evaluateDeadwoodAndDiscard,
-  findPotentialNewMelds,
-  findPotentialAdditionsToMelds,
+  evaluateDiscardPilePickup,
 } from '../hand-analyzer';
 
 export function predictOpponentWants(
@@ -74,28 +73,15 @@ export function decideSmartChachaTurn(
   };
 
   if (state.phase === 'DRAW' && state.discardPile.length > 0) {
-    const topDiscard = state.discardPile[state.discardPile.length - 1];
-    const topKey = topDiscard.suit ? `${topDiscard.suit}_${topDiscard.rank}` : `WILD`;
-
-    // Test if taking the entire discard pile immediately gives Chacha a new meld or addition
-    const hypotheticalHand = [...hand, ...state.discardPile];
-    const hypMelds = findPotentialNewMelds(hypotheticalHand, {
-      requirePure: myTeamMelds.length === 0,
-    });
-    const hypAdds = findPotentialAdditionsToMelds(hypotheticalHand, myTeamMelds);
-    const currMelds = findPotentialNewMelds(hand, {
-      requirePure: myTeamMelds.length === 0,
-    });
-    const currAdds = findPotentialAdditionsToMelds(hand, myTeamMelds);
-
-    const pileAddsSelfValue = hypMelds.length > currMelds.length || hypAdds.length > currAdds.length;
-    const opponentReallyWantsTop = opponentWants.has(topKey);
-
-    // If pile creates immediate value for Chacha OR denies a critical card wanted by opponents
-    if (pileAddsSelfValue || opponentReallyWantsTop) {
+    if (
+      evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
+        personality: 'SMART_CHACHA',
+        pukarPoolCount: state.pukarPool.length,
+        opponentWants,
+      })
+    ) {
       drawAction = { type: 'TAKE_DISCARD' };
     } else {
-      // Let it slide (draw from stock deck)
       drawAction = { type: 'DRAW_FROM_STOCK' };
     }
   }

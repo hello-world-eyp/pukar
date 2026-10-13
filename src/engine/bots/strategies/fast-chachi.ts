@@ -13,7 +13,7 @@ import { BotMemory, BotTurnPlan } from '../types';
 import {
   findBestMeldPlan,
   evaluateDeadwoodAndDiscard,
-  findPotentialNewMelds,
+  evaluateDiscardPilePickup,
 } from '../hand-analyzer';
 
 export function decideFastChachiTurn(
@@ -31,29 +31,16 @@ export function decideFastChachiTurn(
     type: 'DRAW_FROM_STOCK',
   };
 
-  if (state.phase === 'DRAW') {
-    // Hoarder rule: If discard pile has 3 or more cards, hoard them all unconditionally!
-    if (state.discardPile.length >= 3) {
+  if (state.phase === 'DRAW' && state.discardPile.length > 0) {
+    if (
+      evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
+        personality: 'FAST_CHACHI',
+        pukarPoolCount: state.pukarPool.length,
+      })
+    ) {
       drawAction = { type: 'TAKE_DISCARD' };
-    } else if (state.discardPile.length > 0) {
-      // Check if top card gives an extreme run (A-2-3 or A-K-Q)
-      const top = state.discardPile[state.discardPile.length - 1];
-      const testHand = [...hand, top];
-      const newMelds = findPotentialNewMelds(testHand, {
-        requirePure: myTeamMelds.length === 0,
-      });
-      const hasExtremeMeld = newMelds.some(
-        (m) =>
-          m.type === 'RUN' &&
-          m.cards.some((c) => c.id === top.id) &&
-          m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
-      );
-
-      if (hasExtremeMeld) {
-        drawAction = { type: 'TAKE_DISCARD' };
-      } else {
-        drawAction = { type: 'DRAW_FROM_STOCK' };
-      }
+    } else {
+      drawAction = { type: 'DRAW_FROM_STOCK' };
     }
   }
 

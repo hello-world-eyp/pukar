@@ -13,8 +13,7 @@ import { BotMemory, BotTurnPlan } from '../types';
 import {
   findBestMeldPlan,
   evaluateDeadwoodAndDiscard,
-  findPotentialNewMelds,
-  findPotentialAdditionsToMelds,
+  evaluateDiscardPilePickup,
 } from '../hand-analyzer';
 
 export function decideTheJadugarTurn(
@@ -33,27 +32,14 @@ export function decideTheJadugarTurn(
   };
 
   if (state.phase === 'DRAW' && state.discardPile.length > 0) {
-    const topCard = state.discardPile[state.discardPile.length - 1];
-    // Check if the top discard card immediately completes a meld or addition in hand
-    const testWithTop = [...hand, topCard];
-    const newMeldsWithTop = findPotentialNewMelds(testWithTop, {
-      requirePure: myTeamMelds.length === 0,
-    });
-    const addsWithTop = findPotentialAdditionsToMelds(testWithTop, myTeamMelds);
-
-    const currentMelds = findPotentialNewMelds(hand, {
-      requirePure: myTeamMelds.length === 0,
-    });
-    const currentAdds = findPotentialAdditionsToMelds(hand, myTeamMelds);
-
-    const immediateProgress =
-      newMeldsWithTop.length > currentMelds.length || addsWithTop.length > currentAdds.length;
-
-    // The Jadugar only takes the pile if it gives immediate high-tempo meld progress towards Pukar
-    if (immediateProgress) {
+    if (
+      evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
+        personality: 'THE_JADUGAR',
+        pukarPoolCount: state.pukarPool.length,
+      })
+    ) {
       drawAction = { type: 'TAKE_DISCARD' };
     } else {
-      // Otherwise, always prefers stock to stay nimble and not bloat hand
       drawAction = { type: 'DRAW_FROM_STOCK' };
     }
   }

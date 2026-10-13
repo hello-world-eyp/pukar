@@ -5,6 +5,7 @@ import {
   validateNewSet,
   validateNewMeld,
   evaluateMeldScore,
+  canAddCardsToMeld,
 } from '../../src/engine/meld-validator';
 
 // Helper to create test cards quickly
@@ -625,4 +626,55 @@ describe('Meld Validator', () => {
       expect(score.isPure13).toBe(false);
     });
   });
+
+  describe('Ace limit and maximum run length constraints', () => {
+    it('rejects a 14-card run attempting to wrap from Ace to Ace', () => {
+      const cards = [
+        makeCard('c1', 'SPADES', 14), // Ace low
+        makeCard('c2', 'SPADES', 2),
+        makeCard('c3', 'SPADES', 3),
+        makeCard('c4', 'SPADES', 4),
+        makeCard('c5', 'SPADES', 5),
+        makeCard('c6', 'SPADES', 6),
+        makeCard('c7', 'SPADES', 7),
+        makeCard('c8', 'SPADES', 8),
+        makeCard('c9', 'SPADES', 9),
+        makeCard('c10', 'SPADES', 10),
+        makeCard('c11', 'SPADES', 11),
+        makeCard('c12', 'SPADES', 12),
+        makeCard('c13', 'SPADES', 13),
+        makeCard('c14', 'SPADES', 14), // Ace high
+      ];
+      const result = validateNewRun(cards);
+      expect(result.valid).toBe(false);
+      expect(result.error).toMatch(/duplicate Aces|exceed 13 cards/i);
+    });
+
+    it('rejects adding a second Ace to an existing run that already contains an Ace', () => {
+      const existingMeld: Meld = {
+        id: 'meld-run-ace',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('c1', 'SPADES', 14), // Ace low
+          makeCard('c2', 'SPADES', 2),
+          makeCard('c3', 'SPADES', 3),
+          makeCard('c4', 'SPADES', 4),
+        ],
+        slots: [
+          { card: makeCard('c1', 'SPADES', 14), representedRank: 1, isWildcard: false },
+          { card: makeCard('c2', 'SPADES', 2), representedRank: 2, isWildcard: false },
+          { card: makeCard('c3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+          { card: makeCard('c4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+        ],
+      };
+
+      const secondAce = makeCard('c-ace-2', 'SPADES', 14);
+      const result = canAddCardsToMeld(existingMeld, [secondAce]);
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('A run cannot contain duplicate Aces');
+    });
+  });
 });
+

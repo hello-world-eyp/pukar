@@ -181,4 +181,143 @@ describe('Bot Personality Strategies', () => {
       expect(plan.discardAction.cardId).toBe('c2');
     });
   });
+
+  describe('Discard Pile Pickup & Joker Intelligence', () => {
+    it('all bots pick up the discard pile if it contains a Joker (rank 2 or Natural Joker)', () => {
+      // 1. Jadugar picks up pile with Natural Joker
+      const stateJadugar = createTestState();
+      stateJadugar.players[1].hand = [
+        makeCard('h1', 'CLUBS', 4),
+        makeCard('h2', 'HEARTS', 8),
+        makeCard('h3', 'DIAMONDS', 10),
+      ];
+      stateJadugar.discardPile = [
+        makeCard('dp1', 'SPADES', 7),
+        makeCard('joker', null, 0, true), // Natural Joker
+      ];
+      const planJadugar = decideTheJadugarTurn(stateJadugar, 1, createEmptyMemory());
+      expect(planJadugar.drawAction.type).toBe('TAKE_DISCARD');
+
+      // 2. Smart Chacha picks up pile with 2 Wildcard
+      const stateChacha = createTestState();
+      stateChacha.players[1].hand = [
+        makeCard('h1', 'CLUBS', 4),
+        makeCard('h2', 'HEARTS', 8),
+      ];
+      stateChacha.discardPile = [
+        makeCard('dp1', 'SPADES', 7),
+        makeCard('twoWild', 'HEARTS', 2), // 2 Wildcard
+      ];
+      const planChacha = decideSmartChachaTurn(stateChacha, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('TAKE_DISCARD');
+
+      // 3. Long Term Guy picks up pile with Joker
+      const stateLT = createTestState();
+      stateLT.players[1].hand = [
+        makeCard('h1', 'CLUBS', 4),
+        makeCard('h2', 'HEARTS', 8),
+      ];
+      stateLT.discardPile = [makeCard('joker2', null, 0, true)];
+      const planLT = decideTheLongTermGuyTurn(stateLT, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('leaves a pile with a Joker ONLY when bot has 1 card in hand and 0 Pukars left to go out cleanly', () => {
+      const state = createTestState();
+      state.pukarPool = []; // 0 Pukars remaining
+      state.players[1].hand = [makeCard('lastCard', 'SPADES', 9)]; // Exactly 1 card left
+      state.discardPile = [
+        makeCard('dp1', 'HEARTS', 5),
+        makeCard('joker', null, 0, true), // Joker in multi-card pile
+      ];
+
+      // Jadugar leaves the multi-card pile to draw 1 card and go out cleanly
+      const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('bots pick up discard pile when the top card connects with hand (pair or consecutive rank)', () => {
+      // Hand has 7♠. Top of discard pile is 8♠ (consecutive rank in same suit)
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'CLUBS', 4),
+        makeCard('h3', 'DIAMONDS', 10),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'HEARTS', 3),
+        makeCard('dp2', 'SPADES', 8), // Connects with 7♠
+      ];
+
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('TAKE_DISCARD');
+
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('Smart Chacha and The Long-Term Guy pick up discard pile when it has 3 or more cards', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 9),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 7),
+        makeCard('dp3', 'CLUBS', 11),
+      ];
+
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('TAKE_DISCARD');
+
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('The Jadugar picks up discard pile when it has 4 or more cards', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 9),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 7),
+        makeCard('dp3', 'CLUBS', 11),
+        makeCard('dp4', 'HEARTS', 13),
+      ];
+
+      const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+  });
+
+  describe('Wildcard 2 Same-Suit Preference', () => {
+    it('bots prefer using the suited 2 over cross-suit 2 in runs when not close to Pukar', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      // Hand has 5+ cards (not close to Pukar: hand.length > 4)
+      state.players[1].hand = [
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('twoDiamonds', 'DIAMONDS', 2), // Cross-suit 2
+        makeCard('twoSpades', 'SPADES', 2), // Suited 2
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+      ];
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.meldActions.length).toBeGreaterThan(0);
+      const newMeldAction = plan.meldActions.find((a) => a.type === 'PLAY_NEW_MELD');
+      expect(newMeldAction).toBeDefined();
+      if (newMeldAction && 'cardIds' in newMeldAction) {
+        // Must contain suited 2 (twoSpades) and NOT cross-suit 2 (twoDiamonds)
+        expect(newMeldAction.cardIds).toContain('twoSpades');
+        expect(newMeldAction.cardIds).not.toContain('twoDiamonds');
+      }
+    });
+  });
 });
+

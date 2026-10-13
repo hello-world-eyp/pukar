@@ -244,8 +244,8 @@ export function validateNewRun(
     if (!cards || cards.length < 3) {
       return { valid: false, error: 'A run requires at least 3 cards' };
     }
-    if (cards.length > 14) {
-      return { valid: false, error: 'A run cannot exceed 14 cards' };
+    if (cards.length > 13) {
+      return { valid: false, error: 'A run cannot exceed 13 cards' };
     }
 
     // Check for duplicate card instances
@@ -262,8 +262,8 @@ export function validateNewRun(
       return { valid: false, error: 'A run cannot contain duplicate ranks' };
     }
     const aceCount = cards.filter((c) => c.rank === 14).length;
-    if (aceCount > 1 && cards.length < 14) {
-      return { valid: false, error: 'A run cannot contain duplicate ranks' };
+    if (aceCount > 1) {
+      return { valid: false, error: 'A run cannot contain duplicate Aces' };
     }
 
     // Check natural cards (rank >= 3) suit consistency
@@ -766,8 +766,8 @@ export function canAddCardsToMeld(
     }
 
     const allCards = [...meldCards, ...cardsToAdd];
-    if (allCards.length > 14) {
-      return { valid: false, error: 'Run cannot exceed 14 cards' };
+    if (allCards.length > 13) {
+      return { valid: false, error: 'Run cannot exceed 13 cards' };
     }
 
     // Check duplicate natural ranks
@@ -776,6 +776,10 @@ export function canAddCardsToMeld(
       .map((c) => c.rank);
     if (new Set(nonAceNaturalRanks).size !== nonAceNaturalRanks.length) {
       return { valid: false, error: 'A run cannot contain duplicate ranks' };
+    }
+    const allAces = allCards.filter((c) => c.rank === 14);
+    if (allAces.length > 1) {
+      return { valid: false, error: 'A run cannot contain duplicate Aces' };
     }
 
     // 1. Check if meld currently contains a Normal Joker acting as wildcard
@@ -801,8 +805,12 @@ export function canAddCardsToMeld(
         const remainingMeldCards = meldCards.filter((c) => c.id !== pickedUpCard.id);
         const newMeldCards = [...remainingMeldCards, ...cardsToAdd];
 
-        if (newMeldCards.length > 14) {
-          return { valid: false, error: 'Run cannot exceed 14 cards' };
+        if (newMeldCards.length > 13) {
+          return { valid: false, error: 'Run cannot exceed 13 cards' };
+        }
+        const newAces = newMeldCards.filter((c) => c.rank === 14);
+        if (newAces.length > 1) {
+          return { valid: false, error: 'A run cannot contain duplicate Aces' };
         }
 
         const candidates = findRunCandidates(newMeldCards, runSuit);
@@ -974,6 +982,10 @@ export function validateRemoveCardFromMeld(
  */
 function findRunCandidates(cards: Card[], runSuit: Suit): MeldSlot[][] {
   const totalCards = cards.length;
+  if (totalCards > 13) {
+    return [];
+  }
+
   // A card of rank 3..14 with a DIFFERENT suit cannot be in a run of runSuit!
   const wrongSuitNonWildcards = cards.filter(
     (c) => c.suit !== null && c.suit !== runSuit && c.rank !== 2
@@ -996,6 +1008,14 @@ function findRunCandidates(cards: Card[], runSuit: Suit): MeldSlot[][] {
   );
   const ranksSet = new Set(suitedNonAceCards.map((c) => c.rank));
   if (ranksSet.size !== suitedNonAceCards.length) {
+    return [];
+  }
+
+  // A run can contain at most ONE Ace
+  const suitedAces = cards.filter(
+    (c) => c.suit === runSuit && c.rank === 14
+  );
+  if (suitedAces.length > 1) {
     return [];
   }
 
@@ -1025,6 +1045,11 @@ function matchCardsToTargetRanks(
   targetRanks: number[],
   runSuit: Suit
 ): MeldSlot[] | null {
+  // A run cannot wrap around or contain both Ace low (1) and Ace high (14)
+  if (targetRanks.includes(1) && targetRanks.includes(14)) {
+    return null;
+  }
+
   const targetUsed = new Set<number>();
   const cardAssignment = new Map<string, { rank: number; isWildcard: boolean }>();
 
@@ -1042,6 +1067,9 @@ function matchCardsToTargetRanks(
 
   // 2. Assign suited Aces (rank 14) to 1 or 14
   const suitedAces = cards.filter((c) => c.suit === runSuit && c.rank === 14);
+  if (suitedAces.length > 1) {
+    return null;
+  }
   for (const ace of suitedAces) {
     if (targetRanks.includes(1) && !targetUsed.has(1)) {
       cardAssignment.set(ace.id, { rank: 1, isWildcard: false });

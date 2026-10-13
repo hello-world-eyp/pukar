@@ -15,6 +15,7 @@ import {
   findPotentialNewMelds,
   findPotentialAdditionsToMelds,
   evaluateDeadwoodAndDiscard,
+  evaluateDiscardPilePickup,
 } from '../hand-analyzer';
 
 export function decideTheLongTermGuyTurn(
@@ -43,21 +44,12 @@ export function decideTheLongTermGuyTurn(
   };
 
   if (state.phase === 'DRAW' && state.discardPile.length > 0) {
-    const top = state.discardPile[state.discardPile.length - 1];
-    // If top card directly expands an existing team suit sequence or helps open a missing suit
-    const testHand = [...hand, top];
-    const potentialAdditions = findPotentialAdditionsToMelds(testHand, myTeamMelds);
-    const existingAdditions = findPotentialAdditionsToMelds(hand, myTeamMelds);
-
-    const extendsExistingSuit = potentialAdditions.length > existingAdditions.length;
-    const opensNewSuit =
-      top.suit &&
-      !existingRunsBySuit.has(top.suit) &&
-      findPotentialNewMelds(testHand, { requirePure: myTeamMelds.length === 0 }).some(
-        (m) => m.suit === top.suit
-      );
-
-    if (extendsExistingSuit || opensNewSuit) {
+    if (
+      evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
+        personality: 'THE_LONG_TERM_GUY',
+        pukarPoolCount: state.pukarPool.length,
+      })
+    ) {
       drawAction = { type: 'TAKE_DISCARD' };
     } else {
       drawAction = { type: 'DRAW_FROM_STOCK' };

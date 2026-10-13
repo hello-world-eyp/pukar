@@ -4,7 +4,7 @@
  * Pure TypeScript with zero DOM dependencies.
  */
 import { Card, Meld, Suit, isNaturalJoker, isWildcard } from '../types';
-import { canAddCardsToMeld, validateNewMeld } from '../meld-validator';
+import { canAddCardsToMeld, doesCardMatchRank, validateNewMeld } from '../meld-validator';
 
 export interface CandidateMeld {
   cards: Card[];
@@ -43,7 +43,8 @@ export interface HandEvaluation {
 export function findCandidateRunsInSuit(
   suitedCards: Card[],
   suit: Suit,
-  wildcards: Card[]
+  wildcards: Card[],
+  options?: { isCloseToPukar?: boolean }
 ): CandidateMeld[] {
   const candidateMelds: CandidateMeld[] = [];
   const seenCardSets = new Set<string>();
@@ -115,7 +116,21 @@ export function findCandidateRunsInSuit(
 
       // 2. Dirty runs using 1 wildcard
       if (wildcards.length > 0) {
-        for (const wildcard of wildcards) {
+        // Group wildcards by strategic suitability for a run in `suit`:
+        // Tier 1: Suited 2 (rank 2, same suit) - highest preference (+35 pts)
+        // Tier 2: Natural Joker (isNaturalJoker) - second preference (+15 pts)
+        // Tier 3: Cross-suit 2 (rank 2, different suit) - only if close to Pukar (-30 pts)
+        const suited2s = wildcards.filter((c) => c.rank === 2 && c.suit === suit);
+        const naturalJokers = wildcards.filter((c) => isNaturalJoker(c));
+        const crossSuit2s = wildcards.filter((c) => c.rank === 2 && c.suit !== suit);
+
+        const eligibleWildcards: Array<{ card: Card; bonus: number }> = [
+          ...suited2s.map((c) => ({ card: c, bonus: 35 })),
+          ...naturalJokers.map((c) => ({ card: c, bonus: 15 })),
+          ...(options?.isCloseToPukar ? crossSuit2s.map((c) => ({ card: c, bonus: -30 })) : []),
+        ];
+
+        for (const { card: wildcard, bonus } of eligibleWildcards) {
           // Check if window can be satisfied with exactly 1 wildcard substituting
           let missingRank: number | null = null;
           const dirtyMatched: Card[] = [];
@@ -155,7 +170,7 @@ export function findCandidateRunsInSuit(
                   type: 'RUN',
                   suit,
                   isPure: false,
-                  score: testCards.length * 10 + 15,
+                  score: testCards.length * 10 + 15 + bonus,
                 });
               }
             }
@@ -216,15 +231,16 @@ export function findCandidateSets(hand: Card[], wildcards: Card[]): CandidateMel
  */
 export function findPotentialNewMelds(
   hand: Card[],
-  options?: { requirePure?: boolean }
+  options?: { requirePure?: boolean; isCloseToPukar?: boolean }
 ): CandidateMeld[] {
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 4);
   const wildcards = hand.filter((c) => isWildcard(c));
   const candidateMelds: CandidateMeld[] = [];
 
   const suits: Suit[] = ['SPADES', 'HEARTS', 'DIAMONDS', 'CLUBS'];
   for (const suit of suits) {
     const suitedCards = hand.filter((c) => c.suit === suit);
-    const runs = findCandidateRunsInSuit(suitedCards, suit, wildcards);
+    const runs = findCandidateRunsInSuit(suitedCards, suit, wildcards, { isCloseToPukar });
     candidateMelds.push(...runs);
   }
 
@@ -247,20 +263,43 @@ export function findPotentialNewMelds(
  */
 export function findPotentialAdditionsToMelds(
   hand: Card[],
-  tableMelds: Meld[]
+  tableMelds: Meld[],
+  options?: { isCloseToPukar?: boolean }
 ): CandidateAddition[] {
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 4);
   const additions: CandidateAddition[] = [];
 
   for (const meld of tableMelds) {
     // 1. Check single card additions
     for (const card of hand) {
+      // Disallow using cross-suit 2 in a run unless very close to Pukar
+      if (
+        meld.type === 'RUN' &&
+        meld.suit &&
+        card.rank === 2 &&
+        card.suit !== meld.suit &&
+        !isCloseToPukar
+      ) {
+        continue;
+      }
+
       const validation = canAddCardsToMeld(meld, [card]);
       if (validation.valid) {
+        let score = 25;
+        if (meld.type === 'RUN' && meld.suit) {
+          if (card.rank === 2 && card.suit === meld.suit) {
+            score = 50; // Suited 2 highly preferred!
+          } else if (isNaturalJoker(card)) {
+            score = 35; // Natural Joker preferred over cross-suit
+          } else if (card.rank === 2 && card.suit !== meld.suit) {
+            score = 10; // Cross-suit 2 given low priority
+          }
+        }
         additions.push({
           meldId: meld.id,
           cardIds: [card.id],
           cards: [card],
-          score: 25,
+          score,
         });
       }
     }
@@ -270,13 +309,31 @@ export function findPotentialAdditionsToMelds(
       for (let i = 0; i < hand.length; i++) {
         for (let j = i + 1; j < hand.length; j++) {
           const pair = [hand[i], hand[j]];
+          if (
+            meld.type === 'RUN' &&
+            meld.suit &&
+            !isCloseToPukar &&
+            pair.some((c) => c.rank === 2 && c.suit !== meld.suit)
+          ) {
+            continue;
+          }
+
           const validation = canAddCardsToMeld(meld, pair);
           if (validation.valid) {
+            let score = 55;
+            if (meld.type === 'RUN' && meld.suit) {
+              if (pair.some((c) => c.rank === 2 && c.suit === meld.suit)) {
+                score += 25;
+              }
+              if (pair.some((c) => c.rank === 2 && c.suit !== meld.suit)) {
+                score -= 30;
+              }
+            }
             additions.push({
               meldId: meld.id,
               cardIds: pair.map((c) => c.id),
               cards: pair,
-              score: 55,
+              score,
             });
           }
         }
@@ -284,7 +341,7 @@ export function findPotentialAdditionsToMelds(
     }
   }
 
-  // Sort by score descending (prefer bigger additions)
+  // Sort by score descending (prefer bigger and strategically suited additions)
   return additions.sort((a, b) => b.score - a.score);
 }
 
@@ -294,14 +351,15 @@ export function findPotentialAdditionsToMelds(
 export function findBestMeldPlan(
   hand: Card[],
   teamMelds: Meld[],
-  options?: { disallowedCardId?: string; preserveDiscardCard?: boolean }
+  options?: { disallowedCardId?: string; preserveDiscardCard?: boolean; isCloseToPukar?: boolean }
 ): {
   meldsToPlay: CandidateMeld[];
   additionsToPlay: CandidateAddition[];
   usedCardIds: Set<string>;
 } {
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 4);
   const requirePure = teamMelds.length === 0;
-  const potentialMelds = findPotentialNewMelds(hand, { requirePure });
+  const potentialMelds = findPotentialNewMelds(hand, { requirePure, isCloseToPukar });
   // Sort candidate melds by score descending
   potentialMelds.sort((a, b) => b.score - a.score);
 
@@ -341,7 +399,7 @@ export function findBestMeldPlan(
 
   // Now evaluate additions from remaining uncommitted hand cards
   const remainingCards = hand.filter((c) => !usedCardIds.has(c.id));
-  const potentialAdditions = findPotentialAdditionsToMelds(remainingCards, teamMelds);
+  const potentialAdditions = findPotentialAdditionsToMelds(remainingCards, teamMelds, { isCloseToPukar });
   const additionsToPlay: CandidateAddition[] = [];
 
   for (const add of potentialAdditions) {
@@ -475,3 +533,187 @@ export function evaluateDeadwoodAndDiscard(
     discardScores,
   };
 }
+
+/**
+ * Checks whether a card connects with cards in hand or team table melds.
+ * Connecting cards form pairs/sets, same-suit runs or near-runs, or directly extend team melds.
+ */
+export function isCardConnecting(
+  card: Card,
+  hand: Card[],
+  teamMelds: Meld[] = []
+): boolean {
+  // Wildcards always connect
+  if (isWildcard(card) || isNaturalJoker(card) || card.rank === 2) {
+    return true;
+  }
+
+  // 1. Direct or adjacent extension to team melds on table
+  for (const meld of teamMelds) {
+    const addCheck = canAddCardsToMeld(meld, [card]);
+    if (addCheck.valid) {
+      return true;
+    }
+    if (meld.type === 'RUN' && meld.suit === card.suit) {
+      const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+      if (ranks.length > 0) {
+        const minR = ranks[0];
+        const maxR = ranks[ranks.length - 1];
+        if (Math.abs(card.rank - minR) <= 2 || Math.abs(card.rank - maxR) <= 2) {
+          return true;
+        }
+        if ((card.rank === 14 && minR <= 3) || (card.rank === 3 && minR === 1)) {
+          return true;
+        }
+      }
+    }
+    if (meld.type === 'SET' && meld.rank && doesCardMatchRank(card.rank, meld.rank)) {
+      return true;
+    }
+  }
+
+  // 2. Pair or Run connection with cards in hand
+  for (const h of hand) {
+    if (isWildcard(h) || isNaturalJoker(h) || h.rank === 2) continue;
+    // Same rank forms a pair / potential set
+    if (h.rank === card.rank) {
+      return true;
+    }
+    // Same suit consecutive or near-consecutive forms run potential
+    if (h.suit && card.suit && h.suit === card.suit) {
+      if (Math.abs(h.rank - card.rank) <= 2) {
+        return true;
+      }
+      // Ace with 3 (rank 1-2-3 run)
+      if ((h.rank === 14 && card.rank === 3) || (card.rank === 14 && h.rank === 3)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export interface DiscardPickupOptions {
+  personality: 'SMART_CHACHA' | 'THE_JADUGAR' | 'FAST_CHACHI' | 'THE_LONG_TERM_GUY';
+  pukarPoolCount?: number;
+  opponentWants?: Set<string>;
+}
+
+/**
+ * Centrally evaluates whether a bot should take the discard pile based on its personality,
+ * card volume, connecting cards, wildcard presence, and opponent denial.
+ */
+export function evaluateDiscardPilePickup(
+  hand: Card[],
+  discardPile: Card[],
+  teamMelds: Meld[],
+  options: DiscardPickupOptions
+): boolean {
+  if (!discardPile || discardPile.length === 0) {
+    return false;
+  }
+
+  const pileLength = discardPile.length;
+  const topCard = discardPile[pileLength - 1];
+  const pukarPoolCount = options.pukarPoolCount ?? 2;
+
+  // Critical Winning / Endgame Guard:
+  // If bot has 1 card left and 0 Pukars remain (going out cleanly to win the round),
+  // taking a multi-card discard pile bloats the hand and prevents going out this turn!
+  if (hand.length === 1 && pukarPoolCount === 0 && pileLength > 1) {
+    return false;
+  }
+  // Or bot has 1 card left, is 1 card away from claiming Pukar, and pile has 5+ cards
+  if (hand.length === 1 && pukarPoolCount > 0 && pileLength >= 5) {
+    return false;
+  }
+
+  // 1. Wildcard / Joker Rule (Issue 3: "If a joker is at the bottom, they should not just leave it unless there is a good reason to")
+  const hasJokerInPile = discardPile.some(
+    (c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2
+  );
+
+  if (hasJokerInPile) {
+    return true;
+  }
+
+  // 2. Fast Chachi specific personality rule:
+  // Hoards 3+ cards unconditionally, but on smaller piles ONLY takes if top card forms an extreme run (A-2-3 or A-K-Q)
+  if (options.personality === 'FAST_CHACHI') {
+    if (pileLength >= 3) return true;
+    const testHand = [...hand, topCard];
+    const newMelds = findPotentialNewMelds(testHand, {
+      requirePure: teamMelds.length === 0,
+    });
+    const hasExtremeMeld = newMelds.some(
+      (m) =>
+        m.type === 'RUN' &&
+        m.cards.some((c) => c.id === topCard.id) &&
+        m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
+    );
+    return hasExtremeMeld;
+  }
+
+  // 3. Melds / Additions from whole pile
+  const testHand = [...hand, ...discardPile];
+  const hypMelds = findPotentialNewMelds(testHand, { requirePure: teamMelds.length === 0 });
+  const hypAdds = findPotentialAdditionsToMelds(testHand, teamMelds);
+  const currMelds = findPotentialNewMelds(hand, { requirePure: teamMelds.length === 0 });
+  const currAdds = findPotentialAdditionsToMelds(hand, teamMelds);
+  const pileCreatesMelds = hypMelds.length > currMelds.length || hypAdds.length > currAdds.length;
+
+  if (pileCreatesMelds) {
+    return true;
+  }
+
+  // 3. Connecting Cards analysis (Issue 2: "Leaving more connecting cards at the bottom when they should not")
+  const topConnects = isCardConnecting(topCard, hand, teamMelds);
+  const totalConnectingInPile = discardPile.filter((c) => isCardConnecting(c, hand, teamMelds)).length;
+
+  if (topConnects) {
+    if (options.personality === 'THE_JADUGAR') {
+      const isDirectAdd = teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid);
+      const isTightPairOrRun = hand.some(
+        (h) => h.rank === topCard.rank || (h.suit === topCard.suit && Math.abs(h.rank - topCard.rank) <= 1)
+      );
+      if (isDirectAdd || isTightPairOrRun || pileLength >= 2) {
+        return true;
+      }
+    } else {
+      return true;
+    }
+  }
+
+  if (totalConnectingInPile >= 2) {
+    return true;
+  }
+
+  // 4. Opponent Denial (Smart Chacha)
+  if (options.personality === 'SMART_CHACHA' && options.opponentWants) {
+    const topKey = topCard.suit ? `${topCard.suit}_${topCard.rank}` : 'WILD';
+    if (options.opponentWants.has(topKey) || options.opponentWants.has(topCard.id)) {
+      return true;
+    }
+  }
+
+  // 5. Card Volume / Hoarding (Issue 1: "By default leave a lot of cards at the bottom")
+  switch (options.personality) {
+    case 'THE_LONG_TERM_GUY':
+      if (pileLength >= 3) return true;
+      if (pileLength >= 2 && totalConnectingInPile >= 1) return true;
+      break;
+
+    case 'SMART_CHACHA':
+      if (pileLength >= 3) return true;
+      if (pileLength >= 2 && totalConnectingInPile >= 1) return true;
+      break;
+
+    case 'THE_JADUGAR':
+      if (pileLength >= 4) return true;
+      break;
+  }
+
+  return false;
+}
+
