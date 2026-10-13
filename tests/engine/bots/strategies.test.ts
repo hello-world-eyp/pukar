@@ -384,13 +384,14 @@ describe('Bot Personality Strategies', () => {
       expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
     });
 
-    it('The Long-Term Guy hoards 3+ cards while Smart Chacha leaves unhelpful opponent junk in discard', () => {
+    it('The Long-Term Guy and Smart Chacha both leave unhelpful opponent junk in discard (zero sequence value)', () => {
       const state = createTestState();
-      // Smart Chacha has 2 cards (lean hand) and pile is 3 unhelpful opponent cards
+      // Player has hand [4♠, 9♥]
       state.players[1].hand = [
         makeCard('h1', 'SPADES', 4),
         makeCard('h2', 'HEARTS', 9),
       ];
+      // Discard pile is 3 unhelpful opponent cards: 3♣, 7♦, 11♣
       state.discardPile = [
         makeCard('dp1', 'CLUBS', 3),
         makeCard('dp2', 'DIAMONDS', 7),
@@ -401,7 +402,53 @@ describe('Bot Personality Strategies', () => {
       const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
       expect(planChacha.drawAction.type).toBe('DRAW_FROM_STOCK');
 
-      // The Long-Term Guy hoards cards across suits to feed long sequences
+      // The Long-Term Guy also refuses to take discard pile when cards add zero value to his sequence!
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('The Long-Term Guy leaves a single-card discard that adds zero sequence value (e.g. cross-suit pair)', () => {
+      const state = createTestState();
+      // Hand has 4♠ and 9♥
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 9),
+      ];
+      // Discard is 4♦ (same rank, different suit - adds zero sequence value!)
+      state.discardPile = [makeCard('dp1', 'DIAMONDS', 4)];
+
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('The Long-Term Guy takes discard pile when top card extends a team table sequence', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'HEARTS', 9),
+        makeCard('h2', 'CLUBS', 12),
+      ];
+      // Table has Spades run 3♠-4♠-5♠
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('s3', 'SPADES', 3),
+            makeCard('s4', 'SPADES', 4),
+            makeCard('s5', 'SPADES', 5),
+          ],
+          slots: [
+            { card: makeCard('s3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+            { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+            { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          ],
+        },
+      ];
+      // Discard is 6♠ (directly extends table sequence)
+      state.discardPile = [makeCard('dp1', 'SPADES', 6)];
+
       const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
       expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
     });

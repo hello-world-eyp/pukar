@@ -588,6 +588,60 @@ export function evaluateDeadwoodAndDiscard(
 }
 
 /**
+ * Checks whether a card adds value to sequences (runs) in hand or on the table.
+ * Used by The Long-Term Guy to avoid bloating hand with unhelpful deadwood or cross-suit pairs.
+ */
+export function isCardValuableForSequences(
+  card: Card,
+  hand: Card[],
+  teamMelds: Meld[] = []
+): boolean {
+  // Wildcards always add value to sequences
+  if (isWildcard(card) || isNaturalJoker(card) || card.rank === 2) {
+    return true;
+  }
+
+  if (!card.suit) return false;
+
+  // 1. Direct or adjacent extension to existing team RUN melds on table
+  for (const meld of teamMelds) {
+    if (meld.type === 'RUN' && meld.suit === card.suit) {
+      const addCheck = canAddCardsToMeld(meld, [card]);
+      if (addCheck.valid) {
+        return true;
+      }
+      const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+      if (ranks.length > 0) {
+        const minR = ranks[0];
+        const maxR = ranks[ranks.length - 1];
+        if (Math.abs(card.rank - minR) <= 2 || Math.abs(card.rank - maxR) <= 2) {
+          return true;
+        }
+        if ((card.rank === 14 && minR <= 3) || (card.rank === 3 && minR === 1)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 2. Same-suit consecutive or near-consecutive connection with cards in hand
+  const sameSuitCards = hand.filter((h) => !isWildcard(h) && h.suit === card.suit);
+  for (const h of sameSuitCards) {
+    if (Math.abs(h.rank - card.rank) === 1) {
+      return true;
+    }
+    if (Math.abs(h.rank - card.rank) === 2) {
+      return true;
+    }
+    if ((h.rank === 14 && card.rank === 3) || (card.rank === 14 && h.rank === 3)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Checks whether a card connects with cards in hand or team table melds.
  * Connecting cards form pairs/sets, same-suit runs or near-runs, or directly extend team melds.
  */
@@ -717,10 +771,55 @@ export function evaluateDiscardPilePickup(
   const pileCreatesMelds = hypMelds.length > currMelds.length || hypAdds.length > currAdds.length;
 
   if (pileCreatesMelds) {
-    return true;
+    if (options.personality === 'THE_LONG_TERM_GUY') {
+      const createsNewRun = hypMelds.some(
+        (m) => m.type === 'RUN' && m.cards.some((c) => discardPile.some((dp) => dp.id === c.id))
+      );
+      const createsRunAddition = hypAdds.some((a) => {
+        const target = teamMelds.find((m) => m.id === a.meldId);
+        return target?.type === 'RUN' && a.cards.some((c) => discardPile.some((dp) => dp.id === c.id));
+      });
+      if (createsNewRun || createsRunAddition) {
+        return true;
+      }
+    } else {
+      return true;
+    }
   }
 
-  // 3. Connecting Cards analysis (Issue 2: "Leaving more connecting cards at the bottom when they should not")
+  // 4. The Long-Term Guy: Sequence Value Specific Evaluation
+  if (options.personality === 'THE_LONG_TERM_GUY') {
+    const topAddsSeqValue = isCardValuableForSequences(topCard, hand, teamMelds);
+    const seqValuableInPile = discardPile.filter((c) =>
+      isCardValuableForSequences(c, hand, teamMelds)
+    );
+    const valuableCount = seqValuableInPile.length;
+
+    if (topAddsSeqValue) {
+      // Top card directly adds value to a sequence
+      if (pileLength <= 2) {
+        return true;
+      }
+      // If pile has 3+ cards, only take if multiple cards add sequence value
+      // or top card directly extends a table run and pile isn't bloated
+      const isDirectTableRunAdd = teamMelds.some(
+        (m) => m.type === 'RUN' && canAddCardsToMeld(m, [topCard]).valid
+      );
+      if (valuableCount >= 2 || (pileLength === 3 && isDirectTableRunAdd)) {
+        return true;
+      }
+    } else {
+      // Top card does not add sequence value:
+      // Only take if multiple cards in the pile add sequence value and it is not mostly junk
+      if (valuableCount >= 2 && valuableCount >= Math.ceil(pileLength / 2)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // 5. Connecting Cards analysis (Issue 2: "Leaving more connecting cards at the bottom when they should not")
   const topConnects = isCardConnecting(topCard, hand, teamMelds);
   const totalConnectingInPile = discardPile.filter((c) => isCardConnecting(c, hand, teamMelds)).length;
 
@@ -763,7 +862,7 @@ export function evaluateDiscardPilePickup(
     }
   }
 
-  // 4. Opponent Denial (Smart Chacha)
+  // 6. Opponent Denial (Smart Chacha)
   if (options.personality === 'SMART_CHACHA' && options.opponentWants) {
     const topKey = topCard.suit ? `${topCard.suit}_${topCard.rank}` : 'WILD';
     if (options.opponentWants.has(topKey) || options.opponentWants.has(topCard.id)) {
@@ -771,13 +870,8 @@ export function evaluateDiscardPilePickup(
     }
   }
 
-  // 5. Card Volume / Hoarding (Issue 1: "By default leave a lot of cards at the bottom")
+  // 7. Card Volume / Hoarding (Issue 1: "By default leave a lot of cards at the bottom")
   switch (options.personality) {
-    case 'THE_LONG_TERM_GUY':
-      if (pileLength >= 3) return true;
-      if (pileLength >= 2 && totalConnectingInPile >= 1) return true;
-      break;
-
     case 'SMART_CHACHA':
       // Smart Chacha never hoards piles of opponent deadwood on volume alone.
       // Only takes multi-card piles if there are multiple strong connectors and hand is not lean.
