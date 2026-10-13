@@ -106,11 +106,13 @@ export function decideSmartChachaTurn(
       : undefined);
 
   const isDiscardPhase = state.phase === 'DISCARD' || state.turnPhase === 'DISCARD';
+  const isCloseToPukar = hand.length <= 3;
   const meldPlan = isDiscardPhase
     ? { meldsToPlay: [], additionsToPlay: [], usedCardIds: new Set<string>() }
     : findBestMeldPlan(hand, myTeamMelds, {
         disallowedCardId,
         preserveDiscardCard: true,
+        isCloseToPukar,
       });
   const meldActions: GameAction[] = [];
 
@@ -136,6 +138,7 @@ export function decideSmartChachaTurn(
   const nextPlayer = state.players[nextPlayerIdx];
   const partnerLikelyWants = new Set<string>();
   const protectedCardIds = new Set<string>();
+  const opponentTeam: Team = team === 'A' ? 'B' : 'A';
 
   const partnerIdx = state.players.findIndex((p, idx) => idx !== botIndex && p.team === team);
   const partner = partnerIdx >= 0 ? state.players[partnerIdx] : null;
@@ -226,6 +229,9 @@ export function decideSmartChachaTurn(
       opponentWants,
       partnerLikelyWants,
       protectedCardIds,
+      teamMelds: myTeamMelds,
+      opponentMelds: state.melds[opponentTeam] || [],
+      isCloseToPukar,
     }
   );
 

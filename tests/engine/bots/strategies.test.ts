@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { Card, GameState, Rank, Suit } from '../../../src/engine/types';
+import { Card, GameState, Meld, Rank, Suit } from '../../../src/engine/types';
 import { dealInitialState } from '../../../src/engine/deck';
 import { BotMemory } from '../../../src/engine/bots/types';
 import { decideSmartChachaTurn } from '../../../src/engine/bots/strategies/smart-chacha';
 import { decideTheJadugarTurn } from '../../../src/engine/bots/strategies/the-jadugar';
 import { decideFastChachiTurn } from '../../../src/engine/bots/strategies/fast-chachi';
 import { decideTheLongTermGuyTurn } from '../../../src/engine/bots/strategies/the-long-term-guy';
-import { findBestMeldPlan } from '../../../src/engine/bots/hand-analyzer';
+import { findBestMeldPlan, findPotentialAdditionsToMelds } from '../../../src/engine/bots/hand-analyzer';
 
 describe('Bot Personality Strategies', () => {
   function makeCard(id: string, suit: Suit | null, rank: Rank, isNaturalJoker = false): Card {
@@ -842,6 +842,174 @@ describe('Bot Personality Strategies', () => {
       // Partner is on less than 3 cards (< 3), so passing 6♠ allows partner to scoop and go out!
       const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
       expect(plan.discardAction.cardId).toBe('c1');
+    });
+  });
+
+  describe('Bot Strategic Optimizations Audit', () => {
+    it('all bots refuse to discard connecting cards (pairs, adjacent ranks, gap connectors) when isolated deadwood exists', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+      state.players[1].hand = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6), // Connected adjacent pair
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('d8', 'DIAMONDS', 8), // Rank pair
+        makeCard('ck', 'CLUBS', 13), // Isolated high deadwood
+      ];
+
+      // Smart Chacha discards isolated deadwood (ck) over connecting cards
+      const chachaPlan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(chachaPlan.discardAction.cardId).toBe('ck');
+
+      // Fast Chachi discards isolated deadwood (ck) over connecting cards
+      const chachiPlan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(chachiPlan.discardAction.cardId).toBe('ck');
+
+      // The Jadugar discards isolated deadwood (ck) over connecting cards
+      const jadugarPlan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(jadugarPlan.discardAction.cardId).toBe('ck');
+
+      // The Long-Term Guy discards isolated deadwood (ck) over connecting cards
+      const ltPlan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(ltPlan.discardAction.cardId).toBe('ck');
+    });
+
+    it('bots do not casually discard rank 4 cards when 4 connects to low sequence (e.g. 2, 3, 5) or pairs', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+      state.players[1].hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s3', 'SPADES', 3), // 4 connects to 3 for low run
+        makeCard('d10', 'DIAMONDS', 10), // Isolated deadwood
+      ];
+
+      // Fast Chachi preserves 4♠ and 3♠, discarding d10
+      const chachiPlan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(chachiPlan.discardAction.cardId).toBe('d10');
+
+      // Smart Chacha preserves 4♠ and 3♠, discarding d10
+      const chachaPlan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(chachaPlan.discardAction.cardId).toBe('d10');
+    });
+
+    it('bots strictly prefer suited 2s over cross-suit 2s when building sequences', () => {
+      const hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s2', 'SPADES', 2), // Suited 2
+        makeCard('d2', 'DIAMONDS', 2), // Cross-suit 2
+        makeCard('c9', 'CLUBS', 9),
+      ];
+      const dummyMeld: Meld = {
+        id: 'm0',
+        type: 'RUN',
+        cards: [],
+        slots: [],
+        team: 'A',
+        points: 0,
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+      };
+
+      const plan = findBestMeldPlan(hand, [dummyMeld]);
+      expect(plan.meldsToPlay.length).toBeGreaterThan(0);
+      const playedMeld = plan.meldsToPlay[0];
+      // Must use suited 2 (s2), NOT cross-suit 2 (d2)
+      expect(playedMeld.cards.some((c) => c.id === 's2')).toBe(true);
+      expect(playedMeld.cards.some((c) => c.id === 'd2')).toBe(false);
+    });
+
+    it('bots strictly prefer Natural Jokers over cross-suit 2s when 2 suit does not match', () => {
+      const hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('joker', null, 0, true), // Natural Joker
+        makeCard('d2', 'DIAMONDS', 2), // Cross-suit 2
+        makeCard('c9', 'CLUBS', 9),
+      ];
+      const dummyMeld: Meld = {
+        id: 'm0',
+        type: 'RUN',
+        cards: [],
+        slots: [],
+        team: 'A',
+        points: 0,
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+      };
+
+      const plan = findBestMeldPlan(hand, [dummyMeld]);
+      expect(plan.meldsToPlay.length).toBeGreaterThan(0);
+      const playedMeld = plan.meldsToPlay[0];
+      // Must prefer Natural Joker over cross-suit 2
+      expect(playedMeld.cards.some((c) => c.id === 'joker')).toBe(true);
+      expect(playedMeld.cards.some((c) => c.id === 'd2')).toBe(false);
+    });
+
+    it('cross-suit 2 is never added to a sequence when not close to Pukar', () => {
+      const tableMeld: Meld = {
+        id: 'm-spades',
+        type: 'RUN',
+        suit: 'SPADES',
+        team: 'B',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('s5', 'SPADES', 5),
+          makeCard('s6', 'SPADES', 6),
+        ],
+        slots: [
+          { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+          { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+        ],
+        isClean: true,
+        points: 0,
+      };
+
+      const hand = [
+        makeCard('d2', 'DIAMONDS', 2), // Cross-suit 2
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('c10', 'CLUBS', 10),
+        makeCard('cj', 'CLUBS', 11),
+      ];
+
+      // Hand has 5 cards (not close to Pukar)
+      const additions = findPotentialAdditionsToMelds(hand, [tableMeld], { isCloseToPukar: false });
+      // Cross-suit 2 must NOT be added to table meld
+      expect(additions.some((a) => a.cardIds.includes('d2'))).toBe(false);
+    });
+
+    it('bots do not randomly leave a 4-card discard pile when it contains connecting cards or sequence value', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 5),
+        makeCard('h2', 'HEARTS', 9),
+        makeCard('h3', 'CLUBS', 10),
+      ];
+      // Discard pile has 4 cards, and 6♠ connects with hand 5♠
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 2),
+        makeCard('dp2', 'DIAMONDS', 7),
+        makeCard('dp3', 'DIAMONDS', 9),
+        makeCard('dp4', 'SPADES', 6), // Connects with 5♠
+      ];
+
+      // Smart Chacha does NOT leave the 4-card pile with a connector
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Fast Chachi also takes the 4-card pile
+      const planChachi = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(planChachi.drawAction.type).toBe('TAKE_DISCARD');
+
+      // The Long-Term Guy also takes the 4-card pile because 6♠ adds sequence value
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
     });
   });
 });

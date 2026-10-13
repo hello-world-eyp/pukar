@@ -62,9 +62,11 @@ export function decideTheJadugarTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
+  const isCloseToPukar = hand.length <= 3;
   const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
     disallowedCardId,
     preserveDiscardCard: true,
+    isCloseToPukar,
   });
   const meldActions: GameAction[] = [];
 
@@ -85,11 +87,17 @@ export function decideTheJadugarTurn(
 
   // 3. DISCARD PHASE DECISION
   const remainingHand = hand.filter((c) => !meldPlan.usedCardIds.has(c.id));
+  const opponentTeam = team === 'A' ? 'B' : 'A';
 
   const discardEval = evaluateDeadwoodAndDiscard(
     remainingHand.length > 0 ? remainingHand : hand,
     new Set(),
-    { disallowedCardId }
+    {
+      disallowedCardId,
+      teamMelds: myTeamMelds,
+      opponentMelds: state.melds[opponentTeam] || [],
+      isCloseToPukar,
+    }
   );
 
   const cardToDiscard =

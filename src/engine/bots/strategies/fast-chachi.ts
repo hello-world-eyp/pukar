@@ -62,9 +62,11 @@ export function decideFastChachiTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
+  const isCloseToPukar = hand.length <= 3;
   const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
     disallowedCardId,
     preserveDiscardCard: true,
+    isCloseToPukar,
   });
 
   // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first
@@ -94,13 +96,17 @@ export function decideFastChachiTurn(
 
   // 3. DISCARD PHASE DECISION
   const remainingHand = hand.filter((c) => !meldPlan.usedCardIds.has(c.id));
+  const opponentTeam = team === 'A' ? 'B' : 'A';
 
   const discardEval = evaluateDeadwoodAndDiscard(
     remainingHand.length > 0 ? remainingHand : hand,
     new Set(),
     {
       disallowedCardId,
-      preferredExtremeRuns: true, // bias: protect A, 3, K, Q cards in hand
+      preferredExtremeRuns: true, // bias: protect low sequence (A, 2, 3, 4, 5) and high sequence (10..A)
+      teamMelds: myTeamMelds,
+      opponentMelds: state.melds[opponentTeam] || [],
+      isCloseToPukar,
     }
   );
 

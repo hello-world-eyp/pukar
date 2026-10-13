@@ -28,6 +28,9 @@ export interface DiscardEvaluationOptions {
   preferredExtremeRuns?: boolean; // For Fast Chachi: bias towards extreme runs
   partnerLikelyWants?: Set<string>; // For Smart Chacha: cards to pass to partner
   protectedCardIds?: Set<string>; // Cards that can be added to team melds: strictly protect from discard
+  teamMelds?: Meld[]; // Existing team melds on table
+  opponentMelds?: Meld[]; // Opponent melds on table to prevent feeding
+  isCloseToPukar?: boolean; // When true (<= 3 cards), relaxing connector holding to allow discarding out
 }
 
 export interface HandEvaluation {
@@ -117,18 +120,24 @@ export function findCandidateRunsInSuit(
 
       // 2. Dirty runs using 1 wildcard
       if (wildcards.length > 0) {
-        // Group wildcards by strategic suitability for a run in `suit`:
-        // Tier 1: Suited 2 (rank 2, same suit) - highest preference (+35 pts)
-        // Tier 2: Natural Joker (isNaturalJoker) - second preference (+15 pts)
-        // Tier 3: Cross-suit 2 (rank 2, different suit) - only if close to Pukar (-30 pts)
+        // Strategic wildcard suitability for a run in `suit`:
+        // Tier 1: Suited 2 (rank 2, same suit) - highest preference (+50 pts)
+        // Tier 2: Natural Joker (isNaturalJoker) - second preference (+30 pts, can be retrieved later)
+        // Tier 3: Cross-suit 2 (rank 2, different suit) - ONLY permitted when very close to Pukar
+        //         AND no suited 2 or natural joker is available (-60 pts)
         const suited2s = wildcards.filter((c) => c.rank === 2 && c.suit === suit);
         const naturalJokers = wildcards.filter((c) => isNaturalJoker(c));
         const crossSuit2s = wildcards.filter((c) => c.rank === 2 && c.suit !== suit);
 
+        const allowCrossSuit2 =
+          Boolean(options?.isCloseToPukar) &&
+          suited2s.length === 0 &&
+          naturalJokers.length === 0;
+
         const eligibleWildcards: Array<{ card: Card; bonus: number }> = [
-          ...suited2s.map((c) => ({ card: c, bonus: 35 })),
-          ...naturalJokers.map((c) => ({ card: c, bonus: 15 })),
-          ...(options?.isCloseToPukar ? crossSuit2s.map((c) => ({ card: c, bonus: -30 })) : []),
+          ...suited2s.map((c) => ({ card: c, bonus: 50 })),
+          ...naturalJokers.map((c) => ({ card: c, bonus: 30 })),
+          ...(allowCrossSuit2 ? crossSuit2s.map((c) => ({ card: c, bonus: -60 })) : []),
         ];
 
         for (const { card: wildcard, bonus } of eligibleWildcards) {
@@ -234,7 +243,7 @@ export function findPotentialNewMelds(
   hand: Card[],
   options?: { requirePure?: boolean; isCloseToPukar?: boolean }
 ): CandidateMeld[] {
-  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 4);
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const wildcards = hand.filter((c) => isWildcard(c));
   const candidateMelds: CandidateMeld[] = [];
 
@@ -267,21 +276,29 @@ export function findPotentialAdditionsToMelds(
   tableMelds: Meld[],
   options?: { isCloseToPukar?: boolean }
 ): CandidateAddition[] {
-  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 4);
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
+  const hasNaturalJokerInHand = hand.some((c) => isNaturalJoker(c));
   const additions: CandidateAddition[] = [];
 
   for (const meld of tableMelds) {
+    const isCleanRun =
+      meld.type === 'RUN' && (meld.isClean === true || !meld.slots.some((s) => s.isWildcard));
+
     // 1. Check single card additions
     for (const card of hand) {
-      // Disallow using cross-suit 2 in a run unless very close to Pukar
+      // Disallow using cross-suit 2 in a run unless:
+      // 1. Very close to Pukar (<= 3 cards)
+      // 2. The run is NOT clean (never taint clean sequences and forfeit Clean 7 / Pure 13)
+      // 3. No Natural Joker is available in hand (prefer Natural Joker whenever 2 suit doesn't match)
       if (
         meld.type === 'RUN' &&
         meld.suit &&
         card.rank === 2 &&
-        card.suit !== meld.suit &&
-        !isCloseToPukar
+        card.suit !== meld.suit
       ) {
-        continue;
+        if (!isCloseToPukar || isCleanRun || hasNaturalJokerInHand) {
+          continue;
+        }
       }
 
       const validation = canAddCardsToMeld(meld, [card]);
@@ -293,7 +310,7 @@ export function findPotentialAdditionsToMelds(
           } else if (isNaturalJoker(card)) {
             score = 35; // Natural Joker preferred over cross-suit
           } else if (card.rank === 2 && card.suit !== meld.suit) {
-            score = 10; // Cross-suit 2 given low priority
+            score = 5; // Cross-suit 2 given lowest priority
           }
         }
         additions.push({
@@ -313,10 +330,11 @@ export function findPotentialAdditionsToMelds(
           if (
             meld.type === 'RUN' &&
             meld.suit &&
-            !isCloseToPukar &&
             pair.some((c) => c.rank === 2 && c.suit !== meld.suit)
           ) {
-            continue;
+            if (!isCloseToPukar || isCleanRun || hasNaturalJokerInHand) {
+              continue;
+            }
           }
 
           const validation = canAddCardsToMeld(meld, pair);
@@ -327,7 +345,7 @@ export function findPotentialAdditionsToMelds(
                 score += 25;
               }
               if (pair.some((c) => c.rank === 2 && c.suit !== meld.suit)) {
-                score -= 30;
+                score -= 40;
               }
             }
             additions.push({
@@ -358,7 +376,7 @@ export function findBestMeldPlan(
   additionsToPlay: CandidateAddition[];
   usedCardIds: Set<string>;
 } {
-  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 4);
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const requirePure = teamMelds.length === 0;
   const potentialMelds = findPotentialNewMelds(hand, { requirePure, isCloseToPukar });
   // Sort candidate melds by score descending
@@ -496,6 +514,7 @@ export function evaluateDeadwoodAndDiscard(
 } {
   const deadwood = hand.filter((c) => !committedCardIds.has(c.id));
   const pool = deadwood.length > 0 ? deadwood : hand;
+  const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
 
   const discardScores = pool.map((card) => {
     // Disallowed card (e.g. single drawn card this turn): strictly forbidden
@@ -511,55 +530,174 @@ export function evaluateDeadwoodAndDiscard(
     let score = 50;
     let reason = 'Normal deadwood card';
 
-    // 1. Synergy bonus: Does this card have adjacent same-suit neighbors in hand?
-    const hasNeighbor = hand.some(
+    // 1. Team Table Melds: Can this card be added to an existing team meld or sequence?
+    const cardKey = card.suit ? `${card.suit}_${card.rank}` : `RANK_${card.rank}`;
+    const isExplicitPartnerPass = Boolean(
+      options?.partnerLikelyWants?.has(cardKey) ||
+        (card.id && options?.partnerLikelyWants?.has(card.id))
+    );
+
+    const isDirectTeamAdd =
+      !isExplicitPartnerPass &&
+      (options?.protectedCardIds?.has(card.id) ||
+        (options?.teamMelds && options.teamMelds.some((m) => canAddCardsToMeld(m, [card]).valid)));
+    if (isDirectTeamAdd) {
+      score += 300;
+      reason = 'Can be added to team sequence (protected from discard)';
+    }
+
+    // 2. Team Table Melds: Open-end neighbor (adjacent to a team run on table)
+    let isTeamMeldNeighbor = false;
+    if (!isExplicitPartnerPass && options?.teamMelds && card.suit) {
+      for (const meld of options.teamMelds) {
+        if (meld.type === 'RUN' && meld.suit === card.suit) {
+          const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+          if (ranks.length > 0) {
+            const minR = ranks[0];
+            const maxR = ranks[ranks.length - 1];
+            if (card.rank === minR - 1 || card.rank === maxR + 1) {
+              isTeamMeldNeighbor = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (isTeamMeldNeighbor) {
+      score += 180;
+      reason = 'Connects to open end of team table sequence';
+    }
+
+    // 3. Opponent Table Melds: Does this card feed or extend opponent sequences on table?
+    let feedsOpponentMeld = false;
+    if (options?.opponentMelds && card.suit) {
+      for (const oppMeld of options.opponentMelds) {
+        if (canAddCardsToMeld(oppMeld, [card]).valid) {
+          feedsOpponentMeld = true;
+          break;
+        }
+        if (oppMeld.type === 'RUN' && oppMeld.suit === card.suit) {
+          const ranks = oppMeld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+          if (ranks.length > 0) {
+            const minR = ranks[0];
+            const maxR = ranks[ranks.length - 1];
+            if (card.rank === minR - 1 || card.rank === maxR + 1) {
+              feedsOpponentMeld = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (feedsOpponentMeld) {
+      score += 150;
+      reason = 'Feeds opponent sequence on table (denial protection)';
+    }
+
+    // 4. Opponent Wants prediction (Smart Chacha memory prediction)
+    if (options?.opponentWants?.has(cardKey) || options?.opponentWants?.has(card.id)) {
+      score += 160;
+      reason = 'Opponents predicted to need this card';
+    }
+
+    // 5. Connecting Cards in Hand:
+    // a. Direct adjacent neighbor (difference 1 in same suit)
+    const hasAdjacentNeighbor = hand.some(
       (other) =>
         other.id !== card.id &&
         other.suit === card.suit &&
         Math.abs(other.rank - card.rank) === 1
     );
-    if (hasNeighbor) {
-      score += 40;
-      reason = 'Connected to same-suit neighbor';
+    if (hasAdjacentNeighbor) {
+      score += 70;
+      reason = 'Connected to same-suit adjacent card';
     }
 
-    // 2. Fast Chachi extreme run preference:
-    // Prefers keeping A, 2, 3 and A, K, Q cards
+    // b. Inside-run gap neighbor (difference 2 in same suit, or Ace with 3)
+    const hasGapNeighbor = hand.some(
+      (other) =>
+        other.id !== card.id &&
+        other.suit === card.suit &&
+        (Math.abs(other.rank - card.rank) === 2 ||
+          (card.rank === 14 && other.rank === 3) ||
+          (card.rank === 3 && other.rank === 14))
+    );
+    if (hasGapNeighbor) {
+      score += 45;
+      reason = hasAdjacentNeighbor ? reason : 'Connected to same-suit gap card';
+    }
+
+    // c. Pair or Triplet in hand (same rank)
+    const sameRankCount = hand.filter(
+      (other) => other.id !== card.id && other.rank === card.rank && !isWildcard(other)
+    ).length;
+    if (sameRankCount >= 2) {
+      score += 85;
+      reason = 'Part of triplet/set in hand';
+    } else if (sameRankCount === 1) {
+      score += 55;
+      reason = hasAdjacentNeighbor ? reason : 'Part of pair in hand';
+    }
+
+    // d. Rank 4 low-sequence bridge protection:
+    // 4 is a critical connector for low sequences (A-2-3-4-5) and sets of 4s
+    if (card.rank === 4) {
+      const connectsLowRun = hand.some(
+        (other) =>
+          other.id !== card.id &&
+          other.suit === card.suit &&
+          (other.rank === 2 || other.rank === 3 || other.rank === 5 || other.rank === 6)
+      );
+      if (connectsLowRun) {
+        score += 50;
+        reason = 'Rank 4 bridge for low sequence';
+      }
+    }
+
+    // e. Fast Chachi extreme run preference (A-2-3-4-5 and 10-J-Q-K-A):
     if (options?.preferredExtremeRuns) {
-      if (card.rank === 14 || card.rank === 3 || card.rank === 13 || card.rank === 12) {
-        score += 25;
+      if (
+        card.rank === 14 ||
+        card.rank === 3 ||
+        card.rank === 4 ||
+        card.rank === 5 ||
+        card.rank === 13 ||
+        card.rank === 12 ||
+        card.rank === 11
+      ) {
+        score += 35;
         reason += ' (Extreme run candidate)';
       }
     }
 
-    // 3. Opponent wants (Smart Chacha prediction)
-    const cardKey = card.suit ? `${card.suit}_${card.rank}` : `RANK_${card.rank}`;
-    if (options?.opponentWants?.has(cardKey) || options?.opponentWants?.has(card.id)) {
-      score += 150;
-      reason = 'Opponents predicted to need this card';
+    // 6. Connecting Cards Preservation when NOT close to Pukar:
+    // "not giving connecting cards on the discard pile easily unless reaching close to a pukar"
+    const hasAnyConnection =
+      !isExplicitPartnerPass &&
+      (hasAdjacentNeighbor ||
+        hasGapNeighbor ||
+        sameRankCount > 0 ||
+        isDirectTeamAdd ||
+        isTeamMeldNeighbor);
+
+    if (!isCloseToPukar && hasAnyConnection) {
+      score += 60; // Strong penalty against discarding connecting cards when not close to Pukar!
     }
 
-    // 4. Protected cards (can be added to existing team meld or sequence):
-    // Strictly penalize discard so bot retains sequence cards instead of gifting them to opponents
-    if (options?.protectedCardIds?.has(card.id)) {
-      score += 250;
-      reason = 'Can be added to team sequence (protected from discard)';
-    }
-
-    // 5. Partner likely wants (Smart Chacha partner assist)
+    // 7. Partner likely wants (Smart Chacha partner assist):
     // Only applied if card is NOT protected from discard
     if (
-      !options?.protectedCardIds?.has(card.id) &&
+      !isDirectTeamAdd &&
+      !isTeamMeldNeighbor &&
       (options?.partnerLikelyWants?.has(cardKey) || options?.partnerLikelyWants?.has(card.id))
     ) {
-      // Discarding to pass to partner: reduces discard score so it is favored to discard!
       score -= 60;
       reason = 'Passed to partner via discard pile';
     }
 
-    // 5. Higher ranks (10, J, Q, K) are slightly preferred to discard over low cards if isolated
-    if (card.rank >= 10 && !hasNeighbor) {
-      score -= 5;
+    // 8. Isolated high deadwood (ranks 10-K with zero connections and not feeding opponents):
+    if (!hasAnyConnection && !feedsOpponentMeld && card.rank >= 10) {
+      score -= 10;
     }
 
     return { card, score, reason };
@@ -795,6 +933,11 @@ export function evaluateDiscardPilePickup(
     );
     const valuableCount = seqValuableInPile.length;
 
+    // Do not leave 4+ card piles if they contain sequence builders!
+    if (pileLength >= 4 && valuableCount >= 1 && hand.length > 1) {
+      return true;
+    }
+
     if (topAddsSeqValue) {
       // Top card directly adds value to a sequence
       if (pileLength <= 2) {
@@ -833,17 +976,17 @@ export function evaluateDiscardPilePickup(
         return true;
       }
     } else if (options.personality === 'SMART_CHACHA') {
-      // Smart Chacha understands that a good connecting card often comes bundled with
-      // 2-3 unhelpful opponent cards, which bloats the hand with deadwood.
-      // - If pile is small (<= 2 cards), taking it is clean and beneficial (hand has room).
-      // - If pile has 3+ cards: only take if there are multiple connecting cards (totalConnectingInPile >= 2)
-      //   AND Smart Chacha has enough cards to absorb them (hand.length > 4).
-      //   If totalConnectingInPile <= 1, that good card comes with 2-3 unhelpful opponent cards,
-      //   which is NOT beneficial!
+      // Smart Chacha evaluates connecting cards:
+      // - If pile is small (<= 2 cards), taking it is clean and beneficial
+      // - If pile has 3+ cards with 2+ connectors and hand has room
+      // - If pile has 4+ cards and top card connects, take it (do not leave 4 cards easily!)
       if (pileLength <= 2 && hand.length > 3) {
         return true;
       }
       if (pileLength >= 3 && totalConnectingInPile >= 2 && hand.length > 4) {
+        return true;
+      }
+      if (pileLength >= 4 && hand.length > 1) {
         return true;
       }
     } else {
@@ -853,8 +996,7 @@ export function evaluateDiscardPilePickup(
 
   if (totalConnectingInPile >= 2) {
     if (options.personality === 'SMART_CHACHA') {
-      // Smart Chacha does not bloat his hand when close to Pukar (<= 4 cards)
-      if (hand.length > 4) {
+      if (hand.length > 4 || pileLength >= 4) {
         return true;
       }
     } else {
@@ -868,14 +1010,27 @@ export function evaluateDiscardPilePickup(
     if (options.opponentWants.has(topKey) || options.opponentWants.has(topCard.id)) {
       return true;
     }
+    // If pile has >= 4 cards and opponents want any card in the pile, deny them!
+    if (pileLength >= 4 && hand.length > 1) {
+      const oppWantsCard = discardPile.some((c) => {
+        const k = c.suit ? `${c.suit}_${c.rank}` : 'WILD';
+        return options.opponentWants?.has(k) || options.opponentWants?.has(c.id);
+      });
+      if (oppWantsCard) {
+        return true;
+      }
+    }
   }
 
-  // 7. Card Volume / Hoarding (Issue 1: "By default leave a lot of cards at the bottom")
+  // 7. Card Volume / Hoarding (Issue: "not randomly leaving 4 cards also that easily")
   switch (options.personality) {
     case 'SMART_CHACHA':
-      // Smart Chacha never hoards piles of opponent deadwood on volume alone.
-      // Only takes multi-card piles if there are multiple strong connectors and hand is not lean.
-      if (pileLength >= 3 && totalConnectingInPile >= 2 && hand.length > 4) {
+      // If pile has 4+ cards and at least 1 connecting card, take it!
+      if (pileLength >= 4 && totalConnectingInPile >= 1 && hand.length > 1) {
+        return true;
+      }
+      // If pile reaches 5+ cards, high volume card advantage unless close to going out
+      if (pileLength >= 5 && hand.length >= 4) {
         return true;
       }
       break;

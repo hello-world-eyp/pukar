@@ -70,7 +70,7 @@ export function decideTheLongTermGuyTurn(
   const meldActions: GameAction[] = [];
 
   if (!isDiscardPhase) {
-    const isCloseToPukar = hand.length <= 4;
+    const isCloseToPukar = hand.length <= 3;
 
     // Step 2a: Additions to existing team sequences (iterative multi-pass with virtualMelds)
     // Feeds and expands existing team sequences towards Clean 7 and Pure 13 first!
@@ -174,11 +174,18 @@ export function decideTheLongTermGuyTurn(
 
   // 3. DISCARD PHASE DECISION
   const finalRemainingHand = hand.filter((c) => !usedCardIds.has(c.id));
+  const opponentTeam = team === 'A' ? 'B' : 'A';
+  const isCloseToPukar = hand.length <= 3;
 
   const discardEval = evaluateDeadwoodAndDiscard(
     finalRemainingHand.length > 0 ? finalRemainingHand : hand,
     new Set(),
-    { disallowedCardId }
+    {
+      disallowedCardId,
+      teamMelds: myTeamMelds,
+      opponentMelds: state.melds[opponentTeam] || [],
+      isCloseToPukar,
+    }
   );
 
   const cardToDiscard =
