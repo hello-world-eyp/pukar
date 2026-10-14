@@ -365,6 +365,85 @@ export function findPotentialAdditionsToMelds(
 }
 
 /**
+ * Recursively searches for a sequence of additions that can bring a team meld to targetCount
+ * (e.g. 7 cards for Clean 7 / Dirty 7 completion, or 13 cards for Pure 13).
+ */
+function findCompletionSequence(
+  simMeld: Meld,
+  availableCards: Card[],
+  fullHand: Card[],
+  usedCardIds: Set<string>,
+  targetCount: number,
+  options?: { disallowedCardId?: string; preserveDiscardCard?: boolean; isCloseToPukar?: boolean },
+  depth = 0
+): CandidateAddition[] | null {
+  if (simMeld.cards.length >= targetCount) {
+    return [];
+  }
+  if (depth >= 5) {
+    return null;
+  }
+
+  const remainingAvailable = availableCards.filter((c) => !usedCardIds.has(c.id));
+  if (options?.preserveDiscardCard && remainingAvailable.length <= 1) {
+    return null;
+  }
+
+  const adds = findPotentialAdditionsToMelds(remainingAvailable, [simMeld], {
+    isCloseToPukar: options?.isCloseToPukar,
+  });
+  if (adds.length === 0) {
+    return null;
+  }
+
+  for (const add of adds) {
+    if (add.cards.some((c) => usedCardIds.has(c.id))) continue;
+    if (add.cards.length >= fullHand.length) continue;
+
+    const potentialUsed = new Set([...usedCardIds, ...add.cards.map((c) => c.id)]);
+    const remainingHand = fullHand.filter((c) => !potentialUsed.has(c.id));
+
+    if (options?.preserveDiscardCard && remainingHand.length === 0) {
+      continue;
+    }
+    if (options?.disallowedCardId) {
+      const remainingNonDisallowed = remainingHand.filter(
+        (c) => c.id !== options.disallowedCardId
+      );
+      if (remainingNonDisallowed.length === 0 && fullHand.length > 1) {
+        continue;
+      }
+    }
+
+    const validation = canAddCardsToMeld(simMeld, add.cards);
+    if (!validation.valid || !validation.updatedSlots) continue;
+
+    const nextMeld: Meld = {
+      ...simMeld,
+      cards: [...simMeld.cards, ...add.cards],
+      slots: validation.updatedSlots,
+    };
+
+    const nextUsed = new Set([...usedCardIds, ...add.cards.map((c) => c.id)]);
+    const subResult = findCompletionSequence(
+      nextMeld,
+      availableCards,
+      fullHand,
+      nextUsed,
+      targetCount,
+      options,
+      depth + 1
+    );
+
+    if (subResult !== null) {
+      return [add, ...subResult];
+    }
+  }
+
+  return null;
+}
+
+/**
  * Greedily resolves non-overlapping meld and addition plan for the turn.
  */
 export function findBestMeldPlan(
@@ -378,12 +457,71 @@ export function findBestMeldPlan(
 } {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const requirePure = teamMelds.length === 0;
-  const potentialMelds = findPotentialNewMelds(hand, { requirePure, isCloseToPukar });
-  // Sort candidate melds by score descending
-  potentialMelds.sort((a, b) => b.score - a.score);
 
   const usedCardIds = new Set<string>();
   const meldsToPlay: CandidateMeld[] = [];
+  const additionsToPlay: CandidateAddition[] = [];
+  const virtualMelds: Meld[] = teamMelds.map((m) => ({
+    ...m,
+    cards: [...m.cards],
+    slots: [...m.slots],
+  }));
+
+  // PRIORITY 1: Check if any candidate table additions can bring an existing team run or set
+  // to >= 7 cards (or 13 cards for Pure 13). If so, prioritize and commit those additions first (+200 or +500 pts).
+  for (let i = 0; i < virtualMelds.length; i++) {
+    const currentMeld = virtualMelds[i];
+    const initialCount = currentMeld.cards.length;
+    let targetCount: number | null = null;
+    if (currentMeld.type === 'SET') {
+      if (initialCount < 7) {
+        targetCount = 7;
+      }
+    } else if (currentMeld.type === 'RUN') {
+      if (initialCount < 7) {
+        targetCount = 7;
+      } else if (initialCount < 13) {
+        targetCount = 13;
+      }
+    }
+
+    if (targetCount === null) continue;
+
+    const completionAdds = findCompletionSequence(
+      currentMeld,
+      hand,
+      hand,
+      usedCardIds,
+      targetCount,
+      options
+    );
+
+    if (completionAdds && completionAdds.length > 0) {
+      for (const add of completionAdds) {
+        additionsToPlay.push(add);
+        add.cards.forEach((c) => usedCardIds.add(c.id));
+
+        const targetMeldIndex = virtualMelds.findIndex((m) => m.id === add.meldId);
+        if (targetMeldIndex >= 0) {
+          const targetMeld = virtualMelds[targetMeldIndex];
+          const validation = canAddCardsToMeld(targetMeld, add.cards);
+          if (validation.valid && validation.updatedSlots) {
+            virtualMelds[targetMeldIndex] = {
+              ...targetMeld,
+              cards: [...targetMeld.cards, ...add.cards],
+              slots: validation.updatedSlots,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  // PRIORITY 2: Form new candidate melds from remaining uncommitted hand cards.
+  const remainingHandForMelds = hand.filter((c) => !usedCardIds.has(c.id));
+  const potentialMelds = findPotentialNewMelds(remainingHandForMelds, { requirePure, isCloseToPukar });
+  // Sort candidate melds by score descending
+  potentialMelds.sort((a, b) => b.score - a.score);
 
   for (const meld of potentialMelds) {
     const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
@@ -416,15 +554,8 @@ export function findBestMeldPlan(
     }
   }
 
-  // Now evaluate additions from remaining uncommitted hand cards iteratively
+  // PRIORITY 3: Now evaluate additions from remaining uncommitted hand cards iteratively
   // so multi-card sequence extensions (e.g. 8♠, 9♠, 10♠) can be played in full
-  const additionsToPlay: CandidateAddition[] = [];
-  const virtualMelds: Meld[] = teamMelds.map((m) => ({
-    ...m,
-    cards: [...m.cards],
-    slots: [...m.slots],
-  }));
-
   for (let iter = 0; iter < 10; iter++) {
     const remainingCards = hand.filter((c) => !usedCardIds.has(c.id));
     if (options?.preserveDiscardCard && remainingCards.length <= 1) {

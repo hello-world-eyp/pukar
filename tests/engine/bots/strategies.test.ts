@@ -1006,6 +1006,138 @@ describe('Bot Personality Strategies', () => {
       expect(plan.additionsToPlay.length).toBeGreaterThanOrEqual(1);
     });
 
+    it('prioritizes completing a Clean 7 table run (+200 pts) over opening a new 3-card meld', () => {
+      // 5-card table run: 3♠, 4♠, 5♠, 6♠, 7♠
+      const tableMeld: Meld = {
+        id: 'meld-clean-5-spades',
+        team: 'B',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('m3', 'SPADES', 3),
+          makeCard('m4', 'SPADES', 4),
+          makeCard('m5', 'SPADES', 5),
+          makeCard('m6', 'SPADES', 6),
+          makeCard('m7', 'SPADES', 7),
+        ],
+        slots: [
+          { card: makeCard('m3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+          { card: makeCard('m4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+          { card: makeCard('m5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('m6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+          { card: makeCard('m7', 'SPADES', 7), representedRank: 7, isWildcard: false },
+        ],
+        points: 0,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      // Bot holds 8♠, 9♠, 10♠ (which could form a new 3-card run 8♠-9♠-10♠)
+      // plus K♥ as deadwood to preserve for discard.
+      // Completing the 5-card run to 7 cards scores Clean 7 (+200 pts).
+      const hand = [
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+        makeCard('s10', 'SPADES', 10),
+        makeCard('hk', 'HEARTS', 13),
+      ];
+
+      const plan = findBestMeldPlan(hand, [tableMeld], { preserveDiscardCard: true });
+
+      // The bot must prioritize completing the Clean 7 run on table rather than opening a new 3-card run
+      expect(plan.meldsToPlay.length).toBe(0);
+      expect(plan.additionsToPlay.length).toBeGreaterThan(0);
+      expect(plan.usedCardIds.has('s8')).toBe(true);
+      expect(plan.usedCardIds.has('s9')).toBe(true);
+      expect(plan.usedCardIds.has('hk')).toBe(false);
+    });
+
+    it('prioritizes completing a 6-card table run to 7 cards over opening a new 3-card meld', () => {
+      // 6-card table run: 3♠, 4♠, 5♠, 6♠, 7♠, 8♠
+      const tableMeld: Meld = {
+        id: 'meld-6-spades',
+        team: 'B',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('m3', 'SPADES', 3),
+          makeCard('m4', 'SPADES', 4),
+          makeCard('m5', 'SPADES', 5),
+          makeCard('m6', 'SPADES', 6),
+          makeCard('m7', 'SPADES', 7),
+          makeCard('m8', 'SPADES', 8),
+        ],
+        slots: [
+          { card: makeCard('m3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+          { card: makeCard('m4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+          { card: makeCard('m5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('m6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+          { card: makeCard('m7', 'SPADES', 7), representedRank: 7, isWildcard: false },
+          { card: makeCard('m8', 'SPADES', 8), representedRank: 8, isWildcard: false },
+        ],
+        points: 0,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      // Bot holds 9♠, 10♠, J♠ (which could form 9♠-10♠-J♠) + K♥ as deadwood
+      const hand = [
+        makeCard('s9', 'SPADES', 9),
+        makeCard('s10', 'SPADES', 10),
+        makeCard('sj', 'SPADES', 11),
+        makeCard('hk', 'HEARTS', 13),
+      ];
+
+      const plan = findBestMeldPlan(hand, [tableMeld], { preserveDiscardCard: true });
+      expect(plan.meldsToPlay.length).toBe(0);
+      expect(plan.additionsToPlay.length).toBeGreaterThan(0);
+      expect(plan.usedCardIds.has('s9')).toBe(true);
+      expect(plan.usedCardIds.has('hk')).toBe(false);
+    });
+
+    it('prioritizes completing a 12-card run to Pure 13 (+500 pts) over opening a new 3-card meld', () => {
+      // 12-card Pure Spades run (2♠ to K♠)
+      const tableCards: Card[] = [];
+      const tableSlots = [];
+      for (let r = 2; r <= 13; r++) {
+        const c = makeCard(`spade_${r}`, 'SPADES', r as Rank);
+        tableCards.push(c);
+        tableSlots.push({ card: c, representedRank: r, isWildcard: false });
+      }
+
+      const tableMeld: Meld = {
+        id: 'meld-pure-12-spades',
+        team: 'B',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: tableCards,
+        slots: tableSlots,
+        points: 200,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      // Hand has A♠ (completes Pure 13 for +500 pts!) and 8♥-9♥-10♥ (new candidate run) + K♦
+      const hand = [
+        makeCard('s_ace', 'SPADES', 14),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('kd', 'DIAMONDS', 13),
+      ];
+
+      const plan = findBestMeldPlan(hand, [tableMeld], { preserveDiscardCard: true });
+      // A♠ must be added to table meld to complete Pure 13
+      expect(plan.usedCardIds.has('s_ace')).toBe(true);
+      expect(plan.additionsToPlay.some((a) => a.cardIds.includes('s_ace'))).toBe(true);
+      // And the independent meld 8♥-9♥-10♥ can also be melded!
+      expect(plan.meldsToPlay.length).toBe(1);
+      expect(plan.usedCardIds.has('kd')).toBe(false);
+    });
+
     it('Smart Chacha passes a sequence card ONLY when partner is on less than 3 cards (< 3 cards) and conditions are clean', () => {
       const state = createTestState();
       state.phase = 'DISCARD';
