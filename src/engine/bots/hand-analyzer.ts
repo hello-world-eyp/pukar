@@ -345,6 +345,9 @@ export function findPotentialAdditionsToMelds(
             score = 5; // Cross-suit 2 given lowest priority
           }
         }
+        if (validation.pickedUpCard) {
+          score += 150;
+        }
         additions.push({
           meldId: meld.id,
           cardIds: [card.id],
@@ -405,6 +408,9 @@ export function findPotentialAdditionsToMelds(
               if (pair.some((c) => c.rank === 2 && c.suit !== meld.suit)) {
                 score -= 40;
               }
+            }
+            if (validation.pickedUpCard) {
+              score += 150;
             }
             additions.push({
               meldId: meld.id,
@@ -576,9 +582,12 @@ export function findBestMeldPlan(
           const targetMeld = virtualMelds[targetMeldIndex];
           const validation = canAddCardsToMeld(targetMeld, add.cards);
           if (validation.valid && validation.updatedSlots) {
+            const meldCardsWithoutPickedUp = validation.pickedUpCard
+              ? targetMeld.cards.filter((c) => c.id !== validation.pickedUpCard!.id)
+              : targetMeld.cards;
             virtualMelds[targetMeldIndex] = {
               ...targetMeld,
-              cards: [...targetMeld.cards, ...add.cards],
+              cards: [...meldCardsWithoutPickedUp, ...add.cards],
               slots: validation.updatedSlots,
             };
           }
@@ -692,9 +701,12 @@ export function findBestMeldPlan(
         const targetMeld = virtualMelds[targetMeldIndex];
         const validation = canAddCardsToMeld(targetMeld, add.cards);
         if (validation.valid && validation.updatedSlots) {
+          const meldCardsWithoutPickedUp = validation.pickedUpCard
+            ? targetMeld.cards.filter((c) => c.id !== validation.pickedUpCard!.id)
+            : targetMeld.cards;
           virtualMelds[targetMeldIndex] = {
             ...targetMeld,
-            cards: [...targetMeld.cards, ...add.cards],
+            cards: [...meldCardsWithoutPickedUp, ...add.cards],
             slots: validation.updatedSlots,
           };
         }

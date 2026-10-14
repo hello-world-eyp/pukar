@@ -1624,6 +1624,121 @@ describe('Bot Personality Strategies', () => {
       expect(currentState.melds['B'][0].isPure).toBe(true);
     });
   });
+
+  describe('Natural Joker Retrieval Priority (Task 4)', () => {
+    it('findPotentialAdditionsToMelds assigns high priority (+150) when validation.pickedUpCard is present', () => {
+      const meldWithJoker: Meld = {
+        id: 'meld-run-joker',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('joker-1', null, 0, true),
+          makeCard('s6', 'SPADES', 6),
+        ],
+        slots: [
+          { card: makeCard('s4', 'SPADES', 4), representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: makeCard('joker-1', null, 0, true), representedRank: 5, representedSuit: 'SPADES', isWildcard: true },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+        ],
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+        points: 0,
+        team: 'B',
+      };
+
+      const hand = [
+        makeCard('s5', 'SPADES', 5), // replaces joker-1
+        makeCard('s7', 'SPADES', 7), // normal addition
+      ];
+
+      const additions = findPotentialAdditionsToMelds(hand, [meldWithJoker]);
+      expect(additions.length).toBeGreaterThanOrEqual(2);
+
+      const jokerRetrievalAddition = additions.find((a) => a.cardIds.length === 1 && a.cardIds[0] === 's5');
+      const normalAddition = additions.find((a) => a.cardIds.length === 1 && a.cardIds[0] === 's7');
+
+      expect(jokerRetrievalAddition).toBeDefined();
+      expect(normalAddition).toBeDefined();
+
+      // Joker retrieval gets +150 bonus (standard score 25 + 150 = 175)
+      expect(jokerRetrievalAddition!.score).toBeGreaterThanOrEqual(175);
+      expect(normalAddition!.score).toBeLessThan(100);
+
+      // Must be sorted highest priority first
+      // Pair [s5, s7] has score 205 (55 + 150) and single s5 has score 175, both retrieve the Joker!
+      expect(additions[0].cardIds).toContain('s5');
+    });
+
+    it('bot strategy prioritizes substituting the natural card to retrieve the Joker over a normal addition', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      const meldWithJoker: Meld = {
+        id: 'meld-joker',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('joker-1', null, 0, true),
+          makeCard('s6', 'SPADES', 6),
+        ],
+        slots: [
+          { card: makeCard('s4', 'SPADES', 4), representedRank: 4, representedSuit: 'SPADES', isWildcard: false },
+          { card: makeCard('joker-1', null, 0, true), representedRank: 5, representedSuit: 'SPADES', isWildcard: true },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+        ],
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+        points: 0,
+        team: 'B',
+      };
+
+      const normalMeld: Meld = {
+        id: 'meld-normal',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          makeCard('h7', 'HEARTS', 7),
+          makeCard('h8', 'HEARTS', 8),
+          makeCard('h9', 'HEARTS', 9),
+        ],
+        slots: [
+          { card: makeCard('h7', 'HEARTS', 7), representedRank: 7, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h8', 'HEARTS', 8), representedRank: 8, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h9', 'HEARTS', 9), representedRank: 9, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+        points: 0,
+        team: 'B',
+      };
+
+      // Place normalMeld first in array so normalMeld would be evaluated first without score boost
+      state.melds['B'] = [normalMeld, meldWithJoker];
+
+      state.players[1].hand = [
+        makeCard('h10', 'HEARTS', 10), // normal addition to normalMeld
+        makeCard('s5', 'SPADES', 5),    // joker retrieval on meldWithJoker
+        makeCard('c3', 'CLUBS', 3),     // deadwood
+      ];
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.meldActions.length).toBeGreaterThan(0);
+
+      // The FIRST meld action must be the Joker retrieval addition on meldWithJoker!
+      const firstAction = plan.meldActions[0];
+      expect(firstAction.type).toBe('ADD_TO_MELD');
+      if (firstAction.type === 'ADD_TO_MELD') {
+        expect(firstAction.meldId).toBe('meld-joker');
+        expect(firstAction.cardIds).toEqual(['s5']);
+      }
+    });
+  });
 });
 
 

@@ -378,6 +378,101 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       const lastDiscard = discardActions[discardActions.length - 1];
       expect(lastDiscard.cardId).toBe('c_other');
     });
+
+    it('mid-turn re-plans remaining melds when a Joker is retrieved from the table', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1; // Bot
+      state.phase = 'MELD';
+
+      // Table has a pure sequence for Team B (so pure opening requirement is already satisfied)
+      const pureMeld = {
+        id: 'pure-meld',
+        type: 'RUN' as const,
+        suit: 'CLUBS' as const,
+        cards: [
+          { id: 'c1', suit: 'CLUBS' as const, rank: 4 as any, isNaturalJoker: false, isJoker: false },
+          { id: 'c2', suit: 'CLUBS' as const, rank: 5 as any, isNaturalJoker: false, isJoker: false },
+          { id: 'c3', suit: 'CLUBS' as const, rank: 6 as any, isNaturalJoker: false, isJoker: false },
+        ],
+        slots: [
+          { card: { id: 'c1', suit: 'CLUBS' as const, rank: 4 as any, isNaturalJoker: false, isJoker: false }, representedRank: 4, representedSuit: 'CLUBS' as const, isWildcard: false },
+          { card: { id: 'c2', suit: 'CLUBS' as const, rank: 5 as any, isNaturalJoker: false, isJoker: false }, representedRank: 5, representedSuit: 'CLUBS' as const, isWildcard: false },
+          { card: { id: 'c3', suit: 'CLUBS' as const, rank: 6 as any, isNaturalJoker: false, isJoker: false }, representedRank: 6, representedSuit: 'CLUBS' as const, isWildcard: false },
+        ],
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+        points: 0,
+        team: 'B' as const,
+        playerId: 'p1',
+      };
+
+      // Table also has a run with a Natural Joker that can be retrieved
+      const meldWithJoker = {
+        id: 'meld-with-joker',
+        type: 'RUN' as const,
+        suit: 'SPADES' as const,
+        cards: [
+          { id: 's4', suit: 'SPADES' as const, rank: 4 as any, isNaturalJoker: false, isJoker: false },
+          { id: 'joker-retrievable', suit: null, rank: 0 as any, isNaturalJoker: true, isJoker: true },
+          { id: 's6', suit: 'SPADES' as const, rank: 6 as any, isNaturalJoker: false, isJoker: false },
+        ],
+        slots: [
+          { card: { id: 's4', suit: 'SPADES' as const, rank: 4 as any, isNaturalJoker: false, isJoker: false }, representedRank: 4, representedSuit: 'SPADES' as const, isWildcard: false },
+          { card: { id: 'joker-retrievable', suit: null, rank: 0 as any, isNaturalJoker: true, isJoker: true }, representedRank: 5, representedSuit: 'SPADES' as const, isWildcard: true },
+          { card: { id: 's6', suit: 'SPADES' as const, rank: 6 as any, isNaturalJoker: false, isJoker: false }, representedRank: 6, representedSuit: 'SPADES' as const, isWildcard: false },
+        ],
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+        points: 0,
+        team: 'B' as const,
+        playerId: 'p1',
+      };
+
+      state.melds['B'] = [pureMeld, meldWithJoker];
+
+      // Hand:
+      // s5: can substitute joker-retrievable
+      // h7, h8: cannot form a meld alone, but can form a meld with joker-retrievable!
+      // d9: deadwood for discard
+      state.players[1].hand = [
+        { id: 's5', suit: 'SPADES' as const, rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h7', suit: 'HEARTS' as const, rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h8', suit: 'HEARTS' as const, rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd9', suit: 'DIAMONDS' as const, rank: 9 as any, isNaturalJoker: false, isJoker: false },
+      ];
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      const handleAction = vi.fn((act) => {
+        dispatchedActions.push(act);
+        return true;
+      });
+
+      runHook(() =>
+        useBotGame({
+          appMode: 'BOTS',
+          gameState: state,
+          botConfig,
+          handleAction,
+        })
+      );
+
+      vi.advanceTimersByTime(250);
+
+      // Bot should have executed ADD_TO_MELD (retrieving the joker),
+      // re-planned mid-turn, and also executed PLAY_NEW_MELD using the retrieved Joker!
+      const meldActions = dispatchedActions.filter(
+        (a) => a.type === 'ADD_TO_MELD' || a.type === 'PLAY_NEW_MELD'
+      );
+      expect(meldActions.length).toBe(2);
+      expect(meldActions[0].type).toBe('ADD_TO_MELD');
+      expect(meldActions[0].cardIds).toEqual(['s5']);
+      expect(meldActions[1].type).toBe('PLAY_NEW_MELD');
+      expect(meldActions[1].cardIds).toContain('joker-retrievable');
+    });
   });
 
   describe('useTableShortcuts listener stabilization', () => {

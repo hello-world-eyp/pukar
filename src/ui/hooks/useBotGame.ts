@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { GameAction, GameState } from '../../engine/types';
+import { GameAction, GameState, isNaturalJoker } from '../../engine/types';
 import { BotGameConfig, BotMemory } from '../../engine/bots/types';
 import {
   createInitialBotMemory,
@@ -7,6 +7,7 @@ import {
   selectBotPukarDeck,
   updateBotMemory,
 } from '../../engine/bots/bot-player';
+import { pukarReducer } from '../../engine/reducer';
 
 export type BotSubPhase = 'DRAW' | 'MELD' | 'DISCARD';
 
@@ -220,8 +221,6 @@ export function useBotGame({
 
           setBotSubPhase('MELD');
         } else if (currentSubPhase === 'MELD') {
-          const plan = decideBotTurn(currentState, botIdx, botPersonality, botMemoryRef.current);
-
           // If bot claimed Pukar (initialHandSizeThisTurn === 0) and multiple decks exist, select best deck
           if (
             currentState.initialHandSizeThisTurn === 0 &&
@@ -236,21 +235,77 @@ export function useBotGame({
             }
           }
 
-          // Play meld action(s)
+          // Play meld action(s) with mid-turn re-planning:
+          // When an addition action replaces a Natural Joker on the table, the Joker is
+          // retrieved into the bot's hand. Re-plan immediately to utilize the retrieved
+          // Joker for new melds or table additions before moving to DISCARD.
+          let workingState = currentState;
           let meldRejected = false;
-          if (plan.meldActions.length > 0) {
+          let latestPlan = decideBotTurn(workingState, botIdx, botPersonality, botMemoryRef.current);
+
+          const MAX_MELD_REPLANS = 5;
+          for (let replan = 0; replan < MAX_MELD_REPLANS; replan++) {
+            const plan =
+              replan === 0
+                ? latestPlan
+                : decideBotTurn(workingState, botIdx, botPersonality, botMemoryRef.current);
+            latestPlan = plan;
+
+            if (!plan.meldActions || plan.meldActions.length === 0) {
+              break;
+            }
+
+            let jokerRetrievedInBatch = false;
+
             for (const meldAct of plan.meldActions) {
               const success = handleActionRef.current(meldAct);
               if (success === false) {
                 meldRejected = true;
                 break;
               }
+
+              // Update local state copy via pukarReducer
+              const reducerResult = pukarReducer(workingState, meldAct);
+              if (reducerResult.error) {
+                meldRejected = true;
+                break;
+              }
+              const nextState = reducerResult.state;
+
+              const prevHand = workingState.players[botIdx]?.hand ?? [];
+              const nextHand = nextState.players[botIdx]?.hand ?? [];
+              const prevNewlyPickedCount = workingState.newlyPickedUpCardIds?.length ?? 0;
+              const nextNewlyPickedCount = nextState.newlyPickedUpCardIds?.length ?? 0;
+
+              // Detect if a Joker was retrieved to hand:
+              // 1. newlyPickedUpCardIds count increased
+              // 2. OR lastPickedUpCard is newly set/changed
+              // 3. OR hand has a Natural Joker that wasn't in prevHand
+              // 4. OR hand size increased
+              const jokerRetrieved =
+                nextNewlyPickedCount > prevNewlyPickedCount ||
+                (!!nextState.lastPickedUpCard &&
+                  nextState.lastPickedUpCard.id !== workingState.lastPickedUpCard?.id) ||
+                nextHand.some((c) => isNaturalJoker(c) && !prevHand.some((p) => p.id === c.id)) ||
+                nextHand.length > prevHand.length;
+
+              workingState = nextState;
+
+              if (jokerRetrieved) {
+                jokerRetrievedInBatch = true;
+                // Re-plan with updated hand containing the retrieved Joker
+                break;
+              }
+            }
+
+            if (meldRejected || !jokerRetrievedInBatch) {
+              break;
             }
           }
 
           if (meldRejected) {
             // Meld action was rejected: proceed directly to discard to avoid deadlock
-            handleActionRef.current(plan.discardAction);
+            handleActionRef.current(latestPlan.discardAction);
             setBotSubPhase('DRAW');
           } else {
             // Transition to DISCARD subphase so user sees "is discarding..." and gets full turn duration
