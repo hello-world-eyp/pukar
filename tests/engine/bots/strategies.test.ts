@@ -1587,6 +1587,42 @@ describe('Bot Personality Strategies', () => {
       expect(plan.meldsToPlay.length).toBe(0);
       expect(plan.usedCardIds.size).toBe(0);
     });
+
+    it('Fast Chachi prioritizes non-extreme pure run over extreme dirty run on opening turn', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      state.melds['B'] = []; // 0 team melds on table (opening turn)
+
+      state.players[1].hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6), // Non-extreme pure run
+        makeCard('hq', 'HEARTS', 12),
+        makeCard('hk', 'HEARTS', 13), // Extreme card (rank 13)
+        makeCard('j1', null, 0, true), // Joker
+        makeCard('c8', 'CLUBS', 8), // Discard card
+      ];
+
+      const memory = createEmptyMemory();
+      const plan = decideFastChachiTurn(state, 1, memory);
+      const meldActions = plan.meldActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(meldActions.length).toBe(2);
+
+      // The FIRST meld played MUST be the pure run (s4, s5, s6), NOT the dirty extreme run!
+      const firstMeldCardIds = (meldActions[0] as { type: 'PLAY_NEW_MELD'; cardIds: string[] }).cardIds;
+      expect(firstMeldCardIds.sort()).toEqual(['s4', 's5', 's6']);
+
+      // Also verify reducer accepts it
+      let currentState = state;
+      for (const action of meldActions) {
+        const result = pukarReducer(currentState, action);
+        expect(result.error).toBeUndefined();
+        currentState = result.state;
+      }
+      expect(currentState.melds['B'].length).toBe(2);
+      expect(currentState.melds['B'][0].isPure).toBe(true);
+    });
   });
 });
 

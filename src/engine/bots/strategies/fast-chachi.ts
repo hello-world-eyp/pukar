@@ -69,8 +69,13 @@ export function decideFastChachiTurn(
     isCloseToPukar,
   });
 
-  // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first
+  // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first.
+  // On an opening turn (myTeamMelds.length === 0), pure runs must always take precedence over dirty melds!
   meldPlan.meldsToPlay.sort((a, b) => {
+    if (myTeamMelds.length === 0) {
+      if (a.isPure && !b.isPure) return -1;
+      if (!a.isPure && b.isPure) return 1;
+    }
     const aIsExtreme = a.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13);
     const bIsExtreme = b.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13);
     if (aIsExtreme && !bIsExtreme) return -1;
