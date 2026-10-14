@@ -6,6 +6,7 @@ import { useBotGame } from '../../src/ui/hooks/useBotGame';
 import { useTableShortcuts } from '../../src/ui/hooks/useTableShortcuts';
 import { useMultiplayerGame } from '../../src/network/useMultiplayerGame';
 import { dealInitialState } from '../../src/engine/deck';
+import { pukarReducer } from '../../src/engine/reducer';
 import { BotGameConfig } from '../../src/engine/bots/types';
 import { decideFastChachiTurn } from '../../src/engine/bots/strategies/fast-chachi';
 import { Card } from '../../src/engine/types';
@@ -472,6 +473,134 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       expect(meldActions[0].cardIds).toEqual(['s5']);
       expect(meldActions[1].type).toBe('PLAY_NEW_MELD');
       expect(meldActions[1].cardIds).toContain('joker-retrievable');
+    });
+
+    it('mid-turn Pukar claim selects best deck, updates working state, and dispatches melds before discarding', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.phase = 'DISCARD';
+      state.players[1].team = 'B';
+      state.players[1].hand = [
+        { id: 'c_discard_mid', suit: 'DIAMONDS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+      ];
+
+      // Table has pure meld
+      const tableMeld = {
+        id: 'table-pure-b',
+        team: 'B' as const,
+        type: 'RUN' as const,
+        suit: 'HEARTS' as const,
+        cards: [
+          { id: 'h3', suit: 'HEARTS' as const, rank: 3 as any, isNaturalJoker: false, isJoker: false },
+          { id: 'h4', suit: 'HEARTS' as const, rank: 4 as any, isNaturalJoker: false, isJoker: false },
+          { id: 'h5', suit: 'HEARTS' as const, rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        ],
+        slots: [
+          { card: { id: 'h3', suit: 'HEARTS' as const, rank: 3 as any, isNaturalJoker: false, isJoker: false }, representedRank: 3, isWildcard: false },
+          { card: { id: 'h4', suit: 'HEARTS' as const, rank: 4 as any, isNaturalJoker: false, isJoker: false }, representedRank: 4, isWildcard: false },
+          { card: { id: 'h5', suit: 'HEARTS' as const, rank: 5 as any, isNaturalJoker: false, isJoker: false }, representedRank: 5, isWildcard: false },
+        ],
+        points: 30,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+      state.melds.B = [tableMeld];
+
+      // Deck 0 has 0 melds (all deadwood)
+      const deck0: Card[] = [
+        { id: 's4', suit: 'SPADES', rank: 4 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's7', suit: 'SPADES', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's10', suit: 'SPADES', rank: 10 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd4', suit: 'DIAMONDS', rank: 4 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd6', suit: 'DIAMONDS', rank: 6 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd8', suit: 'DIAMONDS', rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd10', suit: 'DIAMONDS', rank: 10 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd12', suit: 'DIAMONDS', rank: 12 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c5', suit: 'CLUBS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c7', suit: 'CLUBS', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c9', suit: 'CLUBS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c11', suit: 'CLUBS', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c13', suit: 'CLUBS', rank: 13 as any, isNaturalJoker: false, isJoker: false },
+      ];
+
+      // Deck 1 has 2 melds (h7, h8, h9) and (c4, c5_alt, c6)
+      const deck1: Card[] = [
+        { id: 'h7', suit: 'HEARTS', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h8', suit: 'HEARTS', rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h9', suit: 'HEARTS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c4', suit: 'CLUBS', rank: 4 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c5_alt', suit: 'CLUBS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c6', suit: 'CLUBS', rank: 6 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's9', suit: 'SPADES', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's11', suit: 'SPADES', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd5', suit: 'DIAMONDS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd7', suit: 'DIAMONDS', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd9_alt', suit: 'DIAMONDS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h11', suit: 'HEARTS', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h13', suit: 'HEARTS', rank: 13 as any, isNaturalJoker: false, isJoker: false },
+      ];
+
+      state.pukarPool = [deck0, deck1];
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      let currentState = state;
+      const stateMap = new Map<number, any>();
+
+      const handleAction = vi.fn((act: any) => {
+        dispatchedActions.push(act);
+        const res = pukarReducer(currentState, act);
+        if (!res.error) {
+          currentState = res.state;
+          runHook(
+            () =>
+              useBotGame({
+                appMode: 'BOTS',
+                gameState: currentState,
+                botConfig,
+                handleAction,
+                turnDelayMs: 250,
+              }),
+            stateMap
+          );
+          return true;
+        }
+        return false;
+      });
+
+      runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: currentState,
+            botConfig,
+            handleAction,
+            turnDelayMs: 250,
+          }),
+        stateMap
+      );
+
+      // Discard initial card to claim Pukar
+      vi.advanceTimersByTime(250);
+      expect(dispatchedActions[0]).toEqual({ type: 'DISCARD_CARD', cardId: 'c_discard_mid' });
+
+      // In MELD phase, bot should select deck 1 and meld from deck1 cards
+      vi.advanceTimersByTime(250);
+      const deckSelectActions = dispatchedActions.filter((a) => a.type === 'SELECT_PUKAR_DECK');
+      expect(deckSelectActions.length).toBe(1);
+      expect(deckSelectActions[0]).toEqual({ type: 'SELECT_PUKAR_DECK', deckIndex: 1 });
+
+      const meldActions = dispatchedActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(meldActions.length).toBeGreaterThanOrEqual(1);
+      const meldedCardIds = meldActions.flatMap((a: any) => a.cardIds);
+      expect(meldedCardIds.some((id: string) => id === 'h7' || id === 'c4')).toBe(true);
+
+      // In DISCARD phase, bot should discard 1 card
+      vi.advanceTimersByTime(250);
+      const discardActions = dispatchedActions.filter((a) => a.type === 'DISCARD_CARD');
+      expect(discardActions.length).toBe(2);
     });
   });
 

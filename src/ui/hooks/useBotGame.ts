@@ -165,7 +165,13 @@ export function useBotGame({
       pukarDeckSelectedRef.current = false;
       setBotSubPhase('DRAW');
       return;
-    } else if (gameState.phase === 'MELD' && botSubPhase === 'DRAW') {
+    } else if (
+      gameState.phase === 'MELD' &&
+      (botSubPhase === 'DRAW' ||
+        (gameState.initialHandSizeThisTurn === 0 &&
+          !pukarDeckSelectedRef.current &&
+          botSubPhase !== 'MELD'))
+    ) {
       pukarDeckSelectedRef.current = false;
       setBotSubPhase('MELD');
       return;
@@ -221,17 +227,24 @@ export function useBotGame({
 
           setBotSubPhase('MELD');
         } else if (currentSubPhase === 'MELD') {
+          let workingState = currentState;
+
           // If bot claimed Pukar (initialHandSizeThisTurn === 0) and multiple decks exist, select best deck
           if (
             currentState.initialHandSizeThisTurn === 0 &&
-            currentState.pukarPool.length >= 1 &&
             currentState.players[botIdx]?.hand.length === 13 &&
             !pukarDeckSelectedRef.current
           ) {
             pukarDeckSelectedRef.current = true;
-            const chosenDeck = selectBotPukarDeck(currentState, botIdx, botPersonality);
-            if (chosenDeck > 0) {
-              handleActionRef.current({ type: 'SELECT_PUKAR_DECK', deckIndex: chosenDeck });
+            if (currentState.pukarPool && currentState.pukarPool.length >= 1) {
+              const chosenDeck = selectBotPukarDeck(currentState, botIdx, botPersonality);
+              if (chosenDeck > 0) {
+                handleActionRef.current({ type: 'SELECT_PUKAR_DECK', deckIndex: chosenDeck });
+                const res = pukarReducer(workingState, { type: 'SELECT_PUKAR_DECK', deckIndex: chosenDeck });
+                if (!res.error) {
+                  workingState = res.state;
+                }
+              }
             }
           }
 
@@ -239,7 +252,6 @@ export function useBotGame({
           // When an addition action replaces a Natural Joker on the table, the Joker is
           // retrieved into the bot's hand. Re-plan immediately to utilize the retrieved
           // Joker for new melds or table additions before moving to DISCARD.
-          let workingState = currentState;
           let meldRejected = false;
           let latestPlan = decideBotTurn(workingState, botIdx, botPersonality, botMemoryRef.current);
 
