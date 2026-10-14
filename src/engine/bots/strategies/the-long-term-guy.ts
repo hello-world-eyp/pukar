@@ -15,6 +15,7 @@ import {
   findPotentialAdditionsToMelds,
   evaluateDeadwoodAndDiscard,
   evaluateDiscardPilePickup,
+  CandidateMeld,
 } from '../hand-analyzer';
 import { canAddCardsToMeld } from '../../meld-validator';
 
@@ -137,6 +138,34 @@ export function decideTheLongTermGuyTurn(
     }
 
     // Step 2b: New melds from remaining uncommitted cards
+    const tryAddMelds = (melds: CandidateMeld[]) => {
+      for (const meld of melds) {
+        const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
+        if (hasOverlap) continue;
+
+        const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
+        const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
+
+        // Rule: Must keep at least 1 card in hand to discard
+        if (remainingCards.length === 0) continue;
+
+        if (disallowedCardId) {
+          const remainingNonDisallowed = remainingCards.filter(
+            (c) => c.id !== disallowedCardId
+          );
+          if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+            continue;
+          }
+        }
+
+        meld.cards.forEach((c) => usedCardIds.add(c.id));
+        meldActions.push({
+          type: 'PLAY_NEW_MELD',
+          cardIds: meld.cards.map((c) => c.id),
+        });
+      }
+    };
+
     const remainingHand = hand.filter((c) => !usedCardIds.has(c.id));
     const requirePure = myTeamMelds.length === 0 && meldActions.length === 0;
     const candidateMelds = findPotentialNewMelds(remainingHand, {
@@ -144,31 +173,18 @@ export function decideTheLongTermGuyTurn(
       isCloseToPukar,
     });
     candidateMelds.sort((a, b) => b.score - a.score);
+    tryAddMelds(candidateMelds);
 
-    for (const meld of candidateMelds) {
-      const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
-      if (hasOverlap) continue;
-
-      const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
-      const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
-
-      // Rule: Must keep at least 1 card in hand to discard
-      if (remainingCards.length === 0) continue;
-
-      if (disallowedCardId) {
-        const remainingNonDisallowed = remainingCards.filter(
-          (c) => c.id !== disallowedCardId
-        );
-        if (remainingNonDisallowed.length === 0 && hand.length > 1) {
-          continue;
-        }
-      }
-
-      meld.cards.forEach((c) => usedCardIds.add(c.id));
-      meldActions.push({
-        type: 'PLAY_NEW_MELD',
-        cardIds: meld.cards.map((c) => c.id),
+    // If opening turn (requirePure was true) and a pure meld was staged, evaluate dirty melds
+    // from remaining uncommitted cards in the same turn.
+    if (requirePure && meldActions.length > 0) {
+      const remainingHandAfterPure = hand.filter((c) => !usedCardIds.has(c.id));
+      const dirtyMelds = findPotentialNewMelds(remainingHandAfterPure, {
+        requirePure: false,
+        isCloseToPukar,
       });
+      dirtyMelds.sort((a, b) => b.score - a.score);
+      tryAddMelds(dirtyMelds);
     }
   }
 

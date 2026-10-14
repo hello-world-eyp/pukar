@@ -588,41 +588,58 @@ export function findBestMeldPlan(
   }
 
   // PRIORITY 2: Form new candidate melds from remaining uncommitted hand cards.
+  const stageCandidateMelds = (candidates: CandidateMeld[]) => {
+    for (const meld of candidates) {
+      const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
+      if (!hasOverlap) {
+        // A single meld action cannot meld all cards in hand
+        if (meld.cards.length >= hand.length) {
+          continue;
+        }
+
+        const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
+        const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
+
+        if (options?.preserveDiscardCard && remainingHand.length === 0) {
+          continue;
+        }
+
+        // If a single picked up card cannot legally be discarded,
+        // preserve at least 1 other card in hand to be discarded.
+        if (options?.disallowedCardId) {
+          const remainingNonDisallowed = remainingHand.filter(
+            (c) => c.id !== options.disallowedCardId
+          );
+          if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+            continue;
+          }
+        }
+
+        meldsToPlay.push(meld);
+        meld.cards.forEach((c) => usedCardIds.add(c.id));
+      }
+    }
+  };
+
   const remainingHandForMelds = hand.filter((c) => !usedCardIds.has(c.id));
   const potentialMelds = findPotentialNewMelds(remainingHandForMelds, { requirePure, isCloseToPukar });
   // Sort candidate melds by score descending
   potentialMelds.sort((a, b) => b.score - a.score);
+  stageCandidateMelds(potentialMelds);
 
-  for (const meld of potentialMelds) {
-    const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
-    if (!hasOverlap) {
-      // A single meld action cannot meld all cards in hand
-      if (meld.cards.length >= hand.length) {
-        continue;
-      }
-
-      const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
-      const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
-
-      if (options?.preserveDiscardCard && remainingHand.length === 0) {
-        continue;
-      }
-
-      // If a single picked up card cannot legally be discarded,
-      // preserve at least 1 other card in hand to be discarded.
-      if (options?.disallowedCardId) {
-        const remainingNonDisallowed = remainingHand.filter(
-          (c) => c.id !== options.disallowedCardId
-        );
-        if (remainingNonDisallowed.length === 0 && hand.length > 1) {
-          continue;
-        }
-      }
-
-      meldsToPlay.push(meld);
-      meld.cards.forEach((c) => usedCardIds.add(c.id));
-    }
+  // If opening turn (requirePure was true) and at least one pure meld was successfully staged,
+  // the opening requirement is satisfied! Run a second pass with requirePure = false so remaining
+  // uncommitted cards can legally form dirty melds and sets in the same turn.
+  if (requirePure && meldsToPlay.some((m) => m.isPure)) {
+    const remainingHandForDirty = hand.filter((c) => !usedCardIds.has(c.id));
+    const dirtyMelds = findPotentialNewMelds(remainingHandForDirty, {
+      requirePure: false,
+      isCloseToPukar,
+    });
+    dirtyMelds.sort((a, b) => b.score - a.score);
+    stageCandidateMelds(dirtyMelds);
   }
+
 
   // PRIORITY 3: Now evaluate additions from remaining uncommitted hand cards iteratively
   // so multi-card sequence extensions (e.g. 8♠, 9♠, 10♠) can be played in full

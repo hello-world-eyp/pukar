@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Card, GameState, Meld, Rank, Suit } from '../../../src/engine/types';
 import { dealInitialState } from '../../../src/engine/deck';
+import { pukarReducer } from '../../../src/engine/reducer';
 import { BotMemory } from '../../../src/engine/bots/types';
 import {
   decideSmartChachaTurn,
@@ -1478,6 +1479,116 @@ describe('Bot Personality Strategies', () => {
       expect(planLT.discardAction.cardId).toBeDefined();
     });
   });
+
+  describe('Multi-Meld Opening Turns (Pure + Dirty in the Same Turn)', () => {
+    it('findBestMeldPlan stages both Pure Run and Dirty Run in the same opening turn', () => {
+      const hand = [
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('j1', null, 0, true), // Natural Joker
+        makeCard('kd', 'DIAMONDS', 13), // 1 deadwood card to preserve for discard
+      ];
+
+      // Opening turn: teamMelds on table is empty
+      const plan = findBestMeldPlan(hand, [], { preserveDiscardCard: true });
+
+      // Both the pure meld and dirty meld must be staged
+      expect(plan.meldsToPlay.length).toBe(2);
+      expect(plan.meldsToPlay[0].isPure).toBe(true);
+      expect(plan.meldsToPlay[0].cards.map((c) => c.id).sort()).toEqual(['s3', 's4', 's5']);
+      expect(plan.meldsToPlay[1].isPure).toBe(false);
+      expect(plan.meldsToPlay[1].cards.map((c) => c.id).sort()).toEqual(['h8', 'h9', 'j1']);
+
+      // Deadwood card is preserved for discard
+      expect(plan.usedCardIds.has('kd')).toBe(false);
+    });
+
+    it('bots (Smart Chacha, The Jadugar, and The Long-Term Guy) play both Pure Run and Dirty Run in the same opening turn', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      state.melds['B'] = []; // 0 team melds on table
+
+      state.players[1].hand = [
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('j1', null, 0, true),
+        makeCard('kd', 'DIAMONDS', 13),
+      ];
+
+      const memory = createEmptyMemory();
+
+      // 1. Smart Chacha
+      const planChacha = decideSmartChachaTurn(state, 1, memory);
+      const chachaMelds = planChacha.meldActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(chachaMelds.length).toBe(2);
+
+      // 2. The Jadugar
+      const planJadugar = decideTheJadugarTurn(state, 1, memory);
+      const jadugarMelds = planJadugar.meldActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(jadugarMelds.length).toBe(2);
+
+      // 3. The Long-Term Guy
+      const planLT = decideTheLongTermGuyTurn(state, 1, memory);
+      const ltMelds = planLT.meldActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(ltMelds.length).toBe(2);
+    });
+
+    it('pukarReducer executes Pure Run then Dirty Run staged in the same turn without error', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      state.melds['B'] = []; // 0 team melds on table initially
+
+      state.players[1].hand = [
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('j1', null, 0, true),
+        makeCard('kd', 'DIAMONDS', 13),
+      ];
+
+      const memory = createEmptyMemory();
+      const plan = decideSmartChachaTurn(state, 1, memory);
+
+      let currentState = state;
+      for (const action of plan.meldActions) {
+        const result = pukarReducer(currentState, action);
+        expect(result.error).toBeUndefined();
+        currentState = result.state;
+      }
+
+      // Both melds are on table for Team B
+      expect(currentState.melds['B'].length).toBe(2);
+      expect(currentState.melds['B'][0].isPure).toBe(true);
+      expect(currentState.melds['B'][1].isPure).toBe(false);
+    });
+
+    it('does NOT stage dirty melds when no pure run exists on opening turn', () => {
+      const hand = [
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('j1', null, 0, true), // Dirty run only
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('d6', 'DIAMONDS', 6),
+        makeCard('kd', 'DIAMONDS', 13),
+      ];
+
+      // Opening turn with no pure run
+      const plan = findBestMeldPlan(hand, [], { preserveDiscardCard: true });
+      expect(plan.meldsToPlay.length).toBe(0);
+      expect(plan.usedCardIds.size).toBe(0);
+    });
+  });
 });
+
 
 
