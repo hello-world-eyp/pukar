@@ -194,6 +194,17 @@ export function decideTheLongTermGuyTurn(
   // 3. DISCARD PHASE DECISION
   const finalRemainingHand = hand.filter((c) => !usedCardIds.has(c.id));
   const opponentTeam = team === 'A' ? 'B' : 'A';
+  const nextPlayerIndex = (botIndex + 1) % state.playerCount;
+  const nextPlayer = state.players[nextPlayerIndex];
+  const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;
+  const nextOpponentCardCount = isNextPlayerOpponent
+    ? ((nextPlayer as any).cardCount ?? nextPlayer.hand?.length ?? 0)
+    : undefined;
+  const anyOpponentOnTwoOrFewer = state.players.some(
+    (p) => p.team === opponentTeam && (((p as any).cardCount ?? p.hand?.length ?? 0) <= 2)
+  );
+  const opponentNeedsLockdown =
+    (nextOpponentCardCount !== undefined && nextOpponentCardCount <= 2) || anyOpponentOnTwoOrFewer;
 
   const discardEval = evaluateDeadwoodAndDiscard(
     finalRemainingHand.length > 0 ? finalRemainingHand : hand,
@@ -204,6 +215,9 @@ export function decideTheLongTermGuyTurn(
       opponentMelds: state.melds[opponentTeam] || [],
       isCloseToPukar,
       isFinalTurn,
+      nextOpponentCardCount,
+      opponentNeedsLockdown,
+      discardPile: state.discardPile,
     }
   );
 

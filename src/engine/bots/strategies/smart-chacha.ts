@@ -7,7 +7,7 @@
  * - If discard pile does not add value to opponents, lets it slide; otherwise takes it to deny them.
  * - If next opponent is close to Pukar and selective, tries to pass helpful cards to partner through discard.
  */
-import { GameAction, GameState, Team } from '../../types';
+import { GameAction, GameState, Team, isWildcard } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
 import { canAddCardsToMeld } from '../../meld-validator';
 import {
@@ -198,6 +198,17 @@ export function decideSmartChachaTurn(
   const partnerLikelyWants = new Set<string>();
   const protectedCardIds = new Set<string>();
   const opponentTeam: Team = team === 'A' ? 'B' : 'A';
+  const nextPlayerIndex = (botIndex + 1) % state.playerCount;
+  const nextPlayer = state.players[nextPlayerIndex];
+  const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;
+  const nextOpponentCardCount = isNextPlayerOpponent
+    ? ((nextPlayer as any).cardCount ?? nextPlayer.hand?.length ?? 0)
+    : undefined;
+  const anyOpponentOnTwoOrFewer = state.players.some(
+    (p) => p.team === opponentTeam && (((p as any).cardCount ?? p.hand?.length ?? 0) <= 2)
+  );
+  const opponentNeedsLockdown =
+    (nextOpponentCardCount !== undefined && nextOpponentCardCount <= 2) || anyOpponentOnTwoOrFewer;
 
   const partnerIdx = state.players.findIndex((p, idx) => idx !== botIndex && p.team === team);
   const partner = partnerIdx >= 0 ? state.players[partnerIdx] : null;
@@ -241,8 +252,18 @@ export function decideSmartChachaTurn(
           if (ranks.length > 0) {
             const minR = ranks[0];
             const maxR = ranks[ranks.length - 1];
-            return card.rank === minR - 1 || card.rank === maxR + 1;
+            return (
+              card.rank === minR - 1 ||
+              card.rank === maxR + 1 ||
+              (card.rank === 14 && minR === 2)
+            );
           }
+        } else if (m.type === 'SET') {
+          const setRank =
+            m.rank ??
+            m.slots.find((s) => !s.isWildcard)?.representedRank ??
+            m.cards?.find((c) => !isWildcard(c))?.rank;
+          return setRank !== undefined && card.rank === setRank;
         }
         return false;
       });
@@ -320,6 +341,9 @@ export function decideSmartChachaTurn(
       opponentMelds: state.melds[opponentTeam] || [],
       isCloseToPukar,
       isFinalTurn,
+      nextOpponentCardCount,
+      opponentNeedsLockdown,
+      discardPile: state.discardPile,
     }
   );
 

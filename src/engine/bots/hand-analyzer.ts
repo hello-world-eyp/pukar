@@ -32,6 +32,9 @@ export interface DiscardEvaluationOptions {
   opponentMelds?: Meld[]; // Opponent melds on table to prevent feeding
   isCloseToPukar?: boolean; // When true (<= 3 cards), relaxing connector holding to allow discarding out
   isFinalTurn?: boolean;
+  nextOpponentCardCount?: number; // Opponent card count (lockdown when <= 2)
+  opponentNeedsLockdown?: boolean; // Explicit flag when any opponent has <= 2 cards
+  discardPile?: Card[]; // Discard pile to detect exposed connectors that need burying
 }
 
 export interface HandEvaluation {
@@ -754,6 +757,25 @@ export function evaluateDeadwoodAndDiscard(
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const isFinalTurn = options?.isFinalTurn ?? false;
 
+  const isLockdown =
+    (options?.nextOpponentCardCount !== undefined && options.nextOpponentCardCount <= 2) ||
+    Boolean(options?.opponentNeedsLockdown);
+
+  const topDiscard =
+    options?.discardPile && options.discardPile.length > 0
+      ? options.discardPile[options.discardPile.length - 1]
+      : null;
+
+  const hasConnectingCardOnDiscard = isDiscardPileTopConnecting(
+    topDiscard,
+    hand,
+    options?.teamMelds,
+    options?.opponentMelds,
+    options?.opponentWants
+  );
+
+  const shouldBury = isLockdown || hasConnectingCardOnDiscard;
+
   const discardScores = pool.map((card) => {
     // Disallowed card (e.g. single drawn card this turn): strictly forbidden
     if (options?.disallowedCardId && card.id === options.disallowedCardId) {
@@ -806,36 +828,64 @@ export function evaluateDeadwoodAndDiscard(
       reason = 'Connects to open end of team table sequence';
     }
 
-    // 3. Opponent Table Melds: Does this card feed or extend opponent sequences on table?
+    // 3. Opponent Table Melds: Does this card feed or extend opponent sequences/sets on table?
     let feedsOpponentMeld = false;
-    if (options?.opponentMelds && card.suit) {
+    if (options?.opponentMelds) {
       for (const oppMeld of options.opponentMelds) {
         if (canAddCardsToMeld(oppMeld, [card]).valid) {
           feedsOpponentMeld = true;
           break;
         }
-        if (oppMeld.type === 'RUN' && oppMeld.suit === card.suit) {
+        if (oppMeld.type === 'RUN' && card.suit && oppMeld.suit === card.suit) {
           const ranks = oppMeld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
           if (ranks.length > 0) {
             const minR = ranks[0];
             const maxR = ranks[ranks.length - 1];
-            if (card.rank === minR - 1 || card.rank === maxR + 1) {
+            if (
+              card.rank === minR - 1 ||
+              card.rank === maxR + 1 ||
+              (card.rank === 14 && minR === 2)
+            ) {
               feedsOpponentMeld = true;
               break;
             }
+          }
+        } else if (oppMeld.type === 'SET') {
+          const setRank =
+            oppMeld.rank ??
+            oppMeld.slots.find((s) => !s.isWildcard)?.representedRank ??
+            oppMeld.cards?.find((c) => !isWildcard(c))?.rank;
+          if (setRank !== undefined && card.rank === setRank) {
+            feedsOpponentMeld = true;
+            break;
           }
         }
       }
     }
     if (feedsOpponentMeld) {
-      score += 150;
-      reason = 'Feeds opponent sequence on table (denial protection)';
+      if (isLockdown) {
+        score += 500;
+        reason = 'Strict lockdown: feeds or connects to opponent table melds';
+      } else {
+        score += 150;
+        reason = 'Feeds opponent sequence on table (denial protection)';
+      }
     }
 
     // 4. Opponent Wants prediction (Smart Chacha memory prediction)
-    if (options?.opponentWants?.has(cardKey) || options?.opponentWants?.has(card.id)) {
-      score += 160;
-      reason = 'Opponents predicted to need this card';
+    const isOpponentWant = Boolean(
+      options?.opponentWants?.has(cardKey) ||
+      options?.opponentWants?.has(card.id) ||
+      options?.opponentWants?.has(`RANK_${card.rank}`)
+    );
+    if (isOpponentWant) {
+      if (isLockdown) {
+        score += 500;
+        reason = 'Strict lockdown: opponent on <= 2 cards, predicted want';
+      } else {
+        score += 160;
+        reason = 'Opponents predicted to need this card';
+      }
     }
 
     // 5. Connecting Cards in Hand:
@@ -929,12 +979,25 @@ export function evaluateDeadwoodAndDiscard(
       !isTeamMeldNeighbor &&
       (options?.partnerLikelyWants?.has(cardKey) || options?.partnerLikelyWants?.has(card.id))
     ) {
-      score -= 60;
+      score -= 80;
       reason = 'Passed to partner via discard pile';
     }
 
-    // 8. Isolated high deadwood (ranks 10-K with zero connections and not feeding opponents):
-    if (!hasAnyConnection && !feedsOpponentMeld && card.rank >= 10) {
+    // 8. Completely Irrelevant Deadwood (Buries connectors & safe lockdown discard):
+    const isCompletelyIrrelevantDeadwood =
+      !isExplicitPartnerPass &&
+      !hasAnyConnection &&
+      !feedsOpponentMeld &&
+      !isOpponentWant &&
+      !isWildcard(card);
+
+    if (shouldBury && isCompletelyIrrelevantDeadwood) {
+      score -= 60;
+      reason = 'Completely irrelevant deadwood (buries connector for partner / lockdown)';
+    }
+
+    // 9. Isolated high deadwood (ranks 10-K with zero connections and not feeding opponents):
+    if (!hasAnyConnection && !feedsOpponentMeld && !isOpponentWant && card.rank >= 10) {
       score -= 10;
     }
 
@@ -1074,6 +1137,68 @@ export function isCardConnecting(
     }
   }
 
+  return false;
+}
+
+/**
+ * Determines whether the top card of the discard pile is a connecting card or wildcard.
+ * When true, bots bury the card under safe deadwood to prevent opponents from scooping it.
+ */
+export function isDiscardPileTopConnecting(
+  topCard: Card | null | undefined,
+  hand: Card[] = [],
+  teamMelds: Meld[] = [],
+  opponentMelds: Meld[] = [],
+  opponentWants?: Set<string>
+): boolean {
+  if (!topCard) return false;
+  // Wildcards always connect
+  if (isWildcard(topCard) || isNaturalJoker(topCard) || topCard.rank === 2) {
+    return true;
+  }
+  // Connects with hand or team melds
+  if (isCardConnecting(topCard, hand, teamMelds)) {
+    return true;
+  }
+  // Connects with opponent wants
+  if (opponentWants) {
+    const cardKey = topCard.suit ? `${topCard.suit}_${topCard.rank}` : `RANK_${topCard.rank}`;
+    if (
+      opponentWants.has(cardKey) ||
+      opponentWants.has(topCard.id) ||
+      opponentWants.has(`RANK_${topCard.rank}`)
+    ) {
+      return true;
+    }
+  }
+  // Connects with opponent table melds
+  for (const oppMeld of opponentMelds) {
+    if (canAddCardsToMeld(oppMeld, [topCard]).valid) {
+      return true;
+    }
+    if (oppMeld.type === 'RUN' && topCard.suit && oppMeld.suit === topCard.suit) {
+      const ranks = oppMeld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+      if (ranks.length > 0) {
+        const minR = ranks[0];
+        const maxR = ranks[ranks.length - 1];
+        if (
+          topCard.rank === minR - 1 ||
+          topCard.rank === maxR + 1 ||
+          (topCard.rank === 14 && minR === 2)
+        ) {
+          return true;
+        }
+      }
+    } else if (oppMeld.type === 'SET') {
+      const setRank =
+        oppMeld.rank ??
+        oppMeld.slots.find((s) => !s.isWildcard)?.representedRank ??
+        oppMeld.cards?.find((c) => !isWildcard(c))?.rank;
+      if (setRank !== undefined && topCard.rank === setRank) {
+        return true;
+      }
+    }
+  }
   return false;
 }
 

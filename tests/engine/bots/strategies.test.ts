@@ -2276,6 +2276,190 @@ describe('Bot Personality Strategies', () => {
       }).not.toThrow();
     });
   });
+
+  describe('Strict Lockdown Defense & Burying Connecting Cards (Task 10)', () => {
+    it('strictly refuses to discard open-end neighbor or card feeding opponent meld when next opponent has 1 card left', () => {
+      const state = createTestState();
+      // Bot is player 1 (Team B), next player is player 2 (Team A, opponent)
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 8)]; // opponent on 1 card!
+
+      // Opponent Team A has an existing meld on table: SPADES 5, 6, 7
+      state.melds.A = [
+        {
+          id: 'meld_opp_1',
+          team: 'A',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('s5', 'SPADES', 5),
+            makeCard('s6', 'SPADES', 6),
+            makeCard('s7', 'SPADES', 7),
+          ],
+          slots: [
+            { card: makeCard('s5', 'SPADES', 5), representedRank: 5 },
+            { card: makeCard('s6', 'SPADES', 6), representedRank: 6 },
+            { card: makeCard('s7', 'SPADES', 7), representedRank: 7 },
+          ],
+          isPure: true,
+        },
+      ];
+
+      // Bot hand: 8♠ (max + 1 open end neighbor to opponent run),
+      // 4♠ (min - 1 open end neighbor to opponent run),
+      // 10♦ (completely safe isolated deadwood with zero connections)
+      state.players[1].hand = [
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('d10', 'DIAMONDS', 10),
+      ];
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      // Must discard safe isolated deadwood (d10), never 8♠ or 4♠
+      expect(plan.discardAction.cardId).toBe('d10');
+
+      // Verify evaluateDeadwoodAndDiscard gives 8♠ and 4♠ massive penalty (+500)
+      const evalResult = evaluateDeadwoodAndDiscard(state.players[1].hand, new Set(), {
+        opponentMelds: state.melds.A,
+        nextOpponentCardCount: 1,
+      });
+      const s8Score = evalResult.discardScores.find((ds) => ds.card.id === 's8')!.score;
+      const s4Score = evalResult.discardScores.find((ds) => ds.card.id === 's4')!.score;
+      const d10Score = evalResult.discardScores.find((ds) => ds.card.id === 'd10')!.score;
+
+      expect(s8Score).toBeGreaterThanOrEqual(550);
+      expect(s4Score).toBeGreaterThanOrEqual(550);
+      expect(d10Score).toBeLessThan(100);
+    });
+
+    it('ensures all bot strategies avoid discarding connecting cards to an opponent on <= 2 cards', () => {
+      const state = createTestState();
+      // Next player (player 2, Team A) has 2 cards left
+      state.players[2].hand = [
+        makeCard('opp1', 'HEARTS', 8),
+        makeCard('opp2', 'DIAMONDS', 8),
+      ];
+
+      // Opponent has a SET of 9s on table
+      state.melds.A = [
+        {
+          id: 'meld_opp_set',
+          team: 'A',
+          type: 'SET',
+          rank: 9,
+          cards: [
+            makeCard('s9', 'SPADES', 9),
+            makeCard('h9', 'HEARTS', 9),
+            makeCard('d9', 'DIAMONDS', 9),
+          ],
+          slots: [
+            { card: makeCard('s9', 'SPADES', 9), representedRank: 9 },
+            { card: makeCard('h9', 'HEARTS', 9), representedRank: 9 },
+            { card: makeCard('d9', 'DIAMONDS', 9), representedRank: 9 },
+          ],
+        },
+      ];
+
+      // Bot hand: 9♣ (matches opponent's SET of 9s), and isolated deadwood K♦
+      state.players[1].hand = [
+        makeCard('c9', 'CLUBS', 9),
+        makeCard('d13', 'DIAMONDS', 13),
+      ];
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      const memory = createEmptyMemory();
+
+      // All 4 bots must discard d13 (safe deadwood) and avoid c9 (feeding opponent set)
+      expect(decideSmartChachaTurn(state, 1, memory).discardAction.cardId).toBe('d13');
+      expect(decideFastChachiTurn(state, 1, memory).discardAction.cardId).toBe('d13');
+      expect(decideTheJadugarTurn(state, 1, memory).discardAction.cardId).toBe('d13');
+      expect(decideTheLongTermGuyTurn(state, 1, memory).discardAction.cardId).toBe('d13');
+
+      // Verify evaluateDeadwoodAndDiscard gives c9 massive penalty (+500) for matching opponent SET
+      const evalResult = evaluateDeadwoodAndDiscard(state.players[1].hand, new Set(), {
+        opponentMelds: state.melds.A,
+        nextOpponentCardCount: 2,
+      });
+      const c9Score = evalResult.discardScores.find((ds) => ds.card.id === 'c9')!.score;
+      expect(c9Score).toBeGreaterThanOrEqual(550);
+    });
+
+    it('discards irrelevant deadwood to bury a connecting card in the discard pile without breaking own hand', () => {
+      const state = createTestState();
+      // Discard pile has a wildcard 2 on top (exposed connector)
+      state.discardPile = [makeCard('dp_w2', 'HEARTS', 2)];
+
+      // Next player is opponent (Player 2)
+      state.players[2].hand = [
+        makeCard('opp1', 'SPADES', 10),
+        makeCard('opp2', 'SPADES', 11),
+        makeCard('opp3', 'SPADES', 12),
+      ];
+
+      // Bot hand has:
+      // - Pair in hand: 7♣, 7♦ (building bot's hand)
+      // - 2-card consecutive run: 8♠, 9♠ (building bot's hand)
+      // - Isolated irrelevant deadwood: Q♥ (zero connections to hand, table melds, or opponents)
+      state.players[1].hand = [
+        makeCard('c7', 'CLUBS', 7),
+        makeCard('d7', 'DIAMONDS', 7),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+        makeCard('h12', 'HEARTS', 12),
+      ];
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      // Bot preserves its pair (c7, d7) and run (s8, s9), choosing the irrelevant deadwood h12 to bury the wildcard
+      expect(plan.discardAction.cardId).toBe('h12');
+
+      // Verify evaluateDeadwoodAndDiscard assigns discount to irrelevant deadwood
+      const evalResult = evaluateDeadwoodAndDiscard(state.players[1].hand, new Set(), {
+        discardPile: state.discardPile,
+        nextOpponentCardCount: 3,
+      });
+      expect(evalResult.recommendedDiscard?.id).toBe('h12');
+      const h12Score = evalResult.discardScores.find((ds) => ds.card.id === 'h12')!.score;
+      const c7Score = evalResult.discardScores.find((ds) => ds.card.id === 'c7')!.score;
+      const s8Score = evalResult.discardScores.find((ds) => ds.card.id === 's8')!.score;
+
+      // h12 is chosen because it is safe junk, while c7 (pair) and s8 (consecutive run) are preserved
+      expect(h12Score).toBeLessThanOrEqual(0);
+      expect(h12Score).toBeLessThan(c7Score);
+      expect(h12Score).toBeLessThan(s8Score);
+    });
+
+    it('assigns +500 lockdown penalty to predicted opponent wants from memory when next opponent has <= 2 cards', () => {
+      const state = createTestState();
+      state.players[2].hand = [makeCard('opp1', 'HEARTS', 10)]; // opponent on 1 card
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      const memory = createEmptyMemory();
+      // Memory recorded player 2 picking up HEARTS 9 from bottom, so wants HEARTS 10
+      memory.bottomPickupsByPlayer[2] = [makeCard('h9', 'HEARTS', 9)];
+
+      state.players[1].hand = [
+        makeCard('h10', 'HEARTS', 10), // Opponent predicted want
+        makeCard('c4', 'CLUBS', 4), // Safe isolated deadwood
+      ];
+
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      // Smart Chacha strictly refuses to discard h10, discarding c4
+      expect(plan.discardAction.cardId).toBe('c4');
+
+      const oppWants = predictOpponentWants(memory, state, 'B');
+      const evalResult = evaluateDeadwoodAndDiscard(state.players[1].hand, new Set(), {
+        opponentWants: oppWants,
+        nextOpponentCardCount: 1,
+      });
+      const h10Score = evalResult.discardScores.find((ds) => ds.card.id === 'h10')!.score;
+      expect(h10Score).toBeGreaterThanOrEqual(550);
+    });
+  });
 });
 
 
