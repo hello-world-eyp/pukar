@@ -8,7 +8,7 @@
  * - Aggressive sequence opening: If running low on cards, opens more sequences.
  * - Reckless discard: Might throw cards helpful to opponents, but NEVER throws a wildcard (rank 2 or Natural Joker).
  */
-import { GameAction, GameState } from '../../types';
+import { GameAction, GameState, Team } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
 import {
   findBestMeldPlan,
@@ -25,6 +25,10 @@ export function decideFastChachiTurn(
   const hand = player.hand || [];
   const team = player.team;
   const myTeamMelds = state.melds[team] || [];
+  const opponentTeam: Team = team === 'A' ? 'B' : 'A';
+  const opponentMelds = state.melds[opponentTeam] || [];
+  const allTableMelds = [...myTeamMelds, ...opponentMelds];
+  const isBoardOpen = allTableMelds.length > 0;
 
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
@@ -36,6 +40,8 @@ export function decideFastChachiTurn(
       evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
         personality: 'FAST_CHACHI',
         pukarPoolCount: state.pukarPool.length,
+        allTableMelds,
+        isBoardOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -70,12 +76,14 @@ export function decideFastChachiTurn(
     preserveDiscardCard: true,
     isCloseToPukar,
     isFinalTurn,
+    allTableMelds,
+    requirePure: !isBoardOpen,
   });
 
   // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first.
-  // On an opening turn (myTeamMelds.length === 0), pure runs must always take precedence over dirty melds!
+  // On an opening turn (!isBoardOpen), pure runs must always take precedence over dirty melds!
   meldPlan.meldsToPlay.sort((a, b) => {
-    if (myTeamMelds.length === 0) {
+    if (!isBoardOpen) {
       if (a.isPure && !b.isPure) return -1;
       if (!a.isPure && b.isPure) return 1;
     }
@@ -104,7 +112,6 @@ export function decideFastChachiTurn(
 
   // 3. DISCARD PHASE DECISION
   const remainingHand = hand.filter((c) => !meldPlan.usedCardIds.has(c.id));
-  const opponentTeam = team === 'A' ? 'B' : 'A';
   const nextPlayerIndex = (botIndex + 1) % state.playerCount;
   const nextPlayer = state.players[nextPlayerIndex];
   const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;

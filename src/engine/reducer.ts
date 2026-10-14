@@ -324,8 +324,10 @@ function handlePlayNewMeld(
   }
 
   const team = activePlayer.team;
-  const teamHasMelds = (state.melds[team]?.length ?? 0) > 0;
-  const requirePure = !teamHasMelds;
+  // The first sequence on the board must be a pure sequence (no wildcards/sets).
+  // Once ANY team establishes a meld on the board, the board is open for both teams.
+  const boardHasMelds = (state.melds.A?.length ?? 0) > 0 || (state.melds.B?.length ?? 0) > 0;
+  const requirePure = !boardHasMelds;
 
   const meldValidation = validateNewMeld(cardsToMeld, jokerRepresentedRank, { requirePure });
   if (!meldValidation.valid || !meldValidation.slots || !meldValidation.type) {

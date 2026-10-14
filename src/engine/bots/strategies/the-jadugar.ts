@@ -8,7 +8,7 @@
  *   towards Pukar, or open critical avenues for her partner.
  * - High-tempo melding: plays all valid melds and additions immediately.
  */
-import { GameAction, GameState } from '../../types';
+import { GameAction, GameState, Team } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
 import {
   findBestMeldPlan,
@@ -25,6 +25,10 @@ export function decideTheJadugarTurn(
   const hand = player.hand || [];
   const team = player.team;
   const myTeamMelds = state.melds[team] || [];
+  const opponentTeam: Team = team === 'A' ? 'B' : 'A';
+  const opponentMelds = state.melds[opponentTeam] || [];
+  const allTableMelds = [...myTeamMelds, ...opponentMelds];
+  const isBoardOpen = allTableMelds.length > 0;
 
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
@@ -36,6 +40,8 @@ export function decideTheJadugarTurn(
       evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
         personality: 'THE_JADUGAR',
         pukarPoolCount: state.pukarPool.length,
+        allTableMelds,
+        isBoardOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -70,6 +76,8 @@ export function decideTheJadugarTurn(
     preserveDiscardCard: true,
     isCloseToPukar,
     isFinalTurn,
+    allTableMelds,
+    requirePure: !isBoardOpen,
   });
   const meldActions: GameAction[] = [];
 
@@ -90,7 +98,6 @@ export function decideTheJadugarTurn(
 
   // 3. DISCARD PHASE DECISION
   const remainingHand = hand.filter((c) => !meldPlan.usedCardIds.has(c.id));
-  const opponentTeam = team === 'A' ? 'B' : 'A';
   const nextPlayerIndex = (botIndex + 1) % state.playerCount;
   const nextPlayer = state.players[nextPlayerIndex];
   const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;

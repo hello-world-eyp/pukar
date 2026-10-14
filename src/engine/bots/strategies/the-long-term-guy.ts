@@ -8,7 +8,7 @@
  * - Opens new valid sequences from remaining cards to advance towards Pukar.
  * - Balanced between steady sequence growth and patient completion.
  */
-import { GameAction, GameState, Meld } from '../../types';
+import { GameAction, GameState, Meld, Team } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
 import {
   findPotentialNewMelds,
@@ -28,6 +28,10 @@ export function decideTheLongTermGuyTurn(
   const hand = player.hand || [];
   const team = player.team;
   const myTeamMelds = state.melds[team] || [];
+  const opponentTeam: Team = team === 'A' ? 'B' : 'A';
+  const opponentMelds = state.melds[opponentTeam] || [];
+  const allTableMelds = [...myTeamMelds, ...opponentMelds];
+  const isBoardOpen = allTableMelds.length > 0;
 
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
@@ -39,6 +43,8 @@ export function decideTheLongTermGuyTurn(
       evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
         personality: 'THE_LONG_TERM_GUY',
         pukarPoolCount: state.pukarPool.length,
+        allTableMelds,
+        isBoardOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -168,7 +174,7 @@ export function decideTheLongTermGuyTurn(
     };
 
     const remainingHand = hand.filter((c) => !usedCardIds.has(c.id));
-    const requirePure = myTeamMelds.length === 0 && meldActions.length === 0;
+    const requirePure = !isBoardOpen && meldActions.length === 0;
     const candidateMelds = findPotentialNewMelds(remainingHand, {
       requirePure,
       isCloseToPukar,
@@ -193,7 +199,6 @@ export function decideTheLongTermGuyTurn(
 
   // 3. DISCARD PHASE DECISION
   const finalRemainingHand = hand.filter((c) => !usedCardIds.has(c.id));
-  const opponentTeam = team === 'A' ? 'B' : 'A';
   const nextPlayerIndex = (botIndex + 1) % state.playerCount;
   const nextPlayer = state.players[nextPlayerIndex];
   const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;

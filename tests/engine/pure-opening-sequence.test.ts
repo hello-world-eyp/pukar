@@ -196,7 +196,8 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
       expect(subsequentSetResult.error).toBeUndefined();
       expect(subsequentSetResult.state.melds.A).toHaveLength(2);
 
-      // 5. Team B still has NO melds on the board, so Team B cannot play a set until they establish a pure sequence
+      // 5. Once Team A establishes a pure sequence on the board, the board IS OPEN.
+      // Team B can now play dirty sequences with Jokers and sets as Team B's first meld!
       const stateForTeamB = {
         ...subsequentSetResult.state,
         currentPlayerIndex: 1, // Player 2 is on Team B
@@ -207,8 +208,23 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
         type: 'PLAY_NEW_MELD',
         cardIds: setCardIds,
       });
-      expect(teamBSetAttempt.error).toContain('First sequence on the board must be a pure sequence');
-      expect(stateForTeamB.melds.B).toHaveLength(0);
+      expect(teamBSetAttempt.error).toBeUndefined();
+      expect(teamBSetAttempt.state.melds.B).toHaveLength(1);
+
+      // Team B can also play a dirty sequence with a Joker now that board is open
+      const dirtyRunCards = [
+        makeCard('b-5s', 'SPADES', 5),
+        makeCard('b-joker', null, 0, true),
+        makeCard('b-7s', 'SPADES', 7),
+        makeCard('b-8s', 'SPADES', 8),
+      ];
+      stateForTeamB.players[1].hand = [...dirtyRunCards, extraCard];
+      const teamBDirtyRunAttempt = pukarReducer(stateForTeamB, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: dirtyRunCards.map((c) => c.id),
+      });
+      expect(teamBDirtyRunAttempt.error).toBeUndefined();
+      expect(teamBDirtyRunAttempt.state.melds.B).toHaveLength(1);
     });
   });
 });

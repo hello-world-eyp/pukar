@@ -2459,6 +2459,86 @@ describe('Bot Personality Strategies', () => {
       const h10Score = evalResult.discardScores.find((ds) => ds.card.id === 'h10')!.score;
       expect(h10Score).toBeGreaterThanOrEqual(550);
     });
+    it('all bots meld obvious dirty runs (e.g. 5♠-Joker-7♠-8♠ and 4♣-5♣-2♣-7♣) when opponent team has opened a pure sequence on the board', () => {
+      const state = createTestState();
+      // Smart Chacha is Player 1 (Team B) or Player 2 (Team A)
+      // Let Team B have a pure sequence on the board:
+      state.melds.B = [
+        {
+          id: 'meld-pure-b',
+          team: 'B',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: [
+            makeCard('h5', 'HEARTS', 5),
+            makeCard('h6', 'HEARTS', 6),
+            makeCard('h7', 'HEARTS', 7),
+          ],
+          slots: [
+            { card: makeCard('h5', 'HEARTS', 5), representedRank: 5, isWildcard: false, representedSuit: 'HEARTS' },
+            { card: makeCard('h6', 'HEARTS', 6), representedRank: 6, isWildcard: false, representedSuit: 'HEARTS' },
+            { card: makeCard('h7', 'HEARTS', 7), representedRank: 7, isWildcard: false, representedSuit: 'HEARTS' },
+          ],
+          isClean: true,
+          isPure: true,
+        },
+      ];
+      // Team A has 0 melds on the board
+      state.melds.A = [];
+
+      // Team A bot (Player 0) holds the exact cards from the user's report:
+      // 5♠, 7♠, 8♠, Natural Joker (can make 5♠-Joker-7♠-8♠)
+      // 4♣, 5♣, 7♣, 2♣ (can make 4♣-5♣-2♣-7♣)
+      // plus deadwood: 9♦, J♣, K♠, Natural Joker 2
+      const botHand = [
+        makeCard('j1', null, 0, true),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('j2', null, 0, true),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('c2', 'CLUBS', 2),
+        makeCard('s7', 'SPADES', 7),
+        makeCard('c5', 'CLUBS', 5),
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('c7', 'CLUBS', 7),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('sk', 'SPADES', 13),
+        makeCard('s8', 'SPADES', 8),
+      ];
+      state.players[0].hand = [...botHand];
+      state.players[0].team = 'A';
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      // Test Smart Chacha:
+      const planChacha = decideSmartChachaTurn(state, 0, createEmptyMemory());
+      const chachaMeldCards = planChacha.meldActions
+        .filter((a) => a.type === 'PLAY_NEW_MELD')
+        .map((a: any) => a.cardIds.sort().join(','));
+      // Must meld both the Spades run (s5, s7, s8, j1/j2) and Clubs run (c4, c5, c7, c2)
+      expect(chachaMeldCards.some((key) => key.includes('s5') && key.includes('s7') && key.includes('s8'))).toBe(true);
+      expect(chachaMeldCards.some((key) => key.includes('c4') && key.includes('c5') && key.includes('c7'))).toBe(true);
+
+      // Test Fast Chachi:
+      const planChachi = decideFastChachiTurn(state, 0, createEmptyMemory());
+      const chachiMeldCards = planChachi.meldActions
+        .filter((a) => a.type === 'PLAY_NEW_MELD')
+        .map((a: any) => a.cardIds.sort().join(','));
+      expect(chachiMeldCards.some((key) => key.includes('s5') && key.includes('s7') && key.includes('s8'))).toBe(true);
+
+      // Test The Jadugar:
+      const planJadugar = decideTheJadugarTurn(state, 0, createEmptyMemory());
+      const jadugarMeldCards = planJadugar.meldActions
+        .filter((a) => a.type === 'PLAY_NEW_MELD')
+        .map((a: any) => a.cardIds.sort().join(','));
+      expect(jadugarMeldCards.some((key) => key.includes('s5') && key.includes('s7') && key.includes('s8'))).toBe(true);
+
+      // Test The Long-Term Guy:
+      const planLT = decideTheLongTermGuyTurn(state, 0, createEmptyMemory());
+      const ltMeldCards = planLT.meldActions
+        .filter((a) => a.type === 'PLAY_NEW_MELD')
+        .map((a: any) => a.cardIds.sort().join(','));
+      expect(ltMeldCards.some((key) => key.includes('s5') && key.includes('s7') && key.includes('s8'))).toBe(true);
+    });
   });
 });
 

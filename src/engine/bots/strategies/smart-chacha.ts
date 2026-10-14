@@ -124,6 +124,10 @@ export function decideSmartChachaTurn(
   const hand = player.hand || [];
   const team = player.team;
   const myTeamMelds = state.melds[team] || [];
+  const opponentTeam: Team = team === 'A' ? 'B' : 'A';
+  const opponentMelds = state.melds[opponentTeam] || [];
+  const allTableMelds = [...myTeamMelds, ...opponentMelds];
+  const isBoardOpen = allTableMelds.length > 0;
   const opponentWants = predictOpponentWants(memory, state, team);
 
   // 1. DRAW PHASE DECISION
@@ -137,6 +141,8 @@ export function decideSmartChachaTurn(
         personality: 'SMART_CHACHA',
         pukarPoolCount: state.pukarPool.length,
         opponentWants,
+        allTableMelds,
+        isBoardOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -174,6 +180,8 @@ export function decideSmartChachaTurn(
         preserveDiscardCard: true,
         isCloseToPukar,
         isFinalTurn,
+        allTableMelds,
+        requirePure: !isBoardOpen,
       });
   const meldActions: GameAction[] = [];
 
@@ -197,7 +205,6 @@ export function decideSmartChachaTurn(
   const candidatePool = remainingHand.length > 0 ? remainingHand : hand;
   const partnerLikelyWants = new Set<string>();
   const protectedCardIds = new Set<string>();
-  const opponentTeam: Team = team === 'A' ? 'B' : 'A';
   const nextPlayerIndex = (botIndex + 1) % state.playerCount;
   const nextPlayer = state.players[nextPlayerIndex];
   const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;

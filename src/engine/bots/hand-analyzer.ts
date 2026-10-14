@@ -529,6 +529,8 @@ export function findBestMeldPlan(
     preserveDiscardCard?: boolean;
     isCloseToPukar?: boolean;
     isFinalTurn?: boolean;
+    allTableMelds?: Meld[];
+    requirePure?: boolean;
   }
 ): {
   meldsToPlay: CandidateMeld[];
@@ -537,7 +539,10 @@ export function findBestMeldPlan(
 } {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const isFinalTurn = options?.isFinalTurn ?? false;
-  const requirePure = teamMelds.length === 0;
+  const isBoardOpen = options?.allTableMelds
+    ? options.allTableMelds.length > 0
+    : teamMelds.length > 0;
+  const requirePure = options?.requirePure !== undefined ? options.requirePure : !isBoardOpen;
 
   const usedCardIds = new Set<string>();
   const meldsToPlay: CandidateMeld[] = [];
@@ -1206,6 +1211,8 @@ export interface DiscardPickupOptions {
   personality: 'SMART_CHACHA' | 'THE_JADUGAR' | 'FAST_CHACHI' | 'THE_LONG_TERM_GUY';
   pukarPoolCount?: number;
   opponentWants?: Set<string>;
+  allTableMelds?: Meld[];
+  isBoardOpen?: boolean;
 }
 
 /**
@@ -1225,6 +1232,8 @@ export function evaluateDiscardPilePickup(
   const pileLength = discardPile.length;
   const topCard = discardPile[pileLength - 1];
   const pukarPoolCount = options.pukarPoolCount ?? 2;
+  const isBoardOpen = options.isBoardOpen ?? (options.allTableMelds ? options.allTableMelds.length > 0 : teamMelds.length > 0);
+  const requirePure = !isBoardOpen;
 
   // Critical Winning / Endgame Guard:
   // If bot has 1 card left and 0 Pukars remain (going out cleanly to win the round),
@@ -1255,7 +1264,7 @@ export function evaluateDiscardPilePickup(
     if (hand.length <= 14 && pileLength >= 3) return true;
     const testHand = [...hand, topCard];
     const newMelds = findPotentialNewMelds(testHand, {
-      requirePure: teamMelds.length === 0,
+      requirePure,
     });
     const hasExtremeMeld = newMelds.some(
       (m) =>
@@ -1269,9 +1278,9 @@ export function evaluateDiscardPilePickup(
 
   // 3. Melds / Additions from whole pile
   const testHand = [...hand, ...discardPile];
-  const hypMelds = findPotentialNewMelds(testHand, { requirePure: teamMelds.length === 0 });
+  const hypMelds = findPotentialNewMelds(testHand, { requirePure });
   const hypAdds = findPotentialAdditionsToMelds(testHand, teamMelds);
-  const currMelds = findPotentialNewMelds(hand, { requirePure: teamMelds.length === 0 });
+  const currMelds = findPotentialNewMelds(hand, { requirePure });
   const currAdds = findPotentialAdditionsToMelds(hand, teamMelds);
   const pileCreatesMelds = hypMelds.length > currMelds.length || hypAdds.length > currAdds.length;
 
