@@ -452,5 +452,54 @@ describe('Hooks Interactive Execution & Edge Cases (Stage 3)', () => {
       // Pukar claim MUST trigger the heavy thud voice ('pukar')
       expect(triggerSound).toHaveBeenCalledWith('pukar');
     });
+
+    it('executes multi-meld opening turn actions synchronously without stale state pure sequence rejection', () => {
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.players[1].team = 'B';
+      state.players[1].hand = [
+        { id: 'd4', suit: 'DIAMONDS', rank: 4 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd5', suit: 'DIAMONDS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd6', suit: 'DIAMONDS', rank: 6 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's8', suit: 'SPADES', rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's10', suit: 'SPADES', rank: 10 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'jk', suit: null, rank: 0 as any, isNaturalJoker: true, isJoker: true },
+        { id: 'h7', suit: 'HEARTS', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+      ];
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      state.melds = { A: [], B: [] }; // No one has opened
+
+      const setErrorMessage = vi.fn();
+      const game = withHookRunner(() =>
+        useLocalGame({
+          initialState: state,
+          appMode: 'LOCAL',
+          multiplayerHook: dummyMultiplayerHook,
+          triggerSound: vi.fn(),
+          setErrorMessage,
+          triggerPukarCelebration: vi.fn(),
+          setExhaustNotification: vi.fn(),
+          setJokerPickupBanner: vi.fn(),
+          clearAllNotifications: vi.fn(),
+          setJokerPromptData: vi.fn(),
+        })
+      );
+
+      // Action 1: Pure sequence (4♦-5♦-6♦)
+      const res1 = game.handleAction({
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['d4', 'd5', 'd6'],
+      });
+      expect(res1).toBe(true);
+
+      // Action 2: Dirty sequence with Joker (8♠-10♠-Joker) in the same turn
+      const res2 = game.handleAction({
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['s8', 's10', 'jk'],
+      });
+      expect(res2).toBe(true);
+      expect(setErrorMessage).not.toHaveBeenCalledWith(expect.stringContaining('First sequence on the board must be pure'));
+    });
   });
 });

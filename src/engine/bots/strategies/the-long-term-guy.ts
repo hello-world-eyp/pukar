@@ -180,7 +180,11 @@ export function decideTheLongTermGuyTurn(
       isCloseToPukar,
       isFinalTurn,
     });
-    candidateMelds.sort((a, b) => b.score - a.score);
+    candidateMelds.sort((a, b) => {
+      if (a.isPure && !b.isPure) return -1;
+      if (!a.isPure && b.isPure) return 1;
+      return b.score - a.score;
+    });
     tryAddMelds(candidateMelds);
 
     // If opening turn (requirePure was true) and a pure meld was staged, evaluate dirty melds

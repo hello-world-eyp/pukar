@@ -80,13 +80,11 @@ export function decideFastChachiTurn(
     requirePure: !isBoardOpen,
   });
 
-  // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first.
-  // On an opening turn (!isBoardOpen), pure runs must always take precedence over dirty melds!
+  // Sort candidate melds: pure runs always take precedence over dirty melds!
+  // Among runs of same purity, extreme runs (containing Ace/3 or Ace/King) come first.
   meldPlan.meldsToPlay.sort((a, b) => {
-    if (!isBoardOpen) {
-      if (a.isPure && !b.isPure) return -1;
-      if (!a.isPure && b.isPure) return 1;
-    }
+    if (a.isPure && !b.isPure) return -1;
+    if (!a.isPure && b.isPure) return 1;
     const aIsExtreme = a.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13);
     const bIsExtreme = b.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13);
     if (aIsExtreme && !bIsExtreme) return -1;

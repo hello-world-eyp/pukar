@@ -646,8 +646,12 @@ export function findBestMeldPlan(
     isCloseToPukar,
     isFinalTurn,
   });
-  // Sort candidate melds by score descending
-  potentialMelds.sort((a, b) => b.score - a.score);
+  // Sort candidate melds: pure melds always take precedence over dirty melds, then by score descending
+  potentialMelds.sort((a, b) => {
+    if (a.isPure && !b.isPure) return -1;
+    if (!a.isPure && b.isPure) return 1;
+    return b.score - a.score;
+  });
   stageCandidateMelds(potentialMelds);
 
   // If opening turn (requirePure was true) and at least one pure meld was successfully staged,

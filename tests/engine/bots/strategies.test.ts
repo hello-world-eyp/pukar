@@ -2539,6 +2539,85 @@ describe('Bot Personality Strategies', () => {
         .map((a: any) => a.cardIds.sort().join(','));
       expect(ltMeldCards.some((key) => key.includes('s5') && key.includes('s7') && key.includes('s8'))).toBe(true);
     });
+
+    it('Fast Chachi opens table with pure sequence (4♦-5♦-6♦) when board has 0 melds', () => {
+      const state = createTestState();
+      state.melds = { A: [], B: [] }; // No one has opened
+      const fastChachiHand = [
+        makeCard('s8', 'SPADES', 8),
+        makeCard('d6', 'DIAMONDS', 6),
+        makeCard('sq', 'SPADES', 12),
+        makeCard('dj1', 'DIAMONDS', 11),
+        makeCard('jk', null, 0, true),
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('d2', 'DIAMONDS', 2),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('ha', 'HEARTS', 14),
+        makeCard('d4', 'DIAMONDS', 4),
+        makeCard('dj2', 'DIAMONDS', 11),
+        makeCard('d5', 'DIAMONDS', 5),
+        makeCard('c3', 'CLUBS', 3),
+        makeCard('c7', 'CLUBS', 7),
+        makeCard('s10', 'SPADES', 10),
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('h5', 'HEARTS', 5),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('c9', 'CLUBS', 9),
+      ];
+      state.players[1].hand = [...fastChachiHand];
+      state.players[1].team = 'B';
+      state.currentPlayerIndex = 1;
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.meldActions.length).toBeGreaterThanOrEqual(1);
+
+      // Verify the pure sequence 4♦, 5♦, 6♦ is staged as the opening meld
+      const firstMeld = plan.meldActions[0];
+      expect(firstMeld.type).toBe('PLAY_NEW_MELD');
+      const firstMeldCards = (firstMeld as any).cardIds;
+      expect(firstMeldCards).toContain('d4');
+      expect(firstMeldCards).toContain('d5');
+      expect(firstMeldCards).toContain('d6');
+    });
+
+    it('The Long-Term Guy opens table with pure sequence (8♣-9♣-10♣-J♣) when board has 0 melds', () => {
+      const state = createTestState();
+      state.melds = { A: [], B: [] }; // No one has opened
+      const longTermHand = [
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('c10', 'CLUBS', 10),
+        makeCard('hq', 'HEARTS', 12),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('jk', null, 0, true),
+        makeCard('c9', 'CLUBS', 9),
+        makeCard('ca', 'CLUBS', 14),
+        makeCard('da', 'DIAMONDS', 14),
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('s2', 'SPADES', 2),
+        makeCard('ha', 'HEARTS', 14),
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('s3', 'SPADES', 3),
+      ];
+      state.players[1].hand = [...longTermHand];
+      state.players[1].team = 'B';
+      state.currentPlayerIndex = 1;
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      const plan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(plan.meldActions.length).toBeGreaterThanOrEqual(1);
+
+      // Verify the pure sequence 8♣, 9♣, 10♣, J♣ is staged as the opening meld
+      const firstMeld = plan.meldActions[0];
+      expect(firstMeld.type).toBe('PLAY_NEW_MELD');
+      const firstMeldCards = (firstMeld as any).cardIds;
+      expect(firstMeldCards).toContain('c8');
+      expect(firstMeldCards).toContain('c9');
+      expect(firstMeldCards).toContain('c10');
+      expect(firstMeldCards).toContain('cj');
+    });
   });
 });
 

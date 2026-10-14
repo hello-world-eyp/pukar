@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   GameState,
   SanitizedGameState,
@@ -47,6 +47,8 @@ export function useLocalGame({
 }: UseLocalGameProps) {
   // Core Local Game State
   const [gameState, setGameState] = useState<GameState>(() => initialState ?? dealInitialState(4));
+  const gameStateRef = useRef<GameState>(gameState);
+  gameStateRef.current = gameState;
 
   // Selection state
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -169,12 +171,13 @@ export function useLocalGame({
         }
 
         // Local Pass & Play Reducer Logic
-        const prevPukarsA = gameState.pukarsClaimed?.A ?? 0;
-        const prevPukarsB = gameState.pukarsClaimed?.B ?? 0;
-        const prevStockCount = gameState.stockDeck?.length ?? 0;
-        const prevPukarPoolCount = gameState.pukarPool?.length ?? 0;
+        const currentGameState = gameStateRef.current;
+        const prevPukarsA = currentGameState.pukarsClaimed?.A ?? 0;
+        const prevPukarsB = currentGameState.pukarsClaimed?.B ?? 0;
+        const prevStockCount = currentGameState.stockDeck?.length ?? 0;
+        const prevPukarPoolCount = currentGameState.pukarPool?.length ?? 0;
 
-        const result = pukarReducer(gameState, action);
+        const result = pukarReducer(currentGameState, action);
 
         if (result.error) {
           setErrorMessage(result.error);
@@ -183,14 +186,15 @@ export function useLocalGame({
         }
 
         const next = result.state;
+        gameStateRef.current = next;
 
         // Detect Pukar claim (+50 pts)
         const nextPukarsA = next.pukarsClaimed?.A ?? 0;
         const nextPukarsB = next.pukarsClaimed?.B ?? 0;
         if (nextPukarsA > prevPukarsA || nextPukarsB > prevPukarsB) {
           const claimingTeam: 'A' | 'B' = nextPukarsA > prevPukarsA ? 'A' : 'B';
-          const claimingPlayerIndex = gameState.currentPlayerIndex;
-          const actor = gameState.players[claimingPlayerIndex];
+          const claimingPlayerIndex = currentGameState.currentPlayerIndex;
+          const actor = currentGameState.players[claimingPlayerIndex];
           const pukarInfo: PukarEventData = {
             team: claimingTeam,
             playerName: actor?.name ?? `Player ${claimingPlayerIndex + 1}`,
@@ -209,7 +213,7 @@ export function useLocalGame({
           triggerSound('draw');
         }
         // Detect Final Turn triggered by stock exhaustion
-        else if (!gameState.lastTurnTriggeredByDeckExhaust && next.lastTurnTriggeredByDeckExhaust) {
+        else if (!currentGameState.lastTurnTriggeredByDeckExhaust && next.lastTurnTriggeredByDeckExhaust) {
           setExhaustNotification(
             'Stock deck and Pukar pool are both exhausted! Final turn initiated.'
           );
@@ -231,22 +235,22 @@ export function useLocalGame({
         }
 
         // Detect Round Over
-        if (next.roundStatus === 'ROUND_OVER' && gameState.roundStatus !== 'ROUND_OVER') {
+        if (next.roundStatus === 'ROUND_OVER' && currentGameState.roundStatus !== 'ROUND_OVER') {
           triggerSound('roundOver');
         }
 
         // Detect Normal Joker pickup into hand
         if (next.lastPickedUpCard) {
-          const actor = gameState.players[gameState.currentPlayerIndex];
+          const actor = currentGameState.players[currentGameState.currentPlayerIndex];
           setJokerPickupBanner({
-            playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
+            playerName: actor?.name ?? `Player ${currentGameState.currentPlayerIndex + 1}`,
           });
           triggerSound('meld');
         }
 
         // Detect Pure 13-Card Sequence (500 pts) in local play
         if (action.type === 'PLAY_NEW_MELD' || action.type === 'ADD_TO_MELD') {
-          const prevMelds = [...(gameState.melds?.A ?? []), ...(gameState.melds?.B ?? [])];
+          const prevMelds = [...(currentGameState.melds?.A ?? []), ...(currentGameState.melds?.B ?? [])];
           const nextMelds = [...(next.melds?.A ?? []), ...(next.melds?.B ?? [])];
           const newPureMeld = nextMelds.find(
             (nm) =>
@@ -254,10 +258,10 @@ export function useLocalGame({
               !prevMelds.some((pm) => pm.id === nm.id && (pm.isPure13 || pm.points === 500))
           );
           if (newPureMeld) {
-            const actor = gameState.players[gameState.currentPlayerIndex];
+            const actor = currentGameState.players[currentGameState.currentPlayerIndex];
             triggerPureSequenceCelebration?.({
               team: newPureMeld.team,
-              playerName: actor?.name ?? `Player ${gameState.currentPlayerIndex + 1}`,
+              playerName: actor?.name ?? `Player ${currentGameState.currentPlayerIndex + 1}`,
               suit: newPureMeld.suit,
             });
           }
@@ -349,10 +353,12 @@ export function useLocalGame({
           }
           return p;
         });
-        return {
+        const next = {
           ...prev,
           players: updatedPlayers,
         };
+        gameStateRef.current = next;
+        return next;
       });
     },
     [isMultiplayerActive, multiplayerHook.gameState, multiplayerHook.mySeatIndex, currentViewIndex]
@@ -462,10 +468,14 @@ export function useLocalGame({
       try {
         if (appMode !== 'LOCAL') return;
         setViewedPlayerIndex(targetIndex);
-        setGameState((prev) => ({
-          ...prev,
-          currentPlayerIndex: targetIndex,
-        }));
+        setGameState((prev) => {
+          const next = {
+            ...prev,
+            currentPlayerIndex: targetIndex,
+          };
+          gameStateRef.current = next;
+          return next;
+        });
         setSelectedCardIds([]);
         setSelectedMeldId(null);
       } catch (err) {

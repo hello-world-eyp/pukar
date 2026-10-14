@@ -1090,5 +1090,152 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       expect(pukarSlam.props.playerName).toBe('Fast Chachi');
       expect(pukarSlam.props.points).toBe(50);
     });
+
+    it('Fast Chachi successfully opens table with pure sequence (4♦-5♦-6♦) and secondary dirty run in same turn', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1; // Fast Chachi (Team B)
+      state.phase = 'MELD';
+      state.melds = { A: [], B: [] }; // No one has opened
+
+      const fastChachiHand: Card[] = [
+        { id: 's8', suit: 'SPADES', rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd6', suit: 'DIAMONDS', rank: 6 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'sq', suit: 'SPADES', rank: 12 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'dj1', suit: 'DIAMONDS', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'jk', suit: null, rank: 0 as any, isNaturalJoker: true, isJoker: true },
+        { id: 'cj', suit: 'CLUBS', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd2', suit: 'DIAMONDS', rank: 2 as any, isNaturalJoker: false, isJoker: true },
+        { id: 'h8', suit: 'HEARTS', rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'ha', suit: 'HEARTS', rank: 14 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd4', suit: 'DIAMONDS', rank: 4 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'dj2', suit: 'DIAMONDS', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'd5', suit: 'DIAMONDS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c3', suit: 'CLUBS', rank: 3 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c7', suit: 'CLUBS', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's10', suit: 'SPADES', rank: 10 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h3', suit: 'HEARTS', rank: 3 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h5', suit: 'HEARTS', rank: 5 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's4', suit: 'SPADES', rank: 4 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c9', suit: 'CLUBS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+      ];
+      state.players[1].hand = [...fastChachiHand];
+      state.players[1].team = 'B';
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      let currentState = state;
+      const stateMap = new Map<number, any>();
+
+      const handleAction = vi.fn((act: any) => {
+        dispatchedActions.push(act);
+        const res = pukarReducer(currentState, act);
+        if (!res.error) {
+          currentState = res.state;
+          return true;
+        }
+        return false;
+      });
+
+      runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: currentState,
+            botConfig,
+            handleAction,
+            turnDelayMs: 250,
+          }),
+        stateMap
+      );
+
+      // Execute MELD phase
+      vi.advanceTimersByTime(250);
+
+      // Check meld actions dispatched
+      const meldActions = dispatchedActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(meldActions.length).toBeGreaterThanOrEqual(1);
+
+      // First meld must be the pure sequence 4♦, 5♦, 6♦
+      const firstMeldCards = meldActions[0].cardIds;
+      expect(firstMeldCards).toContain('d4');
+      expect(firstMeldCards).toContain('d5');
+      expect(firstMeldCards).toContain('d6');
+
+      // Check that team B now has melds on the table and the board is open
+      expect(currentState.melds.B.length).toBeGreaterThanOrEqual(1);
+      expect(currentState.melds.B[0].isPure).toBe(true);
+    });
+
+    it('The Long-Term Guy successfully opens table with pure sequence (8♣-9♣-10♣-J♣) and secondary dirty run in same turn', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 3; // The Long-Term Guy (Team B, seat 3)
+      state.phase = 'MELD';
+      state.melds = { A: [], B: [] }; // No one has opened
+
+      const longTermHand: Card[] = [
+        { id: 'h7', suit: 'HEARTS', rank: 7 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c10', suit: 'CLUBS', rank: 10 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'hq', suit: 'HEARTS', rank: 12 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'h9', suit: 'HEARTS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'jk', suit: null, rank: 0 as any, isNaturalJoker: true, isJoker: true },
+        { id: 'c9', suit: 'CLUBS', rank: 9 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'ca', suit: 'CLUBS', rank: 14 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'da', suit: 'DIAMONDS', rank: 14 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'c8', suit: 'CLUBS', rank: 8 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's2', suit: 'SPADES', rank: 2 as any, isNaturalJoker: false, isJoker: true },
+        { id: 'ha', suit: 'HEARTS', rank: 14 as any, isNaturalJoker: false, isJoker: false },
+        { id: 'cj', suit: 'CLUBS', rank: 11 as any, isNaturalJoker: false, isJoker: false },
+        { id: 's3', suit: 'SPADES', rank: 3 as any, isNaturalJoker: false, isJoker: false },
+      ];
+      state.players[3].hand = [...longTermHand];
+      state.players[3].team = 'B';
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      let currentState = state;
+      const stateMap = new Map<number, any>();
+
+      const handleAction = vi.fn((act: any) => {
+        dispatchedActions.push(act);
+        const res = pukarReducer(currentState, act);
+        if (!res.error) {
+          currentState = res.state;
+          return true;
+        }
+        return false;
+      });
+
+      runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: currentState,
+            botConfig,
+            handleAction,
+            turnDelayMs: 250,
+          }),
+        stateMap
+      );
+
+      // Execute MELD phase
+      vi.advanceTimersByTime(250);
+
+      // Check meld actions dispatched
+      const meldActions = dispatchedActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(meldActions.length).toBeGreaterThanOrEqual(1);
+
+      // First meld must be the pure sequence 8♣, 9♣, 10♣, J♣
+      const firstMeldCards = meldActions[0].cardIds;
+      expect(firstMeldCards).toContain('c8');
+      expect(firstMeldCards).toContain('c9');
+      expect(firstMeldCards).toContain('c10');
+      expect(firstMeldCards).toContain('cj');
+
+      // Check that team B now has melds on the table and the board is open
+      expect(currentState.melds.B.length).toBeGreaterThanOrEqual(1);
+      expect(currentState.melds.B[0].isPure).toBe(true);
+    });
   });
 });

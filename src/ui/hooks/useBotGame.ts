@@ -317,10 +317,12 @@ export function useBotGame({
 
           if (meldRejected) {
             // Meld action was rejected: proceed directly to discard to avoid deadlock
-            handleActionRef.current(latestPlan.discardAction);
+            const discardPlan = decideBotTurn(workingState, botIdx, botPersonality, botMemoryRef.current);
+            handleActionRef.current(discardPlan.discardAction);
             setBotSubPhase('DRAW');
           } else {
             // Transition to DISCARD subphase so user sees "is discarding..." and gets full turn duration
+            gameStateRef.current = workingState;
             setBotSubPhase('DISCARD');
           }
         } else if (currentSubPhase === 'DISCARD') {
