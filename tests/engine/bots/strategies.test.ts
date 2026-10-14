@@ -115,6 +115,124 @@ describe('Bot Personality Strategies', () => {
       const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
       expect(plan.drawAction.type).toBe('TAKE_DISCARD');
     });
+
+    it('leaves a 3-card discard pile with loose gap-2 connectors and draws from stock deck instead', () => {
+      const state = createTestState();
+      // Hand has 7♠ (gap-2 connector to 5♠)
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'HEARTS', 10),
+        makeCard('h3', 'DIAMONDS', 13),
+      ];
+      // 3-card discard pile with top card 5♠ (gap-2 connector, not tight pair/run) and no immediate meld
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 8),
+        makeCard('dp3', 'SPADES', 5),
+      ];
+
+      const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('leaves a 3-card discard pile with multiple loose connectors and draws from stock deck instead', () => {
+      const state = createTestState();
+      // Hand has 7♠
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'HEARTS', 10),
+        makeCard('h3', 'DIAMONDS', 13),
+      ];
+      // Pile has 9♠ (gap-2) and 5♠ (gap-2) - totalConnectingInPile = 2, but no immediate meld
+      state.discardPile = [
+        makeCard('dp1', 'SPADES', 9),
+        makeCard('dp2', 'CLUBS', 3),
+        makeCard('dp3', 'SPADES', 5),
+      ];
+
+      const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('leaves a 4-card discard pile of disconnected deadwood and draws from stock deck', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 9),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 7),
+        makeCard('dp3', 'CLUBS', 11),
+        makeCard('dp4', 'HEARTS', 13),
+      ];
+
+      const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('takes a 1- or 2-card pile with a tight connector (pair or adjacent run connector)', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'HEARTS', 10),
+        makeCard('h3', 'DIAMONDS', 13),
+      ];
+
+      // 1-card pile with adjacent rank 8♠
+      state.discardPile = [makeCard('dp1', 'SPADES', 8)];
+      let plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+
+      // 2-card pile with adjacent rank 8♠
+      state.discardPile = [
+        makeCard('dp0', 'CLUBS', 3),
+        makeCard('dp1', 'SPADES', 8),
+      ];
+      plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+
+      // 2-card pile with rank pair (7♥ with 7♠)
+      state.discardPile = [
+        makeCard('dp0', 'CLUBS', 3),
+        makeCard('dp1', 'HEARTS', 7),
+      ];
+      plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('still takes any pile containing a Joker or creating an immediate meld', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'HEARTS', 10),
+        makeCard('h3', 'DIAMONDS', 13),
+      ];
+
+      // Multi-card pile containing a Joker (even if otherwise disconnected)
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 8),
+        makeCard('joker', null, 0, true),
+        makeCard('dp3', 'HEARTS', 4),
+      ];
+      let plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Multi-card pile creating an immediate meld (hand has 7♠, 8♠, pile top is 9♠)
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'SPADES', 8),
+        makeCard('h3', 'HEARTS', 10),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 8),
+        makeCard('dp3', 'SPADES', 9),
+      ];
+      plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
   });
 
   describe('The Long-Term Guy Strategy', () => {
@@ -824,7 +942,7 @@ describe('Bot Personality Strategies', () => {
       expect(plan.discardAction.cardId).toBe('c1');
     });
 
-    it('The Jadugar picks up discard pile when it has 4 or more cards', () => {
+    it('The Jadugar leaves a 4-card discard pile of deadwood and draws from stock deck', () => {
       const state = createTestState();
       state.players[1].hand = [
         makeCard('h1', 'SPADES', 4),
@@ -838,7 +956,7 @@ describe('Bot Personality Strategies', () => {
       ];
 
       const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
-      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
     });
   });
 

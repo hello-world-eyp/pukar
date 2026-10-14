@@ -1202,7 +1202,7 @@ export function evaluateDiscardPilePickup(
       const isTightPairOrRun = hand.some(
         (h) => h.rank === topCard.rank || (h.suit === topCard.suit && Math.abs(h.rank - topCard.rank) <= 1)
       );
-      if (isDirectAdd || isTightPairOrRun || pileLength >= 2) {
+      if (isDirectAdd || (isTightPairOrRun && pileLength <= 2)) {
         return true;
       }
     } else if (options.personality === 'SMART_CHACHA') {
@@ -1229,8 +1229,6 @@ export function evaluateDiscardPilePickup(
       if (hand.length > 4 || pileLength >= 4) {
         return true;
       }
-    } else {
-      return true;
     }
   }
 
@@ -1263,10 +1261,6 @@ export function evaluateDiscardPilePickup(
       if (pileLength >= 5 && hand.length >= 4) {
         return true;
       }
-      break;
-
-    case 'THE_JADUGAR':
-      if (pileLength >= 4) return true;
       break;
   }
 
