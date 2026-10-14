@@ -80,6 +80,104 @@ describe('Bot Personality Strategies', () => {
       const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
       expect(plan.discardAction.cardId).toBe('c1');
     });
+
+    it('leaves a 3-card pile of disconnected junk to draw from stock deck when holding over 14 cards (hoarding ceiling)', () => {
+      const state = createTestState();
+      // 16 cards in hand (disconnected deadwood, no melds, no 2s, no Jokers)
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 8),
+        makeCard('h3', 'CLUBS', 12),
+        makeCard('h4', 'DIAMONDS', 6),
+        makeCard('h5', 'SPADES', 10),
+        makeCard('h6', 'HEARTS', 4),
+        makeCard('h7', 'CLUBS', 7),
+        makeCard('h8', 'DIAMONDS', 11),
+        makeCard('h9', 'SPADES', 13),
+        makeCard('h10', 'HEARTS', 6),
+        makeCard('h11', 'CLUBS', 9),
+        makeCard('h12', 'DIAMONDS', 4),
+        makeCard('h13', 'SPADES', 7),
+        makeCard('h14', 'HEARTS', 11),
+        makeCard('h15', 'CLUBS', 5),
+        makeCard('h16', 'DIAMONDS', 9),
+      ];
+      // 3-card pile of disconnected junk
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 8),
+        makeCard('dp3', 'HEARTS', 10),
+      ];
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('still takes a 3-card pile when holding over 14 cards if it contains a Joker or forms an immediate meld', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 8),
+        makeCard('h3', 'CLUBS', 12),
+        makeCard('h4', 'DIAMONDS', 6),
+        makeCard('h5', 'SPADES', 10),
+        makeCard('h6', 'HEARTS', 4),
+        makeCard('h7', 'CLUBS', 7),
+        makeCard('h8', 'DIAMONDS', 11),
+        makeCard('h9', 'SPADES', 13),
+        makeCard('h10', 'HEARTS', 6),
+        makeCard('h11', 'CLUBS', 9),
+        makeCard('h12', 'DIAMONDS', 8),
+        makeCard('h13', 'SPADES', 7),
+        makeCard('h14', 'HEARTS', 11),
+        makeCard('h15', 'CLUBS', 5),
+        makeCard('h16', 'DIAMONDS', 9),
+      ];
+
+      // Case A: 3-card pile containing a Joker
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('joker', null, 0, true),
+        makeCard('dp3', 'HEARTS', 10),
+      ];
+      let plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Case B: 3-card pile creating an immediate meld (8♦ + 9♦ + 10♦ pure run)
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'SPADES', 5),
+        makeCard('dp3', 'DIAMONDS', 10),
+      ];
+      plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('still takes a 3-card pile of junk when holding 12 cards (standard hoarding when <= 14 cards)', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 4),
+        makeCard('h2', 'HEARTS', 8),
+        makeCard('h3', 'CLUBS', 12),
+        makeCard('h4', 'DIAMONDS', 6),
+        makeCard('h5', 'SPADES', 10),
+        makeCard('h6', 'HEARTS', 4),
+        makeCard('h7', 'CLUBS', 7),
+        makeCard('h8', 'DIAMONDS', 11),
+        makeCard('h9', 'SPADES', 13),
+        makeCard('h10', 'HEARTS', 6),
+        makeCard('h11', 'CLUBS', 9),
+        makeCard('h12', 'DIAMONDS', 4),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 8),
+        makeCard('dp3', 'HEARTS', 10),
+      ];
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
   });
 
   describe('The Jadugar Strategy', () => {

@@ -1114,9 +1114,12 @@ export function evaluateDiscardPilePickup(
   }
 
   // 2. Fast Chachi specific personality rule:
-  // Hoards 3+ cards unconditionally, but on smaller piles ONLY takes if top card forms an extreme run (A-2-3 or A-K-Q)
+  // Discard hoarder with a ceiling at 14 cards.
+  // When <= 14 cards, hoards 3+ card piles unconditionally.
+  // On smaller piles (or when > 14 cards), takes if top card forms an extreme run (A-2-3 or A-K-Q).
+  // If > 14 cards, she stops blind-hoarding and falls through to Section 3 (immediate melds / table additions).
   if (options.personality === 'FAST_CHACHI') {
-    if (pileLength >= 3) return true;
+    if (hand.length <= 14 && pileLength >= 3) return true;
     const testHand = [...hand, topCard];
     const newMelds = findPotentialNewMelds(testHand, {
       requirePure: teamMelds.length === 0,
@@ -1127,7 +1130,8 @@ export function evaluateDiscardPilePickup(
         m.cards.some((c) => c.id === topCard.id) &&
         m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
     );
-    return hasExtremeMeld;
+    if (hasExtremeMeld) return true;
+    if (hand.length <= 14) return false;
   }
 
   // 3. Melds / Additions from whole pile
@@ -1153,6 +1157,11 @@ export function evaluateDiscardPilePickup(
     } else {
       return true;
     }
+  }
+
+  // Fast Chachi: past hoarding ceiling (> 14 cards), does not hoard or take loose connectors
+  if (options.personality === 'FAST_CHACHI') {
+    return false;
   }
 
   // 4. The Long-Term Guy: Sequence Value Specific Evaluation
