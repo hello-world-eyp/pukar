@@ -3,7 +3,7 @@
  * Dispatches turn decisions to the designated bot personality and maintains bot memory.
  * Pure TypeScript with zero DOM dependencies.
  */
-import { GameAction, GameState } from '../types';
+import { GameAction, GameState, isWildcard } from '../types';
 import { BotMemory, BotPersonality, BotTurnPlan } from './types';
 import { decideSmartChachaTurn } from './strategies/smart-chacha';
 import { decideTheJadugarTurn } from './strategies/the-jadugar';
@@ -96,7 +96,11 @@ export function decideBotTurn(
 
 /**
  * Chooses a Pukar deck when the bot claims a Pukar and multiple decks exist on the table.
- * Evaluates candidate melds in Deck 1 vs Deck 2 (etc.) to pick the best deck index.
+ * Adheres to realistic fair-play rules: Uncle Pukar decks on the table are face-down.
+ * The bot inspects only its own hand (Deck #0 already claimed).
+ * - If activePlayer.hand is strong (contains melds or wildcards), bot keeps Deck #0 (returns 0).
+ * - If activePlayer.hand is weak (0 melds and 0 wildcards), bot gambles by switching to an alternate deck (Deck 1, or 50/50 if multiple options exist).
+ * - Table decks (state.pukarPool) are never peeked or inspected.
  */
 export function selectBotPukarDeck(
   state: GameState,
@@ -105,23 +109,20 @@ export function selectBotPukarDeck(
 ): number {
   const activePlayer = state.players[botIndex];
   if (!activePlayer || !state.pukarPool || state.pukarPool.length === 0) {
-    return 0; // default keep Deck #1
+    return 0; // default keep Deck #0
   }
 
-  // Deck #1 is currently in activePlayer.hand (index 0)
-  // Alternative decks are in state.pukarPool[0] (deckIndex 1), pukarPool[1] (deckIndex 2)
-  const deck0Melds = findPotentialNewMelds(activePlayer.hand);
-  let bestScore = deck0Melds.length;
-  let bestIndex = 0;
+  // Fair-play privacy: bot only inspects its own hand (Deck #0 already claimed).
+  // Face-down Pukar decks on the table (state.pukarPool) are never inspected.
+  const hasWildcards = activePlayer.hand.some((c) => isWildcard(c));
+  const handMelds = findPotentialNewMelds(activePlayer.hand);
 
-  for (let i = 0; i < state.pukarPool.length; i++) {
-    const poolDeck = state.pukarPool[i];
-    const poolMelds = findPotentialNewMelds(poolDeck);
-    if (poolMelds.length > bestScore) {
-      bestScore = poolMelds.length;
-      bestIndex = i + 1; // 1-based deckIndex
-    }
+  // If hand contains a valid meld or wildcard, it is strong enough to keep Deck #0
+  if (hasWildcards || handMelds.length > 0) {
+    return 0;
   }
 
-  return bestIndex;
+  // If hand is weak (0 melds and 0 wildcards), gamble by switching to an alternate deck.
+  // When multiple decks exist in pukarPool, choose randomly among available alternate decks (e.g. 50/50).
+  return 1 + Math.floor(Math.random() * state.pukarPool.length);
 }

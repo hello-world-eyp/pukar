@@ -16,7 +16,7 @@ import {
   findPotentialAdditionsToMelds,
   evaluateDeadwoodAndDiscard,
 } from '../../../src/engine/bots/hand-analyzer';
-import { createInitialBotMemory } from '../../../src/engine/bots/bot-player';
+import { createInitialBotMemory, selectBotPukarDeck } from '../../../src/engine/bots/bot-player';
 
 describe('Bot Personality Strategies', () => {
   function makeCard(id: string, suit: Suit | null, rank: Rank, isNaturalJoker = false): Card {
@@ -2171,6 +2171,109 @@ describe('Bot Personality Strategies', () => {
 
       // Exactly 60 point difference from the relaxed connector penalty
       expect(normalS8Score - finalS8Score).toBe(60);
+    });
+  });
+
+  describe('Realistic Uncle Pukar Deck Selection (Fair-Play Information Privacy)', () => {
+    it('keeps Deck 0 when activePlayer.hand contains a valid meld even if alternative deck has more melds', () => {
+      const state = createTestState();
+      // Active player hand (Deck 0) contains 1 valid pure meld (SPADES 7, 8, 9) and disconnected deadwood
+      state.players[1].hand = [
+        makeCard('s7', 'SPADES', 7),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('d11', 'DIAMONDS', 11),
+      ];
+
+      // pukarPool[0] has 2 valid melds (in the cheating implementation, the bot would peek and choose deckIndex 1)
+      state.pukarPool = [
+        [
+          makeCard('p1', 'HEARTS', 3),
+          makeCard('p2', 'HEARTS', 4),
+          makeCard('p3', 'HEARTS', 5),
+          makeCard('p4', 'CLUBS', 10),
+          makeCard('p5', 'CLUBS', 11),
+          makeCard('p6', 'CLUBS', 12),
+        ],
+      ];
+
+      // Under fair play, bot cannot peek at pukarPool; its own hand already has a valid meld, so it keeps Deck 0
+      const chosenDeck = selectBotPukarDeck(state, 1, 'smart_chacha');
+      expect(chosenDeck).toBe(0);
+    });
+
+    it('keeps Deck 0 when activePlayer.hand contains a wildcard even if no melds are formed', () => {
+      const state = createTestState();
+      // Active player hand has a wildcard (rank 2) and deadwood (0 completed melds)
+      state.players[1].hand = [
+        makeCard('w2', 'HEARTS', 2),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('s7', 'SPADES', 7),
+        makeCard('d11', 'DIAMONDS', 11),
+        makeCard('h13', 'HEARTS', 13),
+      ];
+
+      // pukarPool has alternative decks with melds
+      state.pukarPool = [
+        [
+          makeCard('p1', 'HEARTS', 3),
+          makeCard('p2', 'HEARTS', 4),
+          makeCard('p3', 'HEARTS', 5),
+        ],
+      ];
+
+      // Bot values holding a wildcard and keeps Deck 0
+      const chosenDeck = selectBotPukarDeck(state, 1, 'smart_chacha');
+      expect(chosenDeck).toBe(0);
+    });
+
+    it('can switch to an alternate deck when activePlayer.hand contains 0 melds and 0 wildcards', () => {
+      const state = createTestState();
+      // Completely disconnected cards: 0 melds, 0 wildcards
+      state.players[1].hand = [
+        makeCard('c3', 'CLUBS', 3),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('c11', 'CLUBS', 11),
+        makeCard('s13', 'SPADES', 13),
+      ];
+
+      state.pukarPool = [
+        [makeCard('p1', 'HEARTS', 4), makeCard('p2', 'CLUBS', 6)],
+      ];
+
+      // With a weak hand (0 melds, 0 wildcards), human player gambles and switches to alternate deck
+      const chosenDeck = selectBotPukarDeck(state, 1, 'smart_chacha');
+      expect(chosenDeck).toBe(1);
+    });
+
+    it('works without reading pukarPool contents (e.g. proxying or freezing pukarPool cards)', () => {
+      const state = createTestState();
+      // Hand with a meld
+      state.players[1].hand = [
+        makeCard('s7', 'SPADES', 7),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+      ];
+
+      // Proxy pukarPool cards so any access to card contents throws an error
+      const forbiddenDeck = new Proxy([] as Card[], {
+        get(_target, prop) {
+          if (prop === 'length') return 13;
+          throw new Error(`Cheating attempt: inspected face-down pukarPool card property "${String(prop)}"`);
+        },
+      });
+
+      state.pukarPool = [forbiddenDeck];
+
+      // Must complete without reading face-down cards
+      expect(() => {
+        const choice = selectBotPukarDeck(state, 1, 'smart_chacha');
+        expect(choice).toBe(0);
+      }).not.toThrow();
     });
   });
 });
