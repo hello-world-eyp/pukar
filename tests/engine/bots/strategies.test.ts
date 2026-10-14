@@ -1327,6 +1327,68 @@ describe('Bot Personality Strategies', () => {
       expect(additions.some((a) => a.cardIds.includes('d2'))).toBe(false);
     });
 
+    it('protects 5- and 6-card clean runs from premature wildcard tainting when not close to Pukar', () => {
+      // 5-card clean run on table: 4♠-5♠-6♠-7♠-8♠
+      const tableMeld: Meld = {
+        id: 'meld-5-clean-spades',
+        type: 'RUN',
+        suit: 'SPADES',
+        team: 'B',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('s5', 'SPADES', 5),
+          makeCard('s6', 'SPADES', 6),
+          makeCard('s7', 'SPADES', 7),
+          makeCard('s8', 'SPADES', 8),
+        ],
+        slots: [
+          { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+          { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+          { card: makeCard('s7', 'SPADES', 7), representedRank: 7, isWildcard: false },
+          { card: makeCard('s8', 'SPADES', 8), representedRank: 8, isWildcard: false },
+        ],
+        isClean: true,
+        points: 0,
+      };
+
+      // 1. Bot has > 4 cards (5 cards) with a Natural Joker and deadwood cards
+      const handWithJoker = [
+        makeCard('nj1', null, 0, true), // Natural Joker
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('hj', 'HEARTS', 11),
+        makeCard('d4', 'DIAMONDS', 4),
+        makeCard('c6', 'CLUBS', 6),
+      ];
+
+      // Hand has > 4 cards (not close to Pukar) - Bot must NOT add the wildcard to the clean run
+      const additionsJoker = findPotentialAdditionsToMelds(handWithJoker, [tableMeld]);
+      expect(additionsJoker.some((a) => a.cardIds.includes('nj1'))).toBe(false);
+
+      // 2. Bot has > 4 cards with a suited 2 (acting as wildcard at 3♠ or 9♠) and deadwood
+      const handWithSuited2 = [
+        makeCard('s2', 'SPADES', 2), // Suited 2 acting as wildcard
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('hj', 'HEARTS', 11),
+        makeCard('d4', 'DIAMONDS', 4),
+        makeCard('c6', 'CLUBS', 6),
+      ];
+
+      const additionsSuited2 = findPotentialAdditionsToMelds(handWithSuited2, [tableMeld]);
+      expect(additionsSuited2.some((a) => a.cardIds.includes('s2'))).toBe(false);
+
+      // 3. When bot IS close to Pukar (isCloseToPukar = true), wildcards CAN be added
+      const additionsClose = findPotentialAdditionsToMelds(handWithJoker, [tableMeld], { isCloseToPukar: true });
+      expect(additionsClose.some((a) => a.cardIds.includes('nj1'))).toBe(true);
+
+      // 4. In FINAL_TURN, wildcards CAN be added to secure points
+      const additionsFinal = findPotentialAdditionsToMelds(handWithJoker, [tableMeld], {
+        isCloseToPukar: false,
+        isFinalTurn: true,
+      });
+      expect(additionsFinal.some((a) => a.cardIds.includes('nj1'))).toBe(true);
+    });
+
     it('bots do not randomly leave a 4-card discard pile when it contains connecting cards or sequence value', () => {
       const state = createTestState();
       state.players[1].hand = [

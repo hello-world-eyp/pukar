@@ -274,15 +274,18 @@ export function findPotentialNewMelds(
 export function findPotentialAdditionsToMelds(
   hand: Card[],
   tableMelds: Meld[],
-  options?: { isCloseToPukar?: boolean }
+  options?: { isCloseToPukar?: boolean; isFinalTurn?: boolean }
 ): CandidateAddition[] {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
+  const isFinalTurn = options?.isFinalTurn ?? false;
   const hasNaturalJokerInHand = hand.some((c) => isNaturalJoker(c));
   const additions: CandidateAddition[] = [];
 
   for (const meld of tableMelds) {
     const isCleanRun =
-      meld.type === 'RUN' && (meld.isClean === true || !meld.slots.some((s) => s.isWildcard));
+      meld.type === 'RUN' &&
+      meld.isClean !== false &&
+      (!meld.slots || !meld.slots.some((s) => s.isWildcard));
 
     // 1. Check single card additions
     for (const card of hand) {
@@ -301,8 +304,37 @@ export function findPotentialAdditionsToMelds(
         }
       }
 
+      // Guard: Do not add wildcards (Natural Jokers or 2s) to 5- or 6-card clean runs unless close to Pukar or in final turn.
+      // Preserves 200-pt Clean 7 and 500-pt Pure 13 opportunities.
+      if (
+        meld.type === 'RUN' &&
+        isCleanRun &&
+        meld.cards.length >= 5 &&
+        !isCloseToPukar &&
+        !isFinalTurn &&
+        isNaturalJoker(card)
+      ) {
+        continue;
+      }
+
       const validation = canAddCardsToMeld(meld, [card]);
       if (validation.valid) {
+        // If adding this card would make a 5- or 6-card clean run dirty, disallow it unless close to Pukar or in final turn
+        if (
+          meld.type === 'RUN' &&
+          isCleanRun &&
+          meld.cards.length >= 5 &&
+          !isCloseToPukar &&
+          !isFinalTurn
+        ) {
+          const wouldMakeDirty = validation.updatedSlots
+            ? validation.updatedSlots.some((s) => s.isWildcard)
+            : isWildcard(card);
+          if (wouldMakeDirty) {
+            continue;
+          }
+        }
+
         let score = 25;
         if (meld.type === 'RUN' && meld.suit) {
           if (card.rank === 2 && card.suit === meld.suit) {
@@ -337,8 +369,34 @@ export function findPotentialAdditionsToMelds(
             }
           }
 
+          if (
+            meld.type === 'RUN' &&
+            isCleanRun &&
+            meld.cards.length >= 5 &&
+            !isCloseToPukar &&
+            !isFinalTurn &&
+            pair.some((c) => isNaturalJoker(c))
+          ) {
+            continue;
+          }
+
           const validation = canAddCardsToMeld(meld, pair);
           if (validation.valid) {
+            if (
+              meld.type === 'RUN' &&
+              isCleanRun &&
+              meld.cards.length >= 5 &&
+              !isCloseToPukar &&
+              !isFinalTurn
+            ) {
+              const wouldMakeDirty = validation.updatedSlots
+                ? validation.updatedSlots.some((s) => s.isWildcard)
+                : pair.some((c) => isWildcard(c));
+              if (wouldMakeDirty) {
+                continue;
+              }
+            }
+
             let score = 55;
             if (meld.type === 'RUN' && meld.suit) {
               if (pair.some((c) => c.rank === 2 && c.suit === meld.suit)) {
@@ -374,7 +432,12 @@ function findCompletionSequence(
   fullHand: Card[],
   usedCardIds: Set<string>,
   targetCount: number,
-  options?: { disallowedCardId?: string; preserveDiscardCard?: boolean; isCloseToPukar?: boolean },
+  options?: {
+    disallowedCardId?: string;
+    preserveDiscardCard?: boolean;
+    isCloseToPukar?: boolean;
+    isFinalTurn?: boolean;
+  },
   depth = 0
 ): CandidateAddition[] | null {
   if (simMeld.cards.length >= targetCount) {
@@ -391,6 +454,7 @@ function findCompletionSequence(
 
   const adds = findPotentialAdditionsToMelds(remainingAvailable, [simMeld], {
     isCloseToPukar: options?.isCloseToPukar,
+    isFinalTurn: options?.isFinalTurn,
   });
   if (adds.length === 0) {
     return null;
@@ -449,13 +513,19 @@ function findCompletionSequence(
 export function findBestMeldPlan(
   hand: Card[],
   teamMelds: Meld[],
-  options?: { disallowedCardId?: string; preserveDiscardCard?: boolean; isCloseToPukar?: boolean }
+  options?: {
+    disallowedCardId?: string;
+    preserveDiscardCard?: boolean;
+    isCloseToPukar?: boolean;
+    isFinalTurn?: boolean;
+  }
 ): {
   meldsToPlay: CandidateMeld[];
   additionsToPlay: CandidateAddition[];
   usedCardIds: Set<string>;
 } {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
+  const isFinalTurn = options?.isFinalTurn ?? false;
   const requirePure = teamMelds.length === 0;
 
   const usedCardIds = new Set<string>();
@@ -565,7 +635,7 @@ export function findBestMeldPlan(
     const potentialAdditions = findPotentialAdditionsToMelds(
       remainingCards,
       virtualMelds,
-      { isCloseToPukar }
+      { isCloseToPukar, isFinalTurn }
     );
     if (potentialAdditions.length === 0) {
       break;
