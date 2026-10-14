@@ -67,12 +67,13 @@ export function decideTheLongTermGuyTurn(
       : undefined);
 
   const isDiscardPhase = state.phase === 'DISCARD' || state.turnPhase === 'DISCARD';
+  const isCloseToPukar = hand.length <= 3;
+  const isFinalTurn =
+    state.roundStatus === 'FINAL_TURN' || Boolean(state.lastTurnTriggeredByDeckExhaust);
   const usedCardIds = new Set<string>();
   const meldActions: GameAction[] = [];
 
   if (!isDiscardPhase) {
-    const isCloseToPukar = hand.length <= 3;
-
     // Step 2a: Additions to existing team sequences (iterative multi-pass with virtualMelds)
     // Feeds and expands existing team sequences towards Clean 7 and Pure 13 first!
     const virtualMelds: Meld[] = myTeamMelds.map((m) => ({
@@ -88,7 +89,7 @@ export function decideTheLongTermGuyTurn(
       const potentialAdditions = findPotentialAdditionsToMelds(
         remainingCards,
         virtualMelds,
-        { isCloseToPukar }
+        { isCloseToPukar, isFinalTurn }
       );
       if (potentialAdditions.length === 0) break;
 
@@ -171,6 +172,7 @@ export function decideTheLongTermGuyTurn(
     const candidateMelds = findPotentialNewMelds(remainingHand, {
       requirePure,
       isCloseToPukar,
+      isFinalTurn,
     });
     candidateMelds.sort((a, b) => b.score - a.score);
     tryAddMelds(candidateMelds);
@@ -182,6 +184,7 @@ export function decideTheLongTermGuyTurn(
       const dirtyMelds = findPotentialNewMelds(remainingHandAfterPure, {
         requirePure: false,
         isCloseToPukar,
+        isFinalTurn,
       });
       dirtyMelds.sort((a, b) => b.score - a.score);
       tryAddMelds(dirtyMelds);
@@ -191,7 +194,6 @@ export function decideTheLongTermGuyTurn(
   // 3. DISCARD PHASE DECISION
   const finalRemainingHand = hand.filter((c) => !usedCardIds.has(c.id));
   const opponentTeam = team === 'A' ? 'B' : 'A';
-  const isCloseToPukar = hand.length <= 3;
 
   const discardEval = evaluateDeadwoodAndDiscard(
     finalRemainingHand.length > 0 ? finalRemainingHand : hand,
@@ -201,6 +203,7 @@ export function decideTheLongTermGuyTurn(
       teamMelds: myTeamMelds,
       opponentMelds: state.melds[opponentTeam] || [],
       isCloseToPukar,
+      isFinalTurn,
     }
   );
 

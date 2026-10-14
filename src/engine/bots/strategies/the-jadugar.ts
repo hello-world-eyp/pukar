@@ -63,10 +63,13 @@ export function decideTheJadugarTurn(
       : undefined);
 
   const isCloseToPukar = hand.length <= 3;
+  const isFinalTurn =
+    state.roundStatus === 'FINAL_TURN' || Boolean(state.lastTurnTriggeredByDeckExhaust);
   const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
     disallowedCardId,
     preserveDiscardCard: true,
     isCloseToPukar,
+    isFinalTurn,
   });
   const meldActions: GameAction[] = [];
 
@@ -97,6 +100,7 @@ export function decideTheJadugarTurn(
       teamMelds: myTeamMelds,
       opponentMelds: state.melds[opponentTeam] || [],
       isCloseToPukar,
+      isFinalTurn,
     }
   );
 

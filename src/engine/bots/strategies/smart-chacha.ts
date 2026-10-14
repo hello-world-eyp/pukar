@@ -165,12 +165,15 @@ export function decideSmartChachaTurn(
 
   const isDiscardPhase = state.phase === 'DISCARD' || state.turnPhase === 'DISCARD';
   const isCloseToPukar = hand.length <= 3;
+  const isFinalTurn =
+    state.roundStatus === 'FINAL_TURN' || Boolean(state.lastTurnTriggeredByDeckExhaust);
   const meldPlan = isDiscardPhase
     ? { meldsToPlay: [], additionsToPlay: [], usedCardIds: new Set<string>() }
     : findBestMeldPlan(hand, myTeamMelds, {
         disallowedCardId,
         preserveDiscardCard: true,
         isCloseToPukar,
+        isFinalTurn,
       });
   const meldActions: GameAction[] = [];
 
@@ -316,6 +319,7 @@ export function decideSmartChachaTurn(
       teamMelds: myTeamMelds,
       opponentMelds: state.melds[opponentTeam] || [],
       isCloseToPukar,
+      isFinalTurn,
     }
   );
 

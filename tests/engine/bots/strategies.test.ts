@@ -11,7 +11,11 @@ import {
 import { decideTheJadugarTurn } from '../../../src/engine/bots/strategies/the-jadugar';
 import { decideFastChachiTurn } from '../../../src/engine/bots/strategies/fast-chachi';
 import { decideTheLongTermGuyTurn } from '../../../src/engine/bots/strategies/the-long-term-guy';
-import { findBestMeldPlan, findPotentialAdditionsToMelds } from '../../../src/engine/bots/hand-analyzer';
+import {
+  findBestMeldPlan,
+  findPotentialAdditionsToMelds,
+  evaluateDeadwoodAndDiscard,
+} from '../../../src/engine/bots/hand-analyzer';
 import { createInitialBotMemory } from '../../../src/engine/bots/bot-player';
 
 describe('Bot Personality Strategies', () => {
@@ -1953,6 +1957,220 @@ describe('Bot Personality Strategies', () => {
         expect(firstAction.meldId).toBe('meld-joker');
         expect(firstAction.cardIds).toEqual(['s5']);
       }
+    });
+  });
+
+  describe('Final Turn All-Out Dump Mode (Task 8)', () => {
+    it('when roundStatus is FINAL_TURN with hand length > 4, a bot adds a cross-suit 2 to a dirty table run', () => {
+      const state = createTestState();
+      state.roundStatus = 'FINAL_TURN';
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      const dirtyTableRun: Meld = {
+        id: 'meld-dirty-run',
+        type: 'RUN',
+        suit: 'SPADES',
+        team: 'B',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('s5', 'SPADES', 5),
+          makeCard('s6', 'SPADES', 6),
+        ],
+        slots: [
+          { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+          { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+        ],
+        isClean: false,
+        isPure: false,
+        points: 0,
+      };
+      state.melds['B'] = [dirtyTableRun];
+
+      // Bot hand has 5 cards (> 4, so not close to Pukar under normal rules)
+      state.players[1].hand = [
+        makeCard('d2', 'DIAMONDS', 2), // cross-suit 2
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('c4', 'CLUBS', 4),
+      ];
+
+      const memory = createEmptyMemory();
+      const plan = decideSmartChachaTurn(state, 1, memory);
+
+      // Must add the cross-suit 2 to the dirty table run
+      const addAction = plan.meldActions.find(
+        (a) => a.type === 'ADD_TO_MELD' && (a as any).meldId === 'meld-dirty-run'
+      );
+      expect(addAction).toBeDefined();
+      expect((addAction as any).cardIds).toContain('d2');
+    });
+
+    it('when roundStatus is FINAL_TURN, a bot can form a new dirty run using a cross-suit 2', () => {
+      const state = createTestState();
+      state.roundStatus = 'FINAL_TURN';
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      // Team B already has a pure run on table so opening requirement is satisfied
+      const existingPureRun: Meld = {
+        id: 'meld-pure-run',
+        type: 'RUN',
+        suit: 'HEARTS',
+        team: 'B',
+        cards: [
+          makeCard('h7', 'HEARTS', 7),
+          makeCard('h8', 'HEARTS', 8),
+          makeCard('h9', 'HEARTS', 9),
+        ],
+        slots: [
+          { card: makeCard('h7', 'HEARTS', 7), representedRank: 7, isWildcard: false },
+          { card: makeCard('h8', 'HEARTS', 8), representedRank: 8, isWildcard: false },
+          { card: makeCard('h9', 'HEARTS', 9), representedRank: 9, isWildcard: false },
+        ],
+        isClean: true,
+        isPure: true,
+        points: 0,
+      };
+      state.melds['B'] = [existingPureRun];
+
+      // Bot hand has 5 cards: s4, s5, and d2 (cross-suit 2), plus 2 deadwood cards
+      state.players[1].hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('d2', 'DIAMONDS', 2), // cross-suit 2
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('h12', 'HEARTS', 12),
+      ];
+
+      const memory = createEmptyMemory();
+      const plan = decideSmartChachaTurn(state, 1, memory);
+
+      // Must form the new dirty run [s4, s5, d2]
+      const newMeldAction = plan.meldActions.find((a) => a.type === 'PLAY_NEW_MELD');
+      expect(newMeldAction).toBeDefined();
+      expect((newMeldAction as any).cardIds.sort()).toEqual(['d2', 's4', 's5']);
+    });
+
+    it('when lastTurnTriggeredByDeckExhaust is true, bots also dump cross-suit 2 into table runs and new dirty runs', () => {
+      const state = createTestState();
+      state.roundStatus = 'PLAYING';
+      state.lastTurnTriggeredByDeckExhaust = true;
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      const dirtyTableRun: Meld = {
+        id: 'meld-dirty-run',
+        type: 'RUN',
+        suit: 'SPADES',
+        team: 'B',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('s5', 'SPADES', 5),
+          makeCard('s6', 'SPADES', 6),
+        ],
+        slots: [
+          { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+          { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+        ],
+        isClean: false,
+        isPure: false,
+        points: 0,
+      };
+      state.melds['B'] = [dirtyTableRun];
+
+      state.players[1].hand = [
+        makeCard('d2', 'DIAMONDS', 2),
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('c4', 'CLUBS', 4),
+      ];
+
+      const plan = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      const addAction = plan.meldActions.find(
+        (a) => a.type === 'ADD_TO_MELD' && (a as any).meldId === 'meld-dirty-run'
+      );
+      expect(addAction).toBeDefined();
+      expect((addAction as any).cardIds).toContain('d2');
+    });
+
+    it('The Long-Term Guy and Fast Chachi also dump cross-suit 2s during FINAL_TURN', () => {
+      const state = createTestState();
+      state.roundStatus = 'FINAL_TURN';
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      const existingPureRun: Meld = {
+        id: 'meld-pure-run',
+        type: 'RUN',
+        suit: 'HEARTS',
+        team: 'B',
+        cards: [
+          makeCard('h7', 'HEARTS', 7),
+          makeCard('h8', 'HEARTS', 8),
+          makeCard('h9', 'HEARTS', 9),
+        ],
+        slots: [
+          { card: makeCard('h7', 'HEARTS', 7), representedRank: 7, isWildcard: false },
+          { card: makeCard('h8', 'HEARTS', 8), representedRank: 8, isWildcard: false },
+          { card: makeCard('h9', 'HEARTS', 9), representedRank: 9, isWildcard: false },
+        ],
+        isClean: true,
+        isPure: true,
+        points: 0,
+      };
+      state.melds['B'] = [existingPureRun];
+
+      state.players[1].hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('d2', 'DIAMONDS', 2),
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('h12', 'HEARTS', 12),
+      ];
+
+      const ltgPlan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      const ltgMeldAction = ltgPlan.meldActions.find((a) => a.type === 'PLAY_NEW_MELD');
+      expect(ltgMeldAction).toBeDefined();
+      expect((ltgMeldAction as any).cardIds.sort()).toEqual(['d2', 's4', 's5']);
+
+      const fcPlan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      const fcMeldAction = fcPlan.meldActions.find((a) => a.type === 'PLAY_NEW_MELD');
+      expect(fcMeldAction).toBeDefined();
+      expect((fcMeldAction as any).cardIds.sort()).toEqual(['d2', 's4', 's5']);
+    });
+
+    it('relaxes connecting cards preservation penalty during evaluateDeadwoodAndDiscard when isFinalTurn is true', () => {
+      const hand = [
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9), // Connected cards (adjacent ranks)
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('d6', 'DIAMONDS', 6),
+        makeCard('h10', 'HEARTS', 10),
+      ];
+
+      // Normal turn (isCloseToPukar = false, isFinalTurn = false):
+      // Connected cards receive +60 preservation penalty
+      const normalEval = evaluateDeadwoodAndDiscard(hand, new Set(), {
+        isCloseToPukar: false,
+        isFinalTurn: false,
+      });
+      const normalS8Score = normalEval.discardScores.find((ds) => ds.card.id === 's8')!.score;
+
+      // Final turn (isCloseToPukar = false, isFinalTurn = true):
+      // Connected cards do NOT receive +60 preservation penalty
+      const finalTurnEval = evaluateDeadwoodAndDiscard(hand, new Set(), {
+        isCloseToPukar: false,
+        isFinalTurn: true,
+      });
+      const finalS8Score = finalTurnEval.discardScores.find((ds) => ds.card.id === 's8')!.score;
+
+      // Exactly 60 point difference from the relaxed connector penalty
+      expect(normalS8Score - finalS8Score).toBe(60);
     });
   });
 });

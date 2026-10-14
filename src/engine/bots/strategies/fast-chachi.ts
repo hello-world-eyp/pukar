@@ -63,10 +63,13 @@ export function decideFastChachiTurn(
       : undefined);
 
   const isCloseToPukar = hand.length <= 3;
+  const isFinalTurn =
+    state.roundStatus === 'FINAL_TURN' || Boolean(state.lastTurnTriggeredByDeckExhaust);
   const meldPlan = findBestMeldPlan(hand, myTeamMelds, {
     disallowedCardId,
     preserveDiscardCard: true,
     isCloseToPukar,
+    isFinalTurn,
   });
 
   // Sort candidate melds so that extreme runs (containing Ace/3 or Ace/King) come first.
@@ -112,6 +115,7 @@ export function decideFastChachiTurn(
       teamMelds: myTeamMelds,
       opponentMelds: state.melds[opponentTeam] || [],
       isCloseToPukar,
+      isFinalTurn,
     }
   );
 

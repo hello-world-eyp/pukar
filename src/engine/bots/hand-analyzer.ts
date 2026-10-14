@@ -31,6 +31,7 @@ export interface DiscardEvaluationOptions {
   teamMelds?: Meld[]; // Existing team melds on table
   opponentMelds?: Meld[]; // Opponent melds on table to prevent feeding
   isCloseToPukar?: boolean; // When true (<= 3 cards), relaxing connector holding to allow discarding out
+  isFinalTurn?: boolean;
 }
 
 export interface HandEvaluation {
@@ -48,7 +49,7 @@ export function findCandidateRunsInSuit(
   suitedCards: Card[],
   suit: Suit,
   wildcards: Card[],
-  options?: { isCloseToPukar?: boolean }
+  options?: { isCloseToPukar?: boolean; isFinalTurn?: boolean }
 ): CandidateMeld[] {
   const candidateMelds: CandidateMeld[] = [];
   const seenCardSets = new Set<string>();
@@ -130,7 +131,7 @@ export function findCandidateRunsInSuit(
         const crossSuit2s = wildcards.filter((c) => c.rank === 2 && c.suit !== suit);
 
         const allowCrossSuit2 =
-          Boolean(options?.isCloseToPukar) &&
+          (Boolean(options?.isCloseToPukar) || Boolean(options?.isFinalTurn)) &&
           suited2s.length === 0 &&
           naturalJokers.length === 0;
 
@@ -241,16 +242,17 @@ export function findCandidateSets(hand: Card[], wildcards: Card[]): CandidateMel
  */
 export function findPotentialNewMelds(
   hand: Card[],
-  options?: { requirePure?: boolean; isCloseToPukar?: boolean }
+  options?: { requirePure?: boolean; isCloseToPukar?: boolean; isFinalTurn?: boolean }
 ): CandidateMeld[] {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
+  const isFinalTurn = options?.isFinalTurn ?? false;
   const wildcards = hand.filter((c) => isWildcard(c));
   const candidateMelds: CandidateMeld[] = [];
 
   const suits: Suit[] = ['SPADES', 'HEARTS', 'DIAMONDS', 'CLUBS'];
   for (const suit of suits) {
     const suitedCards = hand.filter((c) => c.suit === suit);
-    const runs = findCandidateRunsInSuit(suitedCards, suit, wildcards, { isCloseToPukar });
+    const runs = findCandidateRunsInSuit(suitedCards, suit, wildcards, { isCloseToPukar, isFinalTurn });
     candidateMelds.push(...runs);
   }
 
@@ -299,7 +301,7 @@ export function findPotentialAdditionsToMelds(
         card.rank === 2 &&
         card.suit !== meld.suit
       ) {
-        if (!isCloseToPukar || isCleanRun || hasNaturalJokerInHand) {
+        if ((!isCloseToPukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
           continue;
         }
       }
@@ -367,7 +369,7 @@ export function findPotentialAdditionsToMelds(
             meld.suit &&
             pair.some((c) => c.rank === 2 && c.suit !== meld.suit)
           ) {
-            if (!isCloseToPukar || isCleanRun || hasNaturalJokerInHand) {
+            if ((!isCloseToPukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
               continue;
             }
           }
@@ -631,7 +633,11 @@ export function findBestMeldPlan(
   };
 
   const remainingHandForMelds = hand.filter((c) => !usedCardIds.has(c.id));
-  const potentialMelds = findPotentialNewMelds(remainingHandForMelds, { requirePure, isCloseToPukar });
+  const potentialMelds = findPotentialNewMelds(remainingHandForMelds, {
+    requirePure,
+    isCloseToPukar,
+    isFinalTurn,
+  });
   // Sort candidate melds by score descending
   potentialMelds.sort((a, b) => b.score - a.score);
   stageCandidateMelds(potentialMelds);
@@ -644,6 +650,7 @@ export function findBestMeldPlan(
     const dirtyMelds = findPotentialNewMelds(remainingHandForDirty, {
       requirePure: false,
       isCloseToPukar,
+      isFinalTurn,
     });
     dirtyMelds.sort((a, b) => b.score - a.score);
     stageCandidateMelds(dirtyMelds);
@@ -745,6 +752,7 @@ export function evaluateDeadwoodAndDiscard(
   const deadwood = hand.filter((c) => !committedCardIds.has(c.id));
   const pool = deadwood.length > 0 ? deadwood : hand;
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
+  const isFinalTurn = options?.isFinalTurn ?? false;
 
   const discardScores = pool.map((card) => {
     // Disallowed card (e.g. single drawn card this turn): strictly forbidden
@@ -910,7 +918,7 @@ export function evaluateDeadwoodAndDiscard(
         isDirectTeamAdd ||
         isTeamMeldNeighbor);
 
-    if (!isCloseToPukar && hasAnyConnection) {
+    if (!isCloseToPukar && !isFinalTurn && hasAnyConnection) {
       score += 60; // Strong penalty against discarding connecting cards when not close to Pukar!
     }
 
