@@ -4,7 +4,7 @@
  * Pure TypeScript with zero DOM dependencies.
  */
 import { Card, Meld, Suit, isNaturalJoker, isWildcard } from '../types';
-import { canAddCardsToMeld, doesCardMatchRank, validateNewMeld } from '../meld-validator';
+import { canAddCardsToMeld, doesCardMatchRank, evaluateMeldScore, validateNewMeld } from '../meld-validator';
 
 export interface CandidateMeld {
   cards: Card[];
@@ -837,11 +837,37 @@ export function evaluateDeadwoodAndDiscard(
 
     // 3. Opponent Table Melds: Does this card feed or extend opponent sequences/sets on table?
     let feedsOpponentMeld = false;
+    let completesOpponentPure13 = false;
+    let completesOpponentClean7 = false;
+    let completesOpponent7 = false;
+
     if (options?.opponentMelds) {
       for (const oppMeld of options.opponentMelds) {
-        if (canAddCardsToMeld(oppMeld, [card]).valid) {
+        const validation = canAddCardsToMeld(oppMeld, [card]);
+        if (validation.valid && validation.updatedSlots) {
           feedsOpponentMeld = true;
-          break;
+          const currentScore = evaluateMeldScore(oppMeld);
+          const oppMeldCards = oppMeld.cards || oppMeld.slots?.map((s) => s.card) || [];
+          const meldCardsWithoutPickedUp = validation.pickedUpCard
+            ? oppMeldCards.filter((c) => c.id !== validation.pickedUpCard!.id)
+            : oppMeldCards;
+          const nextScore = evaluateMeldScore({
+            ...oppMeld,
+            cards: [...meldCardsWithoutPickedUp, card],
+            slots: validation.updatedSlots,
+          });
+
+          if (
+            (nextScore.points === 500 && currentScore.points < 500) ||
+            (validation.updatedSlots.length === 13 && oppMeld.type === 'RUN' && nextScore.isPure13)
+          ) {
+            completesOpponentPure13 = true;
+            break;
+          } else if (nextScore.points === 200 && currentScore.points < 200) {
+            completesOpponentClean7 = true;
+          } else if (nextScore.isComplete7 && !currentScore.isComplete7) {
+            completesOpponent7 = true;
+          }
         }
         if (oppMeld.type === 'RUN' && card.suit && oppMeld.suit === card.suit) {
           const ranks = oppMeld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
@@ -854,7 +880,16 @@ export function evaluateDeadwoodAndDiscard(
               (card.rank === 14 && minR === 2)
             ) {
               feedsOpponentMeld = true;
-              break;
+              if (ranks.length === 12 && (oppMeld.isClean || !oppMeld.slots.some((s) => s.isWildcard))) {
+                completesOpponentPure13 = true;
+                break;
+              } else if (ranks.length === 6) {
+                if (oppMeld.isClean || !oppMeld.slots.some((s) => s.isWildcard)) {
+                  completesOpponentClean7 = true;
+                } else {
+                  completesOpponent7 = true;
+                }
+              }
             }
           }
         } else if (oppMeld.type === 'SET') {
@@ -864,12 +899,29 @@ export function evaluateDeadwoodAndDiscard(
             oppMeld.cards?.find((c) => !isWildcard(c))?.rank;
           if (setRank !== undefined && card.rank === setRank) {
             feedsOpponentMeld = true;
-            break;
+            if (oppMeld.slots.length === 6) {
+              const hasWildcard = oppMeld.slots.some((s) => s.isWildcard) || isWildcard(card);
+              if (hasWildcard) {
+                completesOpponent7 = true;
+              } else {
+                completesOpponentClean7 = true;
+              }
+            }
           }
         }
       }
     }
-    if (feedsOpponentMeld) {
+
+    if (completesOpponentPure13) {
+      score += 50000;
+      reason = 'Critical milestone denial: completes opponent 500-point Pure 13';
+    } else if (completesOpponentClean7) {
+      score += 2500;
+      reason = 'Milestone denial: completes opponent 200-point Clean 7';
+    } else if (completesOpponent7) {
+      score += 1200;
+      reason = 'Milestone denial: completes opponent 7-card sequence/set';
+    } else if (feedsOpponentMeld) {
       if (isLockdown) {
         score += 500;
         reason = 'Strict lockdown: feeds or connects to opponent table melds';

@@ -2668,6 +2668,217 @@ describe('Bot Personality Strategies', () => {
       expect(firstMeldCards).toContain('cj');
     });
   });
+
+  describe('Critical Milestone Denial: 500-Point Pure 13 & Clean 7 Protection', () => {
+    it('all bots strictly refuse to discard a card completing an opponent 500-point Pure 13 sequence when any alternative exists', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      // Opponent Team A has a 12-card Heart run (ranks 2, 4..14, missing natural 3 to become Pure 13 = 500 pts)
+      const heartsMeldCards: Card[] = [
+        makeCard('h2', 'HEARTS', 2),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h5', 'HEARTS', 5),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('h11', 'HEARTS', 11),
+        makeCard('h12', 'HEARTS', 12),
+        makeCard('h13', 'HEARTS', 13),
+        makeCard('h14', 'HEARTS', 14),
+      ];
+
+      state.melds.A = [
+        {
+          id: 'meld-opp-12c',
+          team: 'A',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: heartsMeldCards,
+          slots: [
+            { card: heartsMeldCards[0], representedRank: 3, isWildcard: true, representedSuit: 'HEARTS' },
+            ...heartsMeldCards.slice(1).map((c) => ({
+              card: c,
+              representedRank: c.rank,
+              isWildcard: false,
+              representedSuit: 'HEARTS' as const,
+            })),
+          ],
+          isClean: false,
+          isPure: false,
+          isPure13: false,
+          points: 100,
+        },
+        {
+          id: 'meld-opp-5s',
+          team: 'A',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: [
+            makeCard('s5', 'SPADES', 5),
+            makeCard('s6', 'SPADES', 6),
+            makeCard('s7', 'SPADES', 7),
+            makeCard('s8', 'SPADES', 8),
+            makeCard('s9', 'SPADES', 9),
+          ],
+          slots: [
+            { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false, representedSuit: 'SPADES' as const },
+            { card: makeCard('s6', 'SPADES', 6), representedRank: 6, isWildcard: false, representedSuit: 'SPADES' as const },
+            { card: makeCard('s7', 'SPADES', 7), representedRank: 7, isWildcard: false, representedSuit: 'SPADES' as const },
+            { card: makeCard('s8', 'SPADES', 8), representedRank: 8, isWildcard: false, representedSuit: 'SPADES' as const },
+            { card: makeCard('s9', 'SPADES', 9), representedRank: 9, isWildcard: false, representedSuit: 'SPADES' as const },
+          ],
+          isClean: true,
+          isPure: true,
+          isPure13: false,
+          points: 0,
+        },
+      ];
+      state.melds.B = [];
+
+      // Bot (Team B, Player 1) holds 3♥ (which would complete 500 pts for Opponent) and 4♠ (which feeds a non-critical meld)
+      state.players[1].hand = [
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('s4', 'SPADES', 4),
+      ];
+
+      const memory = createEmptyMemory();
+
+      // Test Fast Chachi (from the user's debug log report)
+      const planChachi = decideFastChachiTurn(state, 1, memory);
+      expect(planChachi.discardAction.cardId).toBe('s4');
+
+      // Test Smart Chacha
+      const planChacha = decideSmartChachaTurn(state, 1, memory);
+      expect(planChacha.discardAction.cardId).toBe('s4');
+
+      // Test The Jadugar
+      const planJadugar = decideTheJadugarTurn(state, 1, memory);
+      expect(planJadugar.discardAction.cardId).toBe('s4');
+
+      // Test The Long-Term Guy
+      const planLongTerm = decideTheLongTermGuyTurn(state, 1, memory);
+      expect(planLongTerm.discardAction.cardId).toBe('s4');
+    });
+
+    it('discards the 500-point card when it is the last card in hand (no alternatives available)', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      const heartsMeldCards: Card[] = [
+        makeCard('h2', 'HEARTS', 2),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h5', 'HEARTS', 5),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('h11', 'HEARTS', 11),
+        makeCard('h12', 'HEARTS', 12),
+        makeCard('h13', 'HEARTS', 13),
+        makeCard('h14', 'HEARTS', 14),
+      ];
+      state.melds.A = [
+        {
+          id: 'meld-opp-12c',
+          team: 'A',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: heartsMeldCards,
+          slots: [
+            { card: heartsMeldCards[0], representedRank: 3, isWildcard: true, representedSuit: 'HEARTS' },
+            ...heartsMeldCards.slice(1).map((c) => ({
+              card: c,
+              representedRank: c.rank,
+              isWildcard: false,
+              representedSuit: 'HEARTS' as const,
+            })),
+          ],
+          isClean: false,
+          isPure: false,
+          isPure13: false,
+          points: 100,
+        },
+      ];
+
+      // Hand has only 1 card left
+      state.players[1].hand = [makeCard('h3', 'HEARTS', 3)];
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('h3');
+    });
+
+    it('avoids discarding a card that completes an opponent Clean 7 (200 pts) sequence', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      // Opponent Team A has a 6-card Clean Club run (ranks 5, 6, 7, 8, 9, 10)
+      const clubMeldCards: Card[] = [
+        makeCard('c5', 'CLUBS', 5),
+        makeCard('c6', 'CLUBS', 6),
+        makeCard('c7', 'CLUBS', 7),
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('c9', 'CLUBS', 9),
+        makeCard('c10', 'CLUBS', 10),
+      ];
+      state.melds.A = [
+        {
+          id: 'meld-opp-6c',
+          team: 'A',
+          type: 'RUN',
+          suit: 'CLUBS',
+          cards: clubMeldCards,
+          slots: clubMeldCards.map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            isWildcard: false,
+            representedSuit: 'CLUBS' as const,
+          })),
+          isClean: true,
+          isPure: true,
+          isPure13: false,
+          points: 0,
+        },
+        {
+          id: 'meld-opp-4d',
+          team: 'A',
+          type: 'RUN',
+          suit: 'DIAMONDS',
+          cards: [
+            makeCard('d8', 'DIAMONDS', 8),
+            makeCard('d9', 'DIAMONDS', 9),
+            makeCard('d10', 'DIAMONDS', 10),
+            makeCard('dj', 'DIAMONDS', 11),
+          ],
+          slots: [
+            { card: makeCard('d8', 'DIAMONDS', 8), representedRank: 8, isWildcard: false, representedSuit: 'DIAMONDS' as const },
+            { card: makeCard('d9', 'DIAMONDS', 9), representedRank: 9, isWildcard: false, representedSuit: 'DIAMONDS' as const },
+            { card: makeCard('d10', 'DIAMONDS', 10), representedRank: 10, isWildcard: false, representedSuit: 'DIAMONDS' as const },
+            { card: makeCard('dj', 'DIAMONDS', 11), representedRank: 11, isWildcard: false, representedSuit: 'DIAMONDS' as const },
+          ],
+          isClean: true,
+          isPure: true,
+          isPure13: false,
+          points: 0,
+        },
+      ];
+
+      // Bot holds J♣ (completes Clean 7 = 200 pts) and Q♦ (feeds 4-card Diamond run to 5 cards, 0 pts)
+      state.players[1].hand = [
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('qd', 'DIAMONDS', 12),
+      ];
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(plan.discardAction.cardId).toBe('qd');
+    });
+  });
 });
 
 
