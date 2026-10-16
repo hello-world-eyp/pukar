@@ -187,7 +187,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </h2>
 
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6">
-                Challenge intelligent AI bots with distinct personalities: Smart Chacha, The Jadugar, Fast Chachi, and The long-term guy.
+                Challenge intelligent AI bots with distinct personalities: Sid, Heman, Chachi, and Harsh.
               </p>
 
               <div className="space-y-2 mb-6">

@@ -34,10 +34,10 @@ describe('Bot Mode UI Components & Integration', () => {
       expect(html).toContain('data-testid="select-bot-opponent-2"');
 
       // Verify bot names are displayed without strategy leaks
-      expect(html).toContain('Smart Chacha');
-      expect(html).toContain('The Jadugar');
-      expect(html).toContain('Fast Chachi');
-      expect(html).toContain('The long-term guy');
+      expect(html).toContain('Sid');
+      expect(html).toContain('Heman');
+      expect(html).toContain('Chachi');
+      expect(html).toContain('Harsh');
 
       // Ensure strategy details are NOT leaked in markup
       expect(html).not.toContain('discard hoarder');
@@ -112,22 +112,22 @@ describe('Bot Mode UI Components & Integration', () => {
     it('renders in-game table in BOTS mode with bot thinking banner when bot is active', () => {
       const initialState = dealInitialState(4, undefined, [
         'You',
-        'Fast Chachi',
-        'Smart Chacha',
-        'The long-term guy',
+        'Chachi',
+        'Sid',
+        'Harsh',
       ]);
 
       const botConfig: BotGameConfig = {
         playerCount: 4,
         seats: [
           { seatIndex: 0, name: 'You', personality: 'smart_chacha', isHuman: true },
-          { seatIndex: 1, name: 'Fast Chachi', personality: 'fast_chachi', isHuman: false },
-          { seatIndex: 2, name: 'Smart Chacha', personality: 'smart_chacha', isHuman: false },
-          { seatIndex: 3, name: 'The long-term guy', personality: 'the_long_term_guy', isHuman: false },
+          { seatIndex: 1, name: 'Chachi', personality: 'fast_chachi', isHuman: false },
+          { seatIndex: 2, name: 'Sid', personality: 'smart_chacha', isHuman: false },
+          { seatIndex: 3, name: 'Harsh', personality: 'the_long_term_guy', isHuman: false },
         ],
       };
 
-      // Set current player to bot (Seat 1: Fast Chachi)
+      // Set current player to bot (Seat 1: Chachi)
       initialState.currentPlayerIndex = 1;
       initialState.phase = 'DRAW';
 
@@ -149,25 +149,25 @@ describe('Bot Mode UI Components & Integration', () => {
 
       // Bot thinking banner is rendered
       expect(html).toContain('data-testid="bot-thinking-banner"');
-      expect(html).toContain('Fast Chachi');
+      expect(html).toContain('Chachi');
       expect(html).toContain('AI Turn');
     });
 
     it('does not render bot thinking banner when active turn belongs to human player (Seat 0)', () => {
       const initialState = dealInitialState(4, undefined, [
         'You',
-        'Fast Chachi',
-        'Smart Chacha',
-        'The long-term guy',
+        'Chachi',
+        'Sid',
+        'Harsh',
       ]);
 
       const botConfig: BotGameConfig = {
         playerCount: 4,
         seats: [
           { seatIndex: 0, name: 'You', personality: 'smart_chacha', isHuman: true },
-          { seatIndex: 1, name: 'Fast Chachi', personality: 'fast_chachi', isHuman: false },
-          { seatIndex: 2, name: 'Smart Chacha', personality: 'smart_chacha', isHuman: false },
-          { seatIndex: 3, name: 'The long-term guy', personality: 'the_long_term_guy', isHuman: false },
+          { seatIndex: 1, name: 'Chachi', personality: 'fast_chachi', isHuman: false },
+          { seatIndex: 2, name: 'Sid', personality: 'smart_chacha', isHuman: false },
+          { seatIndex: 3, name: 'Harsh', personality: 'the_long_term_guy', isHuman: false },
         ],
       };
 

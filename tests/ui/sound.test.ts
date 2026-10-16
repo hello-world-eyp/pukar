@@ -12,6 +12,7 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
   const mockOscillator = {
     type: 'sine',
     frequency: {
+      value: 0,
       setValueAtTime: vi.fn(),
       exponentialRampToValueAtTime: vi.fn(),
     },
@@ -133,18 +134,21 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
       playSound('draw');
 
       expect(mockOscillator.type).toBe('triangle');
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(320, 100);
-      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(520, 100.08);
-      expect(mockGain.gain.setValueAtTime).toHaveBeenCalledWith(0.08, 100);
-      expect(mockGain.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 100.08);
+      expect(mockOscillator.frequency.value).toBe(240);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(240, 100.015);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(340, 100.095);
+      expect(mockGain.gain.setValueAtTime).toHaveBeenCalledWith(0.001, 100.015);
+      expect(mockGain.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.08, 100.02);
+      expect(mockGain.gain.exponentialRampToValueAtTime).toHaveBeenCalledWith(0.001, 100.095);
     });
 
     it('plays "discard" sound with sine wave and descending frequency ramp', () => {
       playSound('discard');
 
       expect(mockOscillator.type).toBe('sine');
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(260, 100);
-      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(130, 100.07);
+      expect(mockOscillator.frequency.value).toBe(240);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(240, 100.015);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(120, 100.085);
     });
 
     it('plays "meld" sound with 3-note harmonic triad (C5, E5, G5)', () => {
@@ -152,9 +156,9 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
 
       // 3 oscillators created for triad
       expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(3);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(523.25, 100);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(659.25, 100.06);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(783.99, 100.12);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(523.25, 100.015);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(659.25, 100.075);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(783.99, 100.135);
     });
 
     it('plays "pukar" sound with heavy physical slam thud and celebratory chime', () => {
@@ -163,20 +167,20 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
       // 4 impact slam layers + 4 celebratory chime notes = 8 oscillators
       expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(8);
       // Sub-bass heavy thud impact
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(160, 100);
-      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(36, 100.38);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(160, 100.015);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(36, 100.395);
       // Table crunch resonance
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(260, 100);
-      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(45, 100.22);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(260, 100.015);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(45, 100.235);
       // Card snap transient
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(440, 100);
-      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(80, 100.08);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(440, 100.015);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(80, 100.095);
       // Table tremor rumble
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(60, 100);
-      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(28, 100.45);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(60, 100.015);
+      expect(mockOscillator.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(28, 100.465);
       // Trailing chime arpeggio
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(523.25, 100.12);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(1046.5, 100.33);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(523.25, 100.135);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(1046.5, 100.345);
     });
 
     it('plays "roundOver" grand victory chord arpeggio', () => {
@@ -184,16 +188,16 @@ describe('Sound Synthesizer (src/ui/sound.ts)', () => {
 
       expect(mockAudioContext.createOscillator).toHaveBeenCalledTimes(4);
       expect(mockOscillator.type).toBe('sine');
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(440, 100);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(880, 100.3);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(440, 100.015);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(880, 100.315);
     });
 
     it('plays "error" sound with buzzy sawtooth wave', () => {
       playSound('error');
 
       expect(mockOscillator.type).toBe('sawtooth');
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(160, 100);
-      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(120, 100.06);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(160, 100.015);
+      expect(mockOscillator.frequency.setValueAtTime).toHaveBeenCalledWith(120, 100.075);
     });
 
     it('gracefully handles missing window/AudioContext without throwing', () => {

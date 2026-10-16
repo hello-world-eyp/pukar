@@ -152,6 +152,6 @@ export function decideFastChachiTurn(
       cardId: cardToDiscard.id,
     },
     pukarDeckIndex: 0,
-    reasoning: 'Fast Chachi: Reckless hoarder with extreme run (A-2-3/A-K-Q) bias',
+    reasoning: 'Chachi: Reckless hoarder with extreme run (A-2-3/A-K-Q) bias',
   };
 }

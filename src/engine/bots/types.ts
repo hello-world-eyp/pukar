@@ -18,19 +18,19 @@ export interface BotProfile {
 export const BOT_PROFILES: Record<BotPersonality, BotProfile> = {
   smart_chacha: {
     id: 'smart_chacha',
-    name: 'Smart Chacha',
+    name: 'Sid',
   },
   the_jadugar: {
     id: 'the_jadugar',
-    name: 'The Jadugar',
+    name: 'Heman',
   },
   fast_chachi: {
     id: 'fast_chachi',
-    name: 'Fast Chachi',
+    name: 'Chachi',
   },
   the_long_term_guy: {
     id: 'the_long_term_guy',
-    name: 'The long-term guy',
+    name: 'Harsh',
   },
 };
 

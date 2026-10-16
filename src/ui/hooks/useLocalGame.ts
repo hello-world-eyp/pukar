@@ -258,12 +258,14 @@ export function useLocalGame({
         }
 
         // Detect Normal Joker pickup into hand
-        if (next.lastPickedUpCard) {
+        if (next.lastPickedUpCard && !currentGameState.lastPickedUpCard) {
           const actor = currentGameState.players[currentGameState.currentPlayerIndex];
           setJokerPickupBanner({
             playerName: actor?.name ?? `Player ${currentGameState.currentPlayerIndex + 1}`,
           });
-          triggerSound('meld');
+          if (action.type !== 'PLAY_NEW_MELD' && action.type !== 'ADD_TO_MELD') {
+            triggerSound('meld');
+          }
         }
 
         // Detect Pure 13-Card Sequence (500 pts) in local play

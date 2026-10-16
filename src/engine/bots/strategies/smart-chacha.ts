@@ -368,6 +368,6 @@ export function decideSmartChachaTurn(
       cardId: cardToDiscard.id,
     },
     pukarDeckIndex: 0,
-    reasoning: 'Smart Chacha: Strategic discard avoidance and opponent denial',
+    reasoning: 'Sid: Strategic discard avoidance and opponent denial',
   };
 }

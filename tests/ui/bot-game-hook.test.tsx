@@ -43,9 +43,9 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       playerCount: 4,
       seats: [
         { seatIndex: 0, name: 'You', personality: 'smart_chacha', isHuman: true },
-        { seatIndex: 1, name: 'Fast Chachi', personality: 'fast_chachi', isHuman: false },
-        { seatIndex: 2, name: 'Smart Chacha', personality: 'smart_chacha', isHuman: false },
-        { seatIndex: 3, name: 'The long-term guy', personality: 'the_long_term_guy', isHuman: false },
+        { seatIndex: 1, name: 'Chachi', personality: 'fast_chachi', isHuman: false },
+        { seatIndex: 2, name: 'Sid', personality: 'smart_chacha', isHuman: false },
+        { seatIndex: 3, name: 'Harsh', personality: 'the_long_term_guy', isHuman: false },
       ],
     };
   }
@@ -169,7 +169,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       );
 
       expect(result.botStatus).not.toBeNull();
-      expect(result.botStatus?.botName).toBe('Fast Chachi');
+      expect(result.botStatus?.botName).toBe('Chachi');
       expect(result.botStatus?.isThinking).toBe(true);
       expect(result.botStatus?.phase).toBe('DRAW');
     });
@@ -904,10 +904,10 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       const botConfig: BotGameConfig = {
         playerCount: 4,
         seats: [
-          { seatIndex: 0, name: 'Smart Chacha', personality: 'smart_chacha', isHuman: false },
-          { seatIndex: 1, name: 'Fast Chachi', personality: 'fast_chachi', isHuman: false },
+          { seatIndex: 0, name: 'Sid', personality: 'smart_chacha', isHuman: false },
+          { seatIndex: 1, name: 'Chachi', personality: 'fast_chachi', isHuman: false },
           { seatIndex: 2, name: 'You', personality: 'smart_chacha', isHuman: true },
-          { seatIndex: 3, name: 'The long-term guy', personality: 'the_long_term_guy', isHuman: false },
+          { seatIndex: 3, name: 'Harsh', personality: 'the_long_term_guy', isHuman: false },
         ],
       };
 
@@ -920,7 +920,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
         initialBotConfig: botConfig,
         initialPukarSlamEvent: {
           team: 'A',
-          playerName: 'Smart Chacha',
+          playerName: 'Sid',
           points: 50,
           playerIndex: 0,
         },
@@ -1073,7 +1073,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
         initialBotConfig: botConfig,
         initialPukarSlamEvent: {
           team: 'B',
-          playerName: 'Fast Chachi',
+          playerName: 'Chachi',
           points: 50,
           playerIndex: 1,
         },
@@ -1087,7 +1087,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       expect(pukarSlam).not.toBeNull();
       // In BOTS mode, autoDismissMs is 0 so it does not auto-dismiss
       expect(pukarSlam.props.autoDismissMs).toBe(0);
-      expect(pukarSlam.props.playerName).toBe('Fast Chachi');
+      expect(pukarSlam.props.playerName).toBe('Chachi');
       expect(pukarSlam.props.points).toBe(50);
     });
 

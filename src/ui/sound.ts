@@ -54,23 +54,28 @@ export function toggleSound(): boolean {
 
 export type SoundEffect = 'draw' | 'meld' | 'discard' | 'pukar' | 'error' | 'roundOver';
 
+// Lookahead buffer to prevent main-thread scheduling jitter, audio quantum underruns, and ramp pitch truncation
+export const AUDIO_SCHEDULE_LOOKAHEAD_SEC = 0.015;
+
 export function playSound(effect: SoundEffect): void {
   if (!soundEnabled) return;
 
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
-    const now = ctx.currentTime;
+    const now = ctx.currentTime + AUDIO_SCHEDULE_LOOKAHEAD_SEC;
 
     switch (effect) {
       case 'draw': {
-        // Crisp card-draw swoop
+        // Warm tactile card-slide swoosh (steady 240Hz -> 340Hz slide without piercing 520Hz whistle)
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(320, now);
-        osc.frequency.exponentialRampToValueAtTime(520, now + 0.08);
-        gain.gain.setValueAtTime(0.08, now);
+        osc.frequency.value = 240;
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(340, now + 0.08);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.005);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -84,9 +89,11 @@ export function playSound(effect: SoundEffect): void {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(260, now);
-        osc.frequency.exponentialRampToValueAtTime(130, now + 0.07);
-        gain.gain.setValueAtTime(0.1, now);
+        osc.frequency.value = 240;
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.07);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.1, now + 0.004);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -101,14 +108,17 @@ export function playSound(effect: SoundEffect): void {
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
+          const noteTime = now + idx * 0.06;
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
-          gain.gain.setValueAtTime(0.12, now + idx * 0.06);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.16);
+          osc.frequency.value = freq;
+          osc.frequency.setValueAtTime(freq, noteTime);
+          gain.gain.setValueAtTime(0.001, noteTime);
+          gain.gain.exponentialRampToValueAtTime(0.12, noteTime + 0.005);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.16);
           osc.connect(gain);
           gain.connect(ctx.destination);
-          osc.start(now + idx * 0.06);
-          osc.stop(now + idx * 0.06 + 0.16);
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.16);
         });
         break;
       }
@@ -120,6 +130,7 @@ export function playSound(effect: SoundEffect): void {
         const subOsc = ctx.createOscillator();
         const subGain = ctx.createGain();
         subOsc.type = 'sine';
+        subOsc.frequency.value = 160;
         subOsc.frequency.setValueAtTime(160, now);
         subOsc.frequency.exponentialRampToValueAtTime(36, now + 0.38);
         subGain.gain.setValueAtTime(0.75, now);
@@ -133,6 +144,7 @@ export function playSound(effect: SoundEffect): void {
         const crunchOsc = ctx.createOscillator();
         const crunchGain = ctx.createGain();
         crunchOsc.type = 'triangle';
+        crunchOsc.frequency.value = 260;
         crunchOsc.frequency.setValueAtTime(260, now);
         crunchOsc.frequency.exponentialRampToValueAtTime(45, now + 0.22);
         crunchGain.gain.setValueAtTime(0.55, now);
@@ -146,6 +158,7 @@ export function playSound(effect: SoundEffect): void {
         const snapOsc = ctx.createOscillator();
         const snapGain = ctx.createGain();
         snapOsc.type = 'triangle';
+        snapOsc.frequency.value = 440;
         snapOsc.frequency.setValueAtTime(440, now);
         snapOsc.frequency.exponentialRampToValueAtTime(80, now + 0.08);
         snapGain.gain.setValueAtTime(0.35, now);
@@ -159,6 +172,7 @@ export function playSound(effect: SoundEffect): void {
         const rumbleOsc = ctx.createOscillator();
         const rumbleGain = ctx.createGain();
         rumbleOsc.type = 'sine';
+        rumbleOsc.frequency.value = 60;
         rumbleOsc.frequency.setValueAtTime(60, now);
         rumbleOsc.frequency.exponentialRampToValueAtTime(28, now + 0.45);
         rumbleGain.gain.setValueAtTime(0.45, now);
@@ -175,6 +189,7 @@ export function playSound(effect: SoundEffect): void {
           const gain = ctx.createGain();
           const noteTime = now + 0.12 + idx * 0.07;
           osc.type = 'triangle';
+          osc.frequency.value = freq;
           osc.frequency.setValueAtTime(freq, noteTime);
           gain.gain.setValueAtTime(0.18, noteTime);
           gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.32);
@@ -192,14 +207,16 @@ export function playSound(effect: SoundEffect): void {
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
+          const noteTime = now + idx * 0.1;
           osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
-          gain.gain.setValueAtTime(0.14, now + idx * 0.1);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+          osc.frequency.value = freq;
+          osc.frequency.setValueAtTime(freq, noteTime);
+          gain.gain.setValueAtTime(0.14, noteTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.4);
           osc.connect(gain);
           gain.connect(ctx.destination);
-          osc.start(now + idx * 0.1);
-          osc.stop(now + idx * 0.1 + 0.4);
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.4);
         });
         break;
       }
@@ -209,6 +226,7 @@ export function playSound(effect: SoundEffect): void {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sawtooth';
+        osc.frequency.value = 160;
         osc.frequency.setValueAtTime(160, now);
         osc.frequency.setValueAtTime(120, now + 0.06);
         gain.gain.setValueAtTime(0.07, now);

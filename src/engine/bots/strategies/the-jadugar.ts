@@ -139,6 +139,6 @@ export function decideTheJadugarTurn(
       cardId: cardToDiscard.id,
     },
     pukarDeckIndex: 0,
-    reasoning: 'The Jadugar: High-velocity Pukar rush with selective stock-first draws',
+    reasoning: 'Heman: High-velocity Pukar rush with selective stock-first draws',
   };
 }

@@ -244,6 +244,6 @@ export function decideTheLongTermGuyTurn(
       cardId: cardToDiscard.id,
     },
     pukarDeckIndex: 0,
-    reasoning: 'The long-term guy: sequence expansion first and patient completion',
+    reasoning: 'Harsh: sequence expansion first and patient completion',
   };
 }
