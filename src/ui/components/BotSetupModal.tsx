@@ -35,13 +35,9 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
 
   if (!isOpen) return null;
 
-  const botOptions: { id: BotPersonality; name: string }[] = [
-    { id: 'smart_chacha', name: BOT_PROFILES.smart_chacha.name },
-    { id: 'the_jadugar', name: BOT_PROFILES.the_jadugar.name },
-    { id: 'fast_chachi', name: BOT_PROFILES.fast_chachi.name },
-    { id: 'the_long_term_guy', name: BOT_PROFILES.the_long_term_guy.name },
-    { id: 'cheetah', name: BOT_PROFILES.cheetah.name },
-  ];
+  const botOptions = (Object.keys(BOT_PROFILES) as BotPersonality[]).map(
+    (id) => BOT_PROFILES[id]
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -202,7 +198,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
               </div>
 
               {/* Seat 2 (Partner 1) */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label htmlFor="select-bot-partner-1" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Partner Bot
                 </label>
@@ -217,16 +213,20 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
-                        {opt.name}
+                        {opt.name} — {opt.title} ({opt.badge})
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-800/40 text-[11px] text-cyan-200 leading-snug">
+                  <span className="font-bold text-cyan-300 shrink-0">{BOT_PROFILES[seat2Personality].badge}</span>
+                  <span className="text-slate-300">{BOT_PROFILES[seat2Personality].description}</span>
                 </div>
               </div>
 
               {/* Seat 4 (Partner 2 if 6p) */}
               {playerCount === 6 && (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <label htmlFor="select-bot-partner-2" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     2nd Partner Bot
                   </label>
@@ -241,10 +241,14 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     >
                       {botOptions.map((opt) => (
                         <option key={opt.id} value={opt.id}>
-                          {opt.name}
+                          {opt.name} — {opt.title} ({opt.badge})
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-800/40 text-[11px] text-cyan-200 leading-snug">
+                    <span className="font-bold text-cyan-300 shrink-0">{BOT_PROFILES[seat4Personality].badge}</span>
+                    <span className="text-slate-300">{BOT_PROFILES[seat4Personality].description}</span>
                   </div>
                 </div>
               )}
@@ -258,7 +262,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
               </div>
 
               {/* Seat 1 (Opponent 1) */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label htmlFor="select-bot-opponent-1" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Opponent 1
                 </label>
@@ -273,15 +277,19 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
-                        {opt.name}
+                        {opt.name} — {opt.title} ({opt.badge})
                       </option>
                     ))}
                   </select>
                 </div>
+                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-800/40 text-[11px] text-amber-200 leading-snug">
+                  <span className="font-bold text-amber-300 shrink-0">{BOT_PROFILES[seat1Personality].badge}</span>
+                  <span className="text-slate-300">{BOT_PROFILES[seat1Personality].description}</span>
+                </div>
               </div>
 
               {/* Seat 3 (Opponent 2) */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1.5">
                 <label htmlFor="select-bot-opponent-2" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   Opponent 2
                 </label>
@@ -296,16 +304,20 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
-                        {opt.name}
+                        {opt.name} — {opt.title} ({opt.badge})
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-800/40 text-[11px] text-amber-200 leading-snug">
+                  <span className="font-bold text-amber-300 shrink-0">{BOT_PROFILES[seat3Personality].badge}</span>
+                  <span className="text-slate-300">{BOT_PROFILES[seat3Personality].description}</span>
                 </div>
               </div>
 
               {/* Seat 5 (Opponent 3 if 6p) */}
               {playerCount === 6 && (
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <label htmlFor="select-bot-opponent-3" className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     Opponent 3
                   </label>
@@ -320,10 +332,14 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     >
                       {botOptions.map((opt) => (
                         <option key={opt.id} value={opt.id}>
-                          {opt.name}
+                          {opt.name} — {opt.title} ({opt.badge})
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-800/40 text-[11px] text-amber-200 leading-snug">
+                    <span className="font-bold text-amber-300 shrink-0">{BOT_PROFILES[seat5Personality].badge}</span>
+                    <span className="text-slate-300">{BOT_PROFILES[seat5Personality].description}</span>
                   </div>
                 </div>
               )}

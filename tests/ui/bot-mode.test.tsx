@@ -186,5 +186,43 @@ describe('Bot Mode UI Components & Integration', () => {
 
       expect(html).not.toContain('data-testid="bot-thinking-banner"');
     });
+
+    it('renders Cheetah-specific lightning banner with [⚡ 30% Faster] and [⚡ Cheetah AI] during Cheetah turns', () => {
+      const initialState = dealInitialState(4, undefined, [
+        'You',
+        'Cheetah',
+        'Sid',
+        'Harsh',
+      ]);
+
+      const botConfig: BotGameConfig = {
+        playerCount: 4,
+        seats: [
+          { seatIndex: 0, name: 'You', personality: 'smart_chacha', isHuman: true },
+          { seatIndex: 1, name: 'Cheetah', personality: 'cheetah', isHuman: false },
+          { seatIndex: 2, name: 'Sid', personality: 'smart_chacha', isHuman: false },
+          { seatIndex: 3, name: 'Harsh', personality: 'the_long_term_guy', isHuman: false },
+        ],
+      };
+
+      // Set active turn to Cheetah (Seat 1)
+      initialState.currentPlayerIndex = 1;
+      initialState.phase = 'DRAW';
+
+      const html = renderToString(
+        <App
+          initialState={initialState}
+          initialMode="BOTS"
+          initialScreen="GAME"
+          initialBotConfig={botConfig}
+        />
+      );
+
+      // Verify Cheetah-specific banner elements
+      expect(html).toContain('data-testid="bot-thinking-banner"');
+      expect(html).toContain('Cheetah');
+      expect(html).toContain('[⚡ 30% Faster]');
+      expect(html).toContain('⚡ Cheetah AI');
+    });
   });
 });

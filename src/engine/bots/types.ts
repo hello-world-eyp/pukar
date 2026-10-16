@@ -14,28 +14,46 @@ export type BotPersonality =
 export interface BotProfile {
   id: BotPersonality;
   name: string;
+  title: string;
+  badge?: string;
+  description: string;
 }
 
 export const BOT_PROFILES: Record<BotPersonality, BotProfile> = {
   smart_chacha: {
     id: 'smart_chacha',
     name: 'Sid',
+    title: 'Smart Chacha',
+    badge: '🧠 Strategic Defense',
+    description: 'Master of lockdown defense. Protects clean runs and strictly prevents opponents from advancing when they hold 1–2 cards.',
   },
   the_jadugar: {
     id: 'the_jadugar',
     name: 'Heman',
+    title: 'The Jadugar',
+    badge: '⚡ Quick Melds',
+    description: 'Speed-runner who builds rapid 3-card melds, keeps deadwood to a minimum, and dumps cards quickly.',
   },
   fast_chachi: {
     id: 'fast_chachi',
     name: 'Chachi',
+    title: 'Fast Chachi',
+    badge: '👑 Extreme Cards',
+    description: 'Aggressive card hoarder who loves building around extreme cards (3s, Kings, Aces) with a safe 14-card ceiling.',
   },
   the_long_term_guy: {
     id: 'the_long_term_guy',
     name: 'Harsh',
+    title: 'The Long-Term Guy',
+    badge: '🎯 7+ Card Runs',
+    description: 'Patient master strategist who holds cards in reserve to construct massive 7+ card runs worth 200+ points.',
   },
   cheetah: {
     id: 'cheetah',
     name: 'Cheetah',
+    title: 'The Hyper-Speed Rusher',
+    badge: '⚡ 30% Faster',
+    description: 'Plays 30% faster than other bots. Aggressively rushes to Pukar with high-tempo melding and ignores defensive stall.',
   },
 };
 

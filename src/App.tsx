@@ -46,6 +46,7 @@ import {
   Trophy,
   Info,
   Bot,
+  Zap,
 } from 'lucide-react';
 
 export interface AppProps {
@@ -566,12 +567,23 @@ export function App({
           <div
             data-testid="bot-thinking-banner"
             role="status"
-            className="flex items-center justify-between gap-3 px-4 py-2 rounded-xl bg-indigo-950/90 border border-indigo-500/70 text-indigo-200 shadow-lg shadow-indigo-950/50 text-xs sm:text-sm animate-pulse"
+            className={`flex items-center justify-between gap-3 px-4 py-2 rounded-xl text-xs sm:text-sm shadow-lg ${
+              botStatus.personality === 'cheetah'
+                ? 'bg-amber-950/90 border border-amber-500/80 text-amber-200 shadow-amber-950/60'
+                : 'bg-indigo-950/90 border border-indigo-500/70 text-indigo-200 shadow-indigo-950/50 animate-pulse'
+            }`}
           >
             <div className="flex items-center gap-2">
-              <Bot className="w-4 h-4 text-indigo-400 shrink-0" />
+              {botStatus.personality === 'cheetah' ? (
+                <Zap className="w-4 h-4 text-amber-400 shrink-0 animate-bounce" />
+              ) : (
+                <Bot className="w-4 h-4 text-indigo-400 shrink-0" />
+              )}
               <span className="font-bold text-white">{botStatus.botName}</span>
-              <span className="text-indigo-300 font-medium">
+              <span className={botStatus.personality === 'cheetah' ? 'text-amber-300 font-medium' : 'text-indigo-300 font-medium'}>
+                {botStatus.personality === 'cheetah' && (
+                  <span className="font-bold text-amber-400 mr-1.5">[⚡ 30% Faster]</span>
+                )}
                 {botStatus.phase === 'DRAW'
                   ? 'is deciding whether to draw from stock or discard pile...'
                   : botStatus.phase === 'MELD'
@@ -579,8 +591,14 @@ export function App({
                   : 'is discarding a card to the pile...'}
               </span>
             </div>
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-              AI Turn
+            <span
+              className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                botStatus.personality === 'cheetah'
+                  ? 'bg-amber-500/25 text-amber-300 border border-amber-500/50'
+                  : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+              }`}
+            >
+              {botStatus.personality === 'cheetah' ? '⚡ Cheetah AI' : 'AI Turn'}
             </span>
           </div>
         )}
