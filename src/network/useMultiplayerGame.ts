@@ -6,8 +6,10 @@ import {
   saveSessionCredentials,
   getSessionCredentials,
   clearSessionCredentials,
+  getStoredPlayerName,
+  saveStoredPlayerName,
 } from './session-storage';
-import { ConnectionStatus, UseMultiplayerGameReturn } from './types';
+import { ConnectionStatus, UseMultiplayerGameReturn, StoredSession } from './types';
 
 export interface UseMultiplayerGameOptions {
   client?: SocketClient;
@@ -16,21 +18,82 @@ export interface UseMultiplayerGameOptions {
 }
 
 /**
+ * Synchronizes browser URL query parameters (?room=ABCD) using window.history.replaceState.
+ * Adds or updates ?room=ABCD when inside a room; clears the param when leaving or disconnecting.
+ */
+export function syncRoomUrl(roomCode: string | null): void {
+  try {
+    if (typeof window === 'undefined' || !window.history?.replaceState || !window.location) {
+      return;
+    }
+    const href = window.location.href || 'http://localhost/';
+    const url = new URL(href);
+    if (roomCode) {
+      const clean = roomCode.trim().toUpperCase();
+      if (url.searchParams.get('room') !== clean) {
+        url.searchParams.set('room', clean);
+        window.history.replaceState(null, '', url.toString());
+      }
+    } else {
+      if (url.searchParams.has('room')) {
+        url.searchParams.delete('room');
+        const newSearch = url.searchParams.toString();
+        const newUrl = `${url.pathname}${newSearch ? `?${newSearch}` : ''}${url.hash}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }
+  } catch {
+    // Defensive guard against restrictive environments
+  }
+}
+
+/**
+ * Retrieves valid stored session credentials for the current browsing context.
+ * If the current URL has a query parameter (?room=XXXX) that contradicts
+ * the stored session's roomCode, the stale session is discarded so the user
+ * is not incorrectly rejoined to an old room instead of the invited room.
+ */
+export function getContextualSessionCredentials(): StoredSession | null {
+  const stored = getSessionCredentials();
+  if (!stored) return null;
+
+  try {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const match = window.location.search.match(/[?&]room=([a-zA-Z0-9]{4})/i);
+      if (match) {
+        const urlRoom = match[1].toUpperCase();
+        if (stored.roomCode && stored.roomCode.toUpperCase() !== urlRoom) {
+          clearSessionCredentials();
+          return null;
+        }
+      }
+    }
+  } catch {
+    // Ignore URL parsing errors
+  }
+
+  return stored;
+}
+
+/**
  * Authoritative React hook managing real-time multiplayer lifecycle, room membership,
  * seating synchronization, game actions, and session resilience.
  */
 export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMultiplayerGameReturn {
+  const initialSession = getContextualSessionCredentials();
   const clientRef = useRef<SocketClient | null>(null);
-  const myPlayerIdRef = useRef<string | null>(null);
-  const roomCodeRef = useRef<string | null>(null);
+  const myPlayerIdRef = useRef<string | null>(initialSession?.playerId ?? null);
+  const roomCodeRef = useRef<string | null>(initialSession?.roomCode ?? null);
+  const myPlayerNameRef = useRef<string | null>(initialSession?.playerName || getStoredPlayerName() || null);
+  const prevStatusRef = useRef<ConnectionStatus>('DISCONNECTED');
 
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('DISCONNECTED');
-  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [roomCode, setRoomCode] = useState<string | null>(initialSession?.roomCode ?? null);
   const [isHost, setIsHost] = useState(false);
   const [lobbySeats, setLobbySeats] = useState<LobbySeat[]>([]);
   const [gameState, setGameState] = useState<SanitizedGameState | null>(null);
-  const [mySeatIndex, setMySeatIndex] = useState<number | null>(null);
-  const [myPlayerId, setMyPlayerId] = useState<string | null>(null);
+  const [mySeatIndex, setMySeatIndex] = useState<number | null>(initialSession?.seatIndex ?? null);
+  const [myPlayerId, setMyPlayerId] = useState<string | null>(initialSession?.playerId ?? null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isInGame, setIsInGame] = useState(false);
 
@@ -40,7 +103,28 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
     clientRef.current = client;
 
     const unsubStatus = client.onStatus((status) => {
+      const prevStatus = prevStatusRef.current;
+      prevStatusRef.current = status;
       setConnectionStatus(status);
+
+      // Auto-reconnection: when socket transitions to CONNECTED, auto-rejoin with stored sessionToken
+      if (status === 'CONNECTED' && prevStatus !== 'CONNECTED') {
+        const stored = getContextualSessionCredentials();
+        if (stored?.roomCode && stored?.sessionToken) {
+          const outbox = client.getOutboxQueue();
+          const hasPendingRoomEntry = outbox.some(
+            (m) => m.type === 'JOIN_ROOM' || m.type === 'CREATE_ROOM'
+          );
+          if (!hasPendingRoomEntry) {
+            client.send({
+              type: 'JOIN_ROOM',
+              roomCode: stored.roomCode,
+              playerName: stored.playerName || myPlayerNameRef.current || getStoredPlayerName() || 'Player',
+              sessionToken: stored.sessionToken,
+            });
+          }
+        }
+      }
     });
 
     const unsubMessage = client.onMessage((msg: ServerMessage) => {
@@ -53,11 +137,15 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
             setMyPlayerId(msg.playerId);
             myPlayerIdRef.current = msg.playerId;
             setMySeatIndex(msg.seatIndex);
+            syncRoomUrl(msg.roomCode);
+
+            const activeName = myPlayerNameRef.current || getStoredPlayerName() || undefined;
             saveSessionCredentials({
               roomCode: msg.roomCode,
               playerId: msg.playerId,
               sessionToken: msg.sessionToken,
               seatIndex: msg.seatIndex,
+              playerName: activeName,
             });
             break;
           }
@@ -141,13 +229,24 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
           case 'ERROR': {
             setErrorMessage(msg.message);
-            // Clear stale stored session if server rejected room or token
+            // Clear stale stored session and URL if server rejected room or token
             if (
               msg.code === 'JOIN_FAILED' ||
               msg.code === 'ROOM_NOT_FOUND' ||
-              msg.code === 'NOT_IN_ROOM'
+              msg.code === 'NOT_IN_ROOM' ||
+              msg.code === 'ROOM_FULL'
             ) {
               clearSessionCredentials();
+              syncRoomUrl(null);
+              setRoomCode(null);
+              roomCodeRef.current = null;
+              setIsHost(false);
+              setLobbySeats([]);
+              setGameState(null);
+              setIsInGame(false);
+              setMySeatIndex(null);
+              setMyPlayerId(null);
+              myPlayerIdRef.current = null;
             }
             break;
           }
@@ -166,6 +265,7 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
       }
     });
 
+
     if (options?.autoConnect !== false && !client.isConnected()) {
       client.connect();
     }
@@ -181,6 +281,8 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
   const createRoom = useCallback((playerName: string, playerCount: 4 | 6) => {
     setErrorMessage(null);
+    myPlayerNameRef.current = playerName.trim();
+    saveStoredPlayerName(playerName);
     clientRef.current?.clearOutbox();
     clientRef.current?.send({
       type: 'CREATE_ROOM',
@@ -196,6 +298,8 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
       return;
     }
     const cleanCode = roomCodeInput.trim().toUpperCase();
+    myPlayerNameRef.current = playerName.trim();
+    saveStoredPlayerName(playerName);
     const existing = getSessionCredentials();
     const sessionToken = existing?.roomCode === cleanCode ? existing.sessionToken : undefined;
 
@@ -240,6 +344,7 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
   const leaveRoom = useCallback(() => {
     clearSessionCredentials();
+    syncRoomUrl(null);
     clientRef.current?.clearOutbox();
     clientRef.current?.send({ type: 'LEAVE_ROOM' });
 
@@ -257,6 +362,13 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
   const clearError = useCallback(() => {
     setErrorMessage(null);
+  }, []);
+
+  const claimHost = useCallback(() => {
+    setErrorMessage(null);
+    clientRef.current?.send({
+      type: 'CLAIM_HOST',
+    });
   }, []);
 
   const isInLobby = roomCode !== null && !isInGame;
@@ -281,6 +393,7 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
       kickPlayer,
       leaveRoom,
       clearError,
+      claimHost,
     }),
     [
       connectionStatus,
@@ -301,6 +414,8 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
       kickPlayer,
       leaveRoom,
       clearError,
+      claimHost,
     ]
   );
 }
+

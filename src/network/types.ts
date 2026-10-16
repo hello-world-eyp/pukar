@@ -11,6 +11,7 @@ export interface StoredSession {
   playerId: string;
   sessionToken: string;
   seatIndex: number | null;
+  playerName?: string;
 }
 
 export interface UseMultiplayerGameReturn {
@@ -32,4 +33,6 @@ export interface UseMultiplayerGameReturn {
   kickPlayer: (seatIndex: number) => void;
   leaveRoom: () => void;
   clearError: () => void;
+  claimHost?: () => void;
 }
+

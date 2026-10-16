@@ -372,5 +372,29 @@ describe('TopNavBar Component - Comprehensive Audit & Edge Cases', () => {
       checkOverflow(false);
       expect(isAutoConsolidated).toBe(false);
     });
+
+    it('renders disconnect indicator dot for disconnected players in roster', () => {
+      const playersWithDisconnect = [
+        { id: 'p0', name: 'Alice', team: 'A' as const, cardCount: 13, isConnected: true },
+        { id: 'p1', name: 'Bob', team: 'B' as const, cardCount: 13, isConnected: false },
+        { id: 'p2', name: 'Charlie', team: 'A' as const, cardCount: 13, isConnected: true },
+        { id: 'p3', name: 'Dana', team: 'B' as const, cardCount: 13, isConnected: false },
+      ];
+
+      const html = renderToString(
+        <TopNavBar
+          activeTab="table"
+          onTabChange={() => {}}
+          onOpenRules={() => {}}
+          players={playersWithDisconnect}
+          currentPlayerIndex={0}
+        />
+      );
+
+      expect(html).toContain('data-testid="nav-player-disconnect-1"');
+      expect(html).toContain('data-testid="nav-player-disconnect-3"');
+      expect(html).not.toContain('data-testid="nav-player-disconnect-0"');
+      expect(html).not.toContain('data-testid="nav-player-disconnect-2"');
+    });
   });
 });

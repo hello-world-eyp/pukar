@@ -6,7 +6,9 @@ export interface PlayerInfo {
   name: string;
   team: 'A' | 'B';
   cardCount?: number;
+  isConnected?: boolean;
 }
+
 
 export interface TopNavBarProps {
   activeTab: 'table' | 'sequences' | 'scoreboard';
@@ -268,10 +270,20 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     title="Active Turn"
                   />
                 )}
+
+                {/* Disconnected Indicator Dot */}
+                {player.isConnected === false && (
+                  <span
+                    data-testid={`nav-player-disconnect-${originalIndex}`}
+                    className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse ml-0.5 shrink-0"
+                    title="Player Disconnected"
+                  />
+                )}
               </div>
             );
           })}
         </div>
+
 
         {/* Sound Toggle */}
         {onToggleMute && (

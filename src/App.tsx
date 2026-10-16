@@ -24,8 +24,10 @@ import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
 import { MainMenu } from './ui/components/MainMenu';
 import { MultiplayerHub } from './ui/components/multiplayer/MultiplayerHub';
 import { MultiplayerStatusBar } from './ui/components/multiplayer/MultiplayerStatusBar';
-import { useMultiplayerGame } from './network/useMultiplayerGame';
+import { useMultiplayerGame, syncRoomUrl } from './network/useMultiplayerGame';
+import { getSessionCredentials, clearSessionCredentials } from './network/session-storage';
 import { UseMultiplayerGameReturn } from './network/types';
+
 import { BotGameConfig } from './engine/bots/types';
 import {
   useGameAudio,
@@ -122,8 +124,17 @@ export function App({
   // ---------------------------------------------------------------------------
   // Application Mode & Navigation State
   // ---------------------------------------------------------------------------
+  const storedSession = useMemo(() => {
+    const creds = getSessionCredentials();
+    if (creds && detectedUrlRoomCode && creds.roomCode.toUpperCase() !== detectedUrlRoomCode.toUpperCase()) {
+      clearSessionCredentials();
+      return null;
+    }
+    return creds;
+  }, [detectedUrlRoomCode]);
+
   const [appMode, setAppMode] = useState<'LOCAL' | 'MULTIPLAYER' | 'BOTS'>(
-    initialMode ?? (detectedUrlRoomCode ? 'MULTIPLAYER' : 'LOCAL')
+    initialMode ?? (detectedUrlRoomCode || storedSession ? 'MULTIPLAYER' : 'LOCAL')
   );
   const [isModeModalOpen, setIsModeModalOpen] = useState(false);
   const [botConfig, setBotConfig] = useState<BotGameConfig | null>(initialBotConfig ?? null);
@@ -131,7 +142,7 @@ export function App({
 
   const defaultInitialScreen: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB' =
     initialScreen ??
-    (detectedUrlRoomCode
+    (detectedUrlRoomCode || storedSession
       ? 'MULTIPLAYER_HUB'
       : typeof window !== 'undefined' &&
         new URLSearchParams(window.location.search).get('screen') === 'game'
@@ -165,6 +176,14 @@ export function App({
       setCurrentScreen('GAME');
     }
   }, [appMode, multiplayerHook.isInGame]);
+
+  // Synchronize browser URL query parameters (?room=ABCD) with active multiplayer roomCode
+  useEffect(() => {
+    if (appMode === 'MULTIPLAYER' && multiplayerHook.roomCode) {
+      syncRoomUrl(multiplayerHook.roomCode);
+    }
+  }, [appMode, multiplayerHook.roomCode]);
+
 
   // ---------------------------------------------------------------------------
   // Custom Modular Hooks
@@ -425,12 +444,18 @@ export function App({
             activeTab={activeGameTab}
             onTabChange={setActiveGameTab}
             onOpenRules={() => setIsRulesModalOpen(true)}
-            players={activeGameState.players.map((p, idx) => ({
-              id: p.id || `p-${idx}`,
-              name: p.name,
-              team: p.team,
-              cardCount: (p as any).cardCount ?? (p.hand ? p.hand.length : 0),
-            }))}
+            players={activeGameState.players.map((p, idx) => {
+              const seat = isMultiplayerActive
+                ? multiplayerHook.lobbySeats.find((s) => s.seatIndex === idx)
+                : undefined;
+              return {
+                id: p.id || `p-${idx}`,
+                name: p.name,
+                team: p.team,
+                cardCount: (p as any).cardCount ?? (p.hand ? p.hand.length : 0),
+                isConnected: seat ? seat.isConnected : (p as any).isConnected !== false,
+              };
+            })}
             currentPlayerIndex={activeTurnIndex}
             isMuted={isMuted}
             onToggleMute={toggleMute}
@@ -445,6 +470,7 @@ export function App({
               if (isMultiplayerActive) {
                 multiplayerHook.leaveRoom();
               }
+              syncRoomUrl(null);
               setActiveGameTab('table');
               setCurrentScreen('MENU');
             }}
@@ -467,6 +493,7 @@ export function App({
           seatIndex={multiplayerHook.mySeatIndex}
           onLeave={() => {
             multiplayerHook.leaveRoom();
+            syncRoomUrl(null);
             setSelectedCardIds([]);
             setSelectedMeldId(null);
             setDisconnectToast(null);
@@ -479,6 +506,7 @@ export function App({
           }}
         />
       )}
+
 
       {/* =====================================================================
           NOTIFICATION & CELEBRATION BANNERS
@@ -697,10 +725,19 @@ export function App({
               players={activeGameState.players}
               viewedPlayerIndex={currentViewIndex}
               activeTurnIndex={activeTurnIndex}
+              playerConnections={
+                isMultiplayerActive
+                  ? activeGameState.players.map((_, idx) => {
+                      const seat = multiplayerHook.lobbySeats.find((s) => s.seatIndex === idx);
+                      return seat ? seat.isConnected : true;
+                    })
+                  : undefined
+              }
               onSelectPlayer={appMode === 'LOCAL' ? handleSwitchPlayer : undefined}
               isRippling={isTableRippling}
               hidePerimeterSeats={true}
             >
+
               {/* The Modern Wood & Cream Table Arena Mat */}
               <div
                 className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-5 table-cream-mat flex flex-col gap-3 sm:gap-3.5 shadow-2xl transition-transform ${

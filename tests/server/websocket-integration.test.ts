@@ -826,5 +826,130 @@ describe('Multiplayer WebSocket E2E Lifecycle & Server Integration', () => {
       await client.close();
       await secureServer.close();
     });
+
+    it('responds to application-level PING keepalive with PONG', async () => {
+      const port = serverInstance.port;
+      const client = await connectClient(port);
+
+      client.ws.send(JSON.stringify({ type: 'PING' }));
+      const pongMsg = await client.waitForMessage((m) => m.type === 'PONG');
+
+      expect(pongMsg.type).toBe('PONG');
+      expect((pongMsg as any).timestamp).toBeDefined();
+
+      await client.close();
+    });
+
+    it('processes CLAIM_HOST message over WebSocket and broadcasts updated lobby', async () => {
+      const port = serverInstance.port;
+      const host = await connectClient(port);
+      host.ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: 'AliceHost', playerCount: 4 }));
+      const r1 = await host.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      if (r1.type !== 'ROOM_JOINED') return;
+
+      const guest = await connectClient(port);
+      guest.ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode: r1.roomCode, playerName: 'BobGuest' }));
+      await guest.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      guest.ws.send(JSON.stringify({ type: 'SELECT_SEAT', seatIndex: 1 }));
+      await guest.waitForMessage(
+        (m) => m.type === 'LOBBY_UPDATE' && m.seats[1].playerId !== null
+      );
+
+      // Disconnect host
+      await host.close();
+
+      // Guest receives lobby update reflecting host disconnected
+      await guest.waitForMessage(
+        (m) => m.type === 'LOBBY_UPDATE' && m.seats[0].isConnected === false
+      );
+
+      // Guest sends CLAIM_HOST
+      guest.ws.send(JSON.stringify({ type: 'CLAIM_HOST' }));
+
+      // Guest receives lobby update with new host
+      const updatedLobby = await guest.waitForMessage(
+        (m) => m.type === 'LOBBY_UPDATE' && m.seats[1].isHost === true
+      );
+
+      expect(updatedLobby.type).toBe('LOBBY_UPDATE');
+      if (updatedLobby.type === 'LOBBY_UPDATE') {
+        expect(updatedLobby.seats[1].isHost).toBe(true);
+        expect(updatedLobby.seats[0].isHost).toBe(false);
+      }
+
+      await guest.close();
+    });
+
+    it('informs reconnected mid-game player about existing disconnected seats', async () => {
+      const port = serverInstance.port;
+
+      // Create room and fill 4 seats
+      const p1 = await connectClient(port);
+      p1.ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: 'Alice', playerCount: 4 }));
+      const r1 = await p1.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      if (r1.type !== 'ROOM_JOINED') return;
+      const roomCode = r1.roomCode;
+      const p1Token = r1.sessionToken;
+
+      const p2 = await connectClient(port);
+      p2.ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, playerName: 'Bob' }));
+      await p2.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      p2.ws.send(JSON.stringify({ type: 'SELECT_SEAT', seatIndex: 1 }));
+
+      const p3 = await connectClient(port);
+      p3.ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, playerName: 'Charlie' }));
+      await p3.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      p3.ws.send(JSON.stringify({ type: 'SELECT_SEAT', seatIndex: 2 }));
+
+      const p4 = await connectClient(port);
+      p4.ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, playerName: 'Dana' }));
+      await p4.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      p4.ws.send(JSON.stringify({ type: 'SELECT_SEAT', seatIndex: 3 }));
+
+      // Wait for all seats occupied
+      await p1.waitForMessage(
+        (m) => m.type === 'LOBBY_UPDATE' && m.seats.every((s) => s.playerId !== null)
+      );
+
+      // Start game
+      p1.ws.send(JSON.stringify({ type: 'START_GAME' }));
+      await p1.waitForMessage((m) => m.type === 'GAME_STARTED');
+      await p2.waitForMessage((m) => m.type === 'GAME_STARTED');
+
+      // Now Bob (seat 1) disconnects
+      await p2.close();
+      await p1.waitForMessage(
+        (m) => m.type === 'PLAYER_CONNECTION_CHANGED' && m.seatIndex === 1 && !m.isConnected
+      );
+
+      // Now Alice (p1) also disconnects
+      await p1.close();
+
+      // Alice reconnects with her sessionToken
+      const p1Reconnected = await connectClient(port);
+      p1Reconnected.ws.send(
+        JSON.stringify({
+          type: 'JOIN_ROOM',
+          roomCode,
+          playerName: 'Alice',
+          sessionToken: p1Token,
+        })
+      );
+
+      // Alice receives ROOM_JOINED, STATE_UPDATE, and PLAYER_CONNECTION_CHANGED for Bob (seat 1)
+      await p1Reconnected.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      await p1Reconnected.waitForMessage((m) => m.type === 'STATE_UPDATE');
+      const bobDisconnectStatus = await p1Reconnected.waitForMessage(
+        (m) => m.type === 'PLAYER_CONNECTION_CHANGED' && m.seatIndex === 1 && m.isConnected === false
+      );
+
+      expect(bobDisconnectStatus).toBeDefined();
+      expect((bobDisconnectStatus as any).seatIndex).toBe(1);
+      expect((bobDisconnectStatus as any).isConnected).toBe(false);
+
+      await p1Reconnected.close();
+      await p3.close();
+      await p4.close();
+    });
   });
 });

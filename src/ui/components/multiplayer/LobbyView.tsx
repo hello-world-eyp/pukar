@@ -12,6 +12,7 @@ export interface LobbyViewProps {
   onStartGame: () => void;
   onKickPlayer?: (seatIndex: number) => void;
   onLeaveLobby: () => void;
+  onClaimHost?: () => void;
 }
 
 export const LobbyView: React.FC<LobbyViewProps> = ({
@@ -24,6 +25,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   onStartGame,
   onKickPlayer,
   onLeaveLobby,
+  onClaimHost,
 }) => {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -31,6 +33,11 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
   const timerLinkRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const occupiedCount = seats.filter((s) => s.playerId !== null).length;
   const isFull = seats.length > 0 && occupiedCount === seats.length;
+  const isSeated = seats.some((s) => s.playerId !== null && s.playerId === myPlayerId);
+  const hostSeat = seats.find((s) => s.isHost);
+  const isHostDisconnected = hostSeat ? !hostSeat.isConnected : false;
+  const canClaimHost = !isHost && isSeated && isHostDisconnected && Boolean(onClaimHost);
+
 
   React.useEffect(() => {
     return () => {
@@ -156,6 +163,46 @@ export const LobbyView: React.FC<LobbyViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Notices & Banners */}
+      {canClaimHost && (
+        <div
+          data-testid="claim-host-banner"
+          className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-between gap-3 text-amber-200"
+        >
+          <div className="text-xs font-semibold">
+            The host has disconnected. You can claim the host role to manage this room and start the game.
+          </div>
+          <button
+            type="button"
+            data-testid="btn-claim-host"
+            onClick={onClaimHost}
+            className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-xs transition-colors shrink-0 cursor-pointer shadow"
+          >
+            Claim Host
+          </button>
+        </div>
+      )}
+
+      {isFull && !isSeated && (
+        <div
+          data-testid="lobby-full-notice"
+          className="p-3 rounded-2xl bg-stone-800/80 border border-stone-700 text-stone-300 text-xs font-medium flex items-center gap-2"
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+          <span>All player seats are filled. You are currently spectating this lobby.</span>
+        </div>
+      )}
+
+      {!isFull && !isSeated && (
+        <div
+          data-testid="unseated-prompt"
+          className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-medium flex items-center gap-2"
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+          <span>Select an open seat below to take your spot at the table!</span>
+        </div>
+      )}
 
       {/* Team Seating Grid */}
       <div>

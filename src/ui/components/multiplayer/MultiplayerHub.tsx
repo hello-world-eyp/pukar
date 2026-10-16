@@ -30,6 +30,7 @@ export const MultiplayerHub: React.FC<MultiplayerHubProps> = ({
     kickPlayer,
     leaveRoom,
     clearError,
+    claimHost,
   } = multiplayerHook;
 
   return (
@@ -70,6 +71,7 @@ export const MultiplayerHub: React.FC<MultiplayerHubProps> = ({
           onSelectSeat={selectSeat}
           onStartGame={startGame}
           onKickPlayer={kickPlayer}
+          onClaimHost={claimHost}
           onLeaveLobby={() => {
             leaveRoom();
             onBackToMenu();

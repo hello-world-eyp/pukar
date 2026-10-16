@@ -12,7 +12,9 @@ export interface JoinRoomSuccess {
 export interface JoinRoomFailure {
   success: false;
   error: string;
+  code?: string;
 }
+
 
 export type JoinRoomResult = JoinRoomSuccess | JoinRoomFailure;
 
@@ -39,6 +41,7 @@ export function sanitizePlayerName(rawName: unknown, defaultFallback: string = '
 }
 
 export class RoomManager {
+  public maxRoomSessions: number = 16;
   private rooms: Map<string, Room> = new Map();
   private socketToPlayer: Map<string, { roomCode: string; playerId: string }> = new Map();
 
@@ -129,6 +132,7 @@ export class RoomManager {
         hostPlayerId: hostId,
         createdAt: now,
         lastActivityAt: now,
+        hostDisconnectedAt: null,
         seats,
         sessions: new Map([[hostId, hostSession]]),
         tokenToPlayerId: new Map([[sessionToken, hostId]]),
@@ -190,6 +194,10 @@ export class RoomManager {
             room.seats[session.seatIndex].isConnected = true;
           }
 
+          if (playerId === room.hostPlayerId) {
+            room.hostDisconnectedAt = null;
+          }
+
           serverLogger.info('Player reconnected via token', {
             roomCode: cleanCode,
             playerId,
@@ -203,6 +211,12 @@ export class RoomManager {
         return { success: false, error: 'Game is already in progress' };
       }
 
+      // Reject new joiners if room has reached maximum session capacity (seats + spectators)
+      const maxSessions = this.maxRoomSessions ?? 16;
+      if (room.sessions.size >= maxSessions) {
+        return { success: false, error: 'Room is full', code: 'ROOM_FULL' };
+      }
+
       // If this socket was bound elsewhere, clean up before binding new player
       if (this.socketToPlayer.has(socketId)) {
         this.handleDisconnect(socketId);
@@ -211,6 +225,7 @@ export class RoomManager {
       // New player joining lobby
       const newPlayerId = `p_${crypto.randomUUID().slice(0, 8)}`;
       const newToken = crypto.randomUUID();
+
       const cleanName = sanitizePlayerName(playerName, 'Player');
 
       const newSession: PlayerSession = {
@@ -435,6 +450,7 @@ export class RoomManager {
       }
 
       room.hostPlayerId = newHostPlayerId;
+      room.hostDisconnectedAt = null;
 
       // Update seat isHost flags
       for (const seat of room.seats) {
@@ -455,6 +471,129 @@ export class RoomManager {
         error: err,
       });
       return false;
+    }
+  }
+
+  /**
+   * Checks all rooms in LOBBY status and automatically migrates host if the current host
+   * has been disconnected for more than hostTimeoutMs (default 30 seconds).
+   * Migrates to the next connected seated player, or any connected session in the room.
+   */
+  public checkLobbyHostMigration(
+    hostTimeoutMs: number = 30000
+  ): Array<{ roomCode: string; newHostId: string }> {
+    const migrated: Array<{ roomCode: string; newHostId: string }> = [];
+    const now = Date.now();
+
+    for (const room of this.rooms.values()) {
+      try {
+        if (room.status !== 'LOBBY') continue;
+
+        const currentHostSession = room.sessions.get(room.hostPlayerId);
+        const isHostConnected = currentHostSession?.isConnected === true;
+
+        if (isHostConnected) {
+          room.hostDisconnectedAt = null;
+          continue;
+        }
+
+        const disconnectedAt = room.hostDisconnectedAt || room.lastActivityAt || room.createdAt || now;
+        if (!room.hostDisconnectedAt) {
+          room.hostDisconnectedAt = disconnectedAt;
+        }
+
+        if (now - room.hostDisconnectedAt >= hostTimeoutMs) {
+          // 1. Next connected seated player (clockwise from host's seat)
+          const hostSession = room.sessions.get(room.hostPlayerId);
+          const hostSeatIdx = hostSession?.seatIndex ?? -1;
+          let candidateId: string | undefined;
+
+          if (hostSeatIdx >= 0) {
+            for (let i = 1; i < room.seats.length; i++) {
+              const seat = room.seats[(hostSeatIdx + i) % room.seats.length];
+              if (seat.playerId && seat.playerId !== room.hostPlayerId && seat.isConnected) {
+                candidateId = seat.playerId;
+                break;
+              }
+            }
+          }
+
+          if (!candidateId) {
+            const connectedSeated = room.seats.find(
+              (s) => s.playerId !== null && s.playerId !== room.hostPlayerId && s.isConnected
+            );
+            candidateId = connectedSeated?.playerId ?? undefined;
+          }
+
+          // 2. Fallback: any connected session in room
+          if (!candidateId) {
+            const connectedAny = Array.from(room.sessions.values()).find(
+              (s) => s.playerId !== room.hostPlayerId && s.isConnected
+            );
+            candidateId = connectedAny?.playerId;
+          }
+
+          if (candidateId) {
+            if (this.transferHost(room.roomCode, room.hostPlayerId, candidateId)) {
+              migrated.push({ roomCode: room.roomCode, newHostId: candidateId });
+            }
+          }
+        }
+      } catch (err) {
+        serverLogger.error('Error during checkLobbyHostMigration for room', {
+          roomCode: room.roomCode,
+          error: err,
+        });
+      }
+    }
+
+    return migrated;
+  }
+
+  /**
+   * Allows a connected player to claim host role if the current host is disconnected.
+   */
+  public claimHost(roomCode: string, playerId: string): { success: boolean; error?: string } {
+    try {
+      if (!roomCode || typeof roomCode !== 'string' || !playerId) {
+        return { success: false, error: 'Room code and player ID are required' };
+      }
+
+      const cleanCode = roomCode.trim().toUpperCase();
+      const room = this.rooms.get(cleanCode);
+      if (!room) {
+        return { success: false, error: 'Room not found' };
+      }
+
+      if (room.status !== 'LOBBY') {
+        return { success: false, error: 'Cannot claim host while game is in progress' };
+      }
+
+      const claimingSession = room.sessions.get(playerId);
+      if (!claimingSession || !claimingSession.isConnected) {
+        return { success: false, error: 'Player must be connected in room to claim host' };
+      }
+
+      // Idempotent
+      if (room.hostPlayerId === playerId) {
+        return { success: true };
+      }
+
+      const hostSession = room.sessions.get(room.hostPlayerId);
+      if (hostSession && hostSession.isConnected) {
+        return { success: false, error: 'Current host is still connected' };
+      }
+
+      const success = this.transferHost(cleanCode, room.hostPlayerId, playerId);
+      if (success) {
+        room.hostDisconnectedAt = null;
+        return { success: true };
+      }
+
+      return { success: false, error: 'Failed to claim host' };
+    } catch (err) {
+      serverLogger.error('Error claiming host', { roomCode, playerId, error: err });
+      return { success: false, error: 'Error claiming host' };
     }
   }
 
@@ -505,8 +644,14 @@ export class RoomManager {
         if (remainingSessions.length === 0) {
           this.destroyRoom(cleanCode);
         } else {
+          // Prefer connected seated player first, then connected session, then any remaining session
+          const connectedSeated = room.seats.find(
+            (s) => s.playerId !== null && s.playerId !== playerId && s.isConnected
+          );
           const nextHost =
-            remainingSessions.find((s) => s.isConnected) || remainingSessions[0];
+            (connectedSeated?.playerId ? room.sessions.get(connectedSeated.playerId) : undefined) ||
+            remainingSessions.find((s) => s.isConnected) ||
+            remainingSessions[0];
           this.transferHost(cleanCode, playerId, nextHost.playerId);
         }
       }
@@ -547,6 +692,9 @@ export class RoomManager {
         room.seats[session.seatIndex].isConnected = false;
       }
       room.lastActivityAt = Date.now();
+      if (playerId === room.hostPlayerId) {
+        room.hostDisconnectedAt = Date.now();
+      }
 
       serverLogger.warn('Player socket disconnected', { roomCode, playerId, socketId });
       return {
@@ -561,6 +709,7 @@ export class RoomManager {
       return { found: false };
     }
   }
+
 
   /**
    * Retrieves a room by its code (case-insensitive).

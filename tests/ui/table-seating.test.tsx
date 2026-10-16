@@ -139,5 +139,41 @@ describe('Table Seating & Relative Positioning', () => {
       expect(html).not.toContain('data-testid="table-seat-left"');
       expect(html).not.toContain('data-testid="table-seat-right"');
     });
+
+    it('renders disconnect indicator and avatar badge when isConnected is false', () => {
+      const html = renderToString(
+        <PlayerSeat
+          player={players4[1]}
+          playerIndex={1}
+          isTurn={false}
+          isViewed={false}
+          isTeammate={false}
+          seatPosition="right"
+          isConnected={false}
+        />
+      );
+
+      expect(html).toContain('data-testid="seat-disconnect-badge-1"');
+      expect(html).toContain('data-testid="avatar-disconnect-dot-1"');
+      expect(html).toContain('Disconnected');
+    });
+
+    it('forwards playerConnections map in TableSeating and renders disconnect badges on perimeter seats', () => {
+      const html = renderToString(
+        <TableSeating
+          players={players4}
+          viewedPlayerIndex={0}
+          activeTurnIndex={0}
+          playerConnections={{ 0: true, 1: false, 2: true, 3: false }}
+        />
+      );
+
+      // Player 2 is seatPosition right (index 1) - disconnected
+      expect(html).toContain('data-testid="seat-disconnect-badge-1"');
+      // Player 4 is seatPosition left (index 3) - disconnected
+      expect(html).toContain('data-testid="seat-disconnect-badge-3"');
+      // Player 3 is top (index 2) - connected
+      expect(html).not.toContain('data-testid="seat-disconnect-badge-2"');
+    });
   });
 });

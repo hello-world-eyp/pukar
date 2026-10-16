@@ -1,6 +1,6 @@
 import React from 'react';
 import { Player, SanitizedPlayer } from '../../engine/types';
-import { Shield, Layers } from 'lucide-react';
+import { Shield, Layers, WifiOff } from 'lucide-react';
 
 export type SeatPosition = 'left' | 'right' | 'top' | 'top-left' | 'top-right' | 'top-center' | 'bottom';
 
@@ -11,6 +11,7 @@ export interface RelativeSeatConfig {
   isTeammate: boolean;
   isTurn: boolean;
   isViewed: boolean;
+  isConnected: boolean;
 }
 
 export interface RelativeTableSeats {
@@ -29,7 +30,8 @@ export interface RelativeTableSeats {
 export function getRelativeTableSeats(
   players: Array<Player | SanitizedPlayer>,
   viewedIndex: number,
-  activeTurnIndex: number
+  activeTurnIndex: number,
+  playerConnections?: Record<number, boolean> | boolean[]
 ): RelativeTableSeats {
   try {
     const count = players.length;
@@ -42,6 +44,13 @@ export function getRelativeTableSeats(
 
     const createSeatConfig = (idx: number, pos: SeatPosition): RelativeSeatConfig => {
       const p = players[idx];
+      const isConnected =
+        playerConnections !== undefined
+          ? (Array.isArray(playerConnections)
+              ? playerConnections[idx] !== false
+              : (playerConnections as Record<number, boolean>)[idx] !== false)
+          : (p as any)?.isConnected !== false;
+
       return {
         player: p,
         playerIndex: idx,
@@ -49,6 +58,7 @@ export function getRelativeTableSeats(
         isTeammate: p?.team === viewedTeam,
         isTurn: idx === activeTurnIndex,
         isViewed: idx === viewedIndex,
+        isConnected,
       };
     };
 
@@ -97,6 +107,7 @@ export function getRelativeTableSeats(
       isTeammate: true,
       isTurn: false,
       isViewed: true,
+      isConnected: true,
     };
     return {
       bottomSeat: fallbackConfig,
@@ -107,6 +118,7 @@ export function getRelativeTableSeats(
   }
 }
 
+
 export interface PlayerSeatProps {
   player: Player | SanitizedPlayer;
   playerIndex: number;
@@ -114,6 +126,7 @@ export interface PlayerSeatProps {
   isTurn: boolean;
   isViewed: boolean;
   isTeammate: boolean;
+  isConnected?: boolean;
   onSelectPlayer?: (playerIndex: number) => void;
   className?: string;
   'data-testid'?: string;
@@ -127,6 +140,7 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
   isTurn,
   isViewed,
   isTeammate,
+  isConnected,
   onSelectPlayer,
   className = '',
   'data-testid': testId,
@@ -139,6 +153,9 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
       : 'cardCount' in player && typeof player.cardCount === 'number'
       ? player.cardCount
       : 0;
+
+  const connected =
+    isConnected !== undefined ? isConnected : (player as any)?.isConnected !== false;
 
   const rippleClass = isRippling ? 'animate-card-ripple' : '';
 
@@ -190,24 +207,48 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
             </span>
           </div>
 
-          {isTurn && (
-            <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
-              <span>Current Turn</span>
-            </span>
-          )}
+          <div className="flex items-center gap-1">
+            {!connected && (
+              <span
+                data-testid={`seat-disconnect-badge-${playerIndex}`}
+                className="text-xs font-black uppercase px-2 py-0.5 rounded bg-red-950/90 text-red-400 border border-red-600/60 flex items-center gap-1 shadow-sm animate-pulse"
+                title="Player Disconnected"
+              >
+                <WifiOff className="w-3 h-3 text-red-400" />
+                <span>Disconnected</span>
+              </span>
+            )}
+
+            {isTurn && (
+              <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm animate-pulse">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+                <span>Current Turn</span>
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Player Row: Avatar + Name + Card Count */}
         <div className="flex items-center gap-2.5">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md shrink-0 border-2 border-white ring-2 ${
-              isTeamA
-                ? 'ring-sky-300 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
-                : 'ring-amber-300 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
-            }`}
-          >
-            {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
+          <div className="relative shrink-0">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm shadow-md shrink-0 border-2 border-white ring-2 ${
+                isTeamA
+                  ? 'ring-sky-300 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
+                  : 'ring-amber-300 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
+              }`}
+            >
+              {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
+            </div>
+            {!connected && (
+              <span
+                data-testid={`avatar-disconnect-dot-${playerIndex}`}
+                className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-red-600 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-sm"
+                title="Disconnected"
+              >
+                !
+              </span>
+            )}
           </div>
 
           <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
@@ -277,25 +318,49 @@ export const PlayerSeat: React.FC<PlayerSeatProps> = ({
           </span>
         </div>
 
-        {isTurn && (
-          <span className="text-xs font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
-            <span>Current Turn</span>
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {!connected && (
+            <span
+              data-testid={`seat-disconnect-badge-${playerIndex}`}
+              className="text-xs font-black uppercase px-1.5 py-0.5 rounded bg-red-950/90 text-red-400 border border-red-600/60 flex items-center gap-1 shadow-sm animate-pulse"
+              title="Player Disconnected"
+            >
+              <WifiOff className="w-3 h-3 text-red-400" />
+              <span>Disconnected</span>
+            </span>
+          )}
+
+          {isTurn && (
+            <span className="text-xs font-black uppercase px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 flex items-center gap-1 shadow-sm animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-950" />
+              <span>Current Turn</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Main Seat Info: Avatar Circle + Name + Large Bold Card Count */}
       <div className="flex items-center gap-2.5">
         {/* Avatar circle */}
-        <div
-          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-sm sm:text-base shadow-md shrink-0 border-2 border-white ring-2 sm:ring-4 ${
-            isTeamA
-              ? 'ring-sky-400 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
-              : 'ring-amber-400 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
-          }`}
-        >
-          {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
+        <div className="relative shrink-0">
+          <div
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-black text-sm sm:text-base shadow-md shrink-0 border-2 border-white ring-2 sm:ring-4 ${
+              isTeamA
+                ? 'ring-sky-400 bg-gradient-to-br from-sky-500 to-blue-600 text-white'
+                : 'ring-amber-400 bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950'
+            }`}
+          >
+            {player.name ? player.name.charAt(0).toUpperCase() : `P${playerIndex + 1}`}
+          </div>
+          {!connected && (
+            <span
+              data-testid={`avatar-disconnect-dot-${playerIndex}`}
+              className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-red-600 border-2 border-white rounded-full flex items-center justify-center text-[8px] font-black text-white shadow-sm"
+              title="Disconnected"
+            >
+              !
+            </span>
+          )}
         </div>
 
         {/* Name and Card count */}
@@ -325,6 +390,7 @@ export interface TableSeatingProps {
   players: Array<Player | SanitizedPlayer>;
   viewedPlayerIndex: number;
   activeTurnIndex: number;
+  playerConnections?: Record<number, boolean> | boolean[];
   onSelectPlayer?: (playerIndex: number) => void;
   className?: string;
   children?: React.ReactNode;
@@ -336,6 +402,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
   players,
   viewedPlayerIndex,
   activeTurnIndex,
+  playerConnections,
   onSelectPlayer,
   className = '',
   children,
@@ -352,7 +419,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
     );
   }
 
-  const seats = getRelativeTableSeats(players, viewedPlayerIndex, activeTurnIndex);
+  const seats = getRelativeTableSeats(players, viewedPlayerIndex, activeTurnIndex, playerConnections);
 
   return (
     <div className={`relative w-full flex flex-col items-center gap-1.5 sm:gap-2 ${className}`}>
@@ -367,6 +434,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
               isTurn={seatConfig.isTurn}
               isViewed={seatConfig.isViewed}
               isTeammate={seatConfig.isTeammate}
+              isConnected={seatConfig.isConnected}
               onSelectPlayer={onSelectPlayer}
               data-testid={`table-seat-top-${index}`}
               isRippling={isRippling}
@@ -386,6 +454,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
             isTurn={seats.leftSeat.isTurn}
             isViewed={seats.leftSeat.isViewed}
             isTeammate={seats.leftSeat.isTeammate}
+            isConnected={seats.leftSeat.isConnected}
             onSelectPlayer={onSelectPlayer}
             data-testid="table-seat-left"
             isRippling={isRippling}
@@ -406,6 +475,7 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
             isTurn={seats.rightSeat.isTurn}
             isViewed={seats.rightSeat.isViewed}
             isTeammate={seats.rightSeat.isTeammate}
+            isConnected={seats.rightSeat.isConnected}
             onSelectPlayer={onSelectPlayer}
             data-testid="table-seat-right"
             isRippling={isRippling}
@@ -415,3 +485,4 @@ export const TableSeating: React.FC<TableSeatingProps> = ({
     </div>
   );
 };
+

@@ -7,23 +7,50 @@ export type StatusHandler = (status: ConnectionStatus) => void;
 export interface SocketClientOptions {
   url?: string;
   WebSocketClass?: any;
+  pingIntervalMs?: number;
 }
 
 const WS_OPEN_STATE = 1;
 
 /**
  * Resolves the default WebSocket endpoint based on environment.
- * In dev (e.g. Vite on port 5173 or dev NODE_ENV), targets port 3001.
+ * Prioritizes VITE_WS_URL if set.
+ * In dev (e.g. Vite on any port 517x, 4173, or 3000), targets port 3001.
  * In prod, uses the same host and wss/ws protocol.
  */
 export function resolveDefaultSocketUrl(): string {
   try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_WS_URL) {
+      // @ts-ignore
+      const envUrl = import.meta.env.VITE_WS_URL;
+      if (typeof envUrl === 'string' && envUrl.trim()) return envUrl.trim();
+    }
+  } catch {
+    // Ignore import.meta check error
+  }
+
+  try {
+    if (typeof process !== 'undefined' && process.env?.VITE_WS_URL) {
+      const envUrl = process.env.VITE_WS_URL;
+      if (typeof envUrl === 'string' && envUrl.trim()) return envUrl.trim();
+    }
+  } catch {
+    // Ignore process.env check error
+  }
+
+  try {
     if (typeof window !== 'undefined' && window.location) {
       const loc = window.location;
       const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-      const isDev =
+      const isViteDevPort =
+        /^51[7-9]\d$/.test(loc.port) ||
+        /^517\d+$/.test(loc.port) ||
         loc.port === '5173' ||
-        loc.port === '3000' ||
+        loc.port === '4173' ||
+        loc.port === '3000';
+      const isDev =
+        isViteDevPort ||
         (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development');
 
       const host = isDev ? `${loc.hostname || 'localhost'}:3001` : (loc.host || 'localhost:3001');
@@ -37,12 +64,14 @@ export function resolveDefaultSocketUrl(): string {
 
 /**
  * Robust WebSocket client with auto-reconnect backoff, an outbox queue,
- * safe frame parsing, and lifecycle subscriptions.
+ * periodic PING keepalive, safe frame parsing, and lifecycle subscriptions.
  */
 export class SocketClient {
   private ws: any = null;
   private readonly url: string;
   private readonly wsFactory: (targetUrl: string) => any;
+  private readonly pingIntervalMs: number;
+  private pingTimer: any = null;
   private messageHandlers: Set<MessageHandler> = new Set();
   private statusHandlers: Set<StatusHandler> = new Set();
   private reconnectAttempts = 0;
@@ -54,15 +83,18 @@ export class SocketClient {
   constructor(urlOrOptions?: string | SocketClientOptions) {
     let resolvedUrl: string | undefined;
     let customWsClass: any;
+    let customPingInterval: number | undefined;
 
     if (typeof urlOrOptions === 'string') {
       resolvedUrl = urlOrOptions;
     } else if (urlOrOptions && typeof urlOrOptions === 'object') {
       resolvedUrl = urlOrOptions.url;
       customWsClass = urlOrOptions.WebSocketClass;
+      customPingInterval = urlOrOptions.pingIntervalMs;
     }
 
     this.url = resolvedUrl || resolveDefaultSocketUrl();
+    this.pingIntervalMs = typeof customPingInterval === 'number' ? customPingInterval : 25000;
 
     this.wsFactory = (targetUrl: string) => {
       const WS =
@@ -74,6 +106,7 @@ export class SocketClient {
       return new WS(targetUrl);
     };
   }
+
 
   /**
    * Returns current connection status.
@@ -146,6 +179,7 @@ export class SocketClient {
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
         this.notifyStatus('CONNECTED');
+        this.startPingTimer();
         this.flushQueue();
       };
 
@@ -167,6 +201,7 @@ export class SocketClient {
       };
 
       this.ws.onclose = () => {
+        this.stopPingTimer();
         this.notifyStatus('DISCONNECTED');
         if (!this.isManuallyClosed) {
           this.scheduleReconnect();
@@ -288,10 +323,41 @@ export class SocketClient {
   }
 
   /**
+   * Starts periodic application-level PING keepalive.
+   */
+  private startPingTimer(): void {
+    this.stopPingTimer();
+    if (this.pingIntervalMs <= 0) return;
+
+    this.pingTimer = setInterval(() => {
+      if (this.isConnected()) {
+        try {
+          this.ws.send(JSON.stringify({ type: 'PING' }));
+        } catch (err) {
+          console.warn('[SocketClient] Failed to send PING keepalive:', err);
+        }
+      }
+    }, this.pingIntervalMs);
+
+    this.pingTimer.unref?.();
+  }
+
+  /**
+   * Cancels periodic application-level PING keepalive timer.
+   */
+  private stopPingTimer(): void {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
+  }
+
+  /**
    * Explicitly closes the socket and cancels any ongoing reconnect loop.
    */
   public close(): void {
     this.isManuallyClosed = true;
+    this.stopPingTimer();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -304,11 +370,12 @@ export class SocketClient {
    * Safely disengages event listeners and closes underlying socket.
    */
   private cleanupSocket(): void {
+    this.stopPingTimer();
     if (this.ws) {
       this.ws.onopen = null;
       this.ws.onmessage = null;
       this.ws.onclose = null;
-      this.ws.onerror = null;
+      this.ws.onerror = () => {};
       try {
         this.ws.close();
       } catch {
@@ -318,3 +385,4 @@ export class SocketClient {
     }
   }
 }
+

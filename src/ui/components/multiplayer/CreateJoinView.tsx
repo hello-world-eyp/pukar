@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PlusCircle, LogIn, Users, Wifi, WifiOff } from 'lucide-react';
+import { getStoredPlayerName, saveStoredPlayerName } from '../../../network/session-storage';
 
 export interface CreateJoinViewProps {
   onCreateRoom: (playerName: string, playerCount: 4 | 6) => void;
@@ -30,7 +31,7 @@ export const CreateJoinView: React.FC<CreateJoinViewProps> = ({
   };
 
   const [tab, setTab] = useState<'CREATE' | 'JOIN'>(initialTab);
-  const [playerName, setPlayerName] = useState(initialPlayerName);
+  const [playerName, setPlayerName] = useState(() => initialPlayerName || getStoredPlayerName());
   const [roomCode, setRoomCode] = useState(() => cleanRoomCode(initialRoomCode));
   const [playerCount, setPlayerCount] = useState<4 | 6>(initialPlayerCount);
 
@@ -43,14 +44,17 @@ export const CreateJoinView: React.FC<CreateJoinViewProps> = ({
   const handleCreate = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isCreateDisabled) return;
+    saveStoredPlayerName(trimmedName);
     onCreateRoom(trimmedName, playerCount);
   };
 
   const handleJoin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isJoinDisabled) return;
+    saveStoredPlayerName(trimmedName);
     onJoinRoom(trimmedCode, trimmedName);
   };
+
 
   return (
     <div
@@ -126,7 +130,11 @@ export const CreateJoinView: React.FC<CreateJoinViewProps> = ({
             maxLength={24}
             placeholder="Enter your name"
             value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
+            onChange={(e) => {
+              setPlayerName(e.target.value);
+              saveStoredPlayerName(e.target.value);
+            }}
+
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

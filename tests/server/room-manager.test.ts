@@ -689,4 +689,128 @@ describe('RoomManager', () => {
       expect(manager.getRoom(room.roomCode)).toBeUndefined();
     });
   });
+
+  describe('Lobby Host Migration & Room Capacity', () => {
+    it('automatically migrates host to next connected seated player after timeout in lobby', () => {
+      const { room, session: hostSession } = manager.createRoom('HostAlice', 4, 'sock_host');
+      const bob = manager.joinRoom(room.roomCode, 'Bob', 'sock_bob');
+      expect(bob.success).toBe(true);
+      if (!bob.success) return;
+      manager.claimSeat(room.roomCode, bob.session.playerId, 1);
+
+      // Disconnect host
+      manager.handleDisconnect('sock_host');
+      expect(room.hostDisconnectedAt).toBeDefined();
+
+      // Check migration before 30s threshold -> should not migrate yet
+      const noMigrate = manager.checkLobbyHostMigration(30000);
+      expect(noMigrate).toHaveLength(0);
+      expect(room.hostPlayerId).toBe(hostSession.playerId);
+
+      // Simulate 35 seconds elapsed since disconnect
+      room.hostDisconnectedAt = Date.now() - 35000;
+      const migrated = manager.checkLobbyHostMigration(30000);
+
+      expect(migrated).toHaveLength(1);
+      expect(migrated[0].newHostId).toBe(bob.session.playerId);
+      expect(room.hostPlayerId).toBe(bob.session.playerId);
+      expect(room.seats[1].isHost).toBe(true);
+      expect(room.seats[0].isHost).toBe(false);
+    });
+
+    it('does not migrate host if current host is still connected', () => {
+      const { room } = manager.createRoom('HostAlice', 4, 'sock_host');
+      const bob = manager.joinRoom(room.roomCode, 'Bob', 'sock_bob');
+      expect(bob.success).toBe(true);
+
+      const migrated = manager.checkLobbyHostMigration(1000);
+      expect(migrated).toHaveLength(0);
+    });
+
+    it('allows a connected player to claim host role if current host is disconnected', () => {
+      const { room } = manager.createRoom('HostAlice', 4, 'sock_host');
+      const bob = manager.joinRoom(room.roomCode, 'Bob', 'sock_bob');
+      expect(bob.success).toBe(true);
+      if (!bob.success) return;
+
+      // Bob tries to claim host while Alice is still connected -> rejected
+      const failClaim = manager.claimHost(room.roomCode, bob.session.playerId);
+      expect(failClaim.success).toBe(false);
+      expect(failClaim.error).toBe('Current host is still connected');
+
+      // Alice disconnects
+      manager.handleDisconnect('sock_host');
+
+      // Bob claims host -> succeeds
+      const claimResult = manager.claimHost(room.roomCode, bob.session.playerId);
+      expect(claimResult.success).toBe(true);
+      expect(room.hostPlayerId).toBe(bob.session.playerId);
+
+      // Bob claiming again is idempotent
+      const claimAgain = manager.claimHost(room.roomCode, bob.session.playerId);
+      expect(claimAgain.success).toBe(true);
+    });
+
+    it('migrates host to the clockwise next seated player around table relative to host seat', () => {
+      const { room } = manager.createRoom('HostAlice', 4, 'sock_host');
+      // Alice moves to seat 2
+      manager.claimSeat(room.roomCode, room.hostPlayerId, 2);
+
+      const bob = manager.joinRoom(room.roomCode, 'Bob', 'sock_bob');
+      if (bob.success) manager.claimSeat(room.roomCode, bob.session.playerId, 0);
+
+      const charlie = manager.joinRoom(room.roomCode, 'Charlie', 'sock_charlie');
+      if (charlie.success) manager.claimSeat(room.roomCode, charlie.session.playerId, 3);
+
+      // Alice disconnects from seat 2
+      manager.handleDisconnect('sock_host');
+      room.hostDisconnectedAt = Date.now() - 35000;
+
+      // Clockwise from seat 2 is seat 3 (Charlie), NOT seat 0 (Bob)
+      const migrated = manager.checkLobbyHostMigration(30000);
+      expect(migrated).toHaveLength(1);
+      if (charlie.success) {
+        expect(migrated[0].newHostId).toBe(charlie.session.playerId);
+        expect(room.hostPlayerId).toBe(charlie.session.playerId);
+        expect(room.seats[3].isHost).toBe(true);
+        expect(room.seats[0].isHost).toBe(false);
+      }
+    });
+
+    it('prioritizes connected seated players over unseated spectators when host leaves', () => {
+      const { room, session: hostSession } = manager.createRoom('HostAlice', 4, 'sock_host');
+      const spectator = manager.joinRoom(room.roomCode, 'Spectator', 'sock_spec');
+      const seatedGuest = manager.joinRoom(room.roomCode, 'SeatedBob', 'sock_seated');
+
+      expect(spectator.success).toBe(true);
+      expect(seatedGuest.success).toBe(true);
+      if (seatedGuest.success) {
+        manager.claimSeat(room.roomCode, seatedGuest.session.playerId, 1);
+      }
+
+      // Host leaves
+      manager.leaveRoom(room.roomCode, hostSession.playerId);
+
+      // SeatedBob should become host, NOT the unseated spectator
+      if (seatedGuest.success) {
+        expect(room.hostPlayerId).toBe(seatedGuest.session.playerId);
+        expect(room.seats[1].isHost).toBe(true);
+      }
+    });
+
+    it('rejects new players with ROOM_FULL code when maxRoomSessions capacity is reached', () => {
+      manager.maxRoomSessions = 2; // Host + 1 guest
+      const { room } = manager.createRoom('HostAlice', 4, 'sock_host');
+
+      const guest1 = manager.joinRoom(room.roomCode, 'Guest1', 'sock_g1');
+      expect(guest1.success).toBe(true);
+
+      const guest2 = manager.joinRoom(room.roomCode, 'Guest2', 'sock_g2');
+      expect(guest2.success).toBe(false);
+      if (!guest2.success) {
+        expect(guest2.code).toBe('ROOM_FULL');
+        expect(guest2.error).toBe('Room is full');
+      }
+    });
+  });
 });

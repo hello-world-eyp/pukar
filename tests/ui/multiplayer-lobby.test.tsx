@@ -7,6 +7,7 @@ import { LobbyView } from '../../src/ui/components/multiplayer/LobbyView';
 import { MultiplayerHub } from '../../src/ui/components/multiplayer/MultiplayerHub';
 import { LobbySeat } from '../../server/types';
 import { UseMultiplayerGameReturn } from '../../src/network/types';
+import { saveStoredPlayerName } from '../../src/network/session-storage';
 
 // Setup minimal React client dispatcher for direct hook-based element inspection in Node
 function setupReactHooks() {
@@ -397,6 +398,19 @@ describe('Multiplayer UI Components', () => {
       expect(preventDefault).toHaveBeenCalled();
       expect(onJoinRoom).toHaveBeenCalledWith('JOIN', 'Ivy');
     });
+
+    it('pre-fills playerName from localStorage via getStoredPlayerName() when initialPlayerName is omitted', () => {
+      saveStoredPlayerName('SavedLegend');
+
+      const tree = CreateJoinView({
+        onCreateRoom: vi.fn(),
+        onJoinRoom: vi.fn(),
+        isConnected: true,
+      });
+
+      const nameInput = findByTestId(tree, 'input-player-name');
+      expect(nameInput.props.value).toBe('SavedLegend');
+    });
   });
 
   /* ========================================================================
@@ -740,6 +754,71 @@ describe('Multiplayer UI Components', () => {
       leaveBtn.props.onClick();
       expect(onLeaveLobby).toHaveBeenCalledTimes(1);
     });
+
+    it('renders claim-host-banner and triggers onClaimHost when host is disconnected and viewer is seated non-host', () => {
+      const onClaimHost = vi.fn();
+      const seatsWithDisconnectedHost: LobbySeat[] = [
+        { seatIndex: 0, playerId: 'p1', playerName: 'Alice', team: 'A', isConnected: false, isHost: true },
+        { seatIndex: 1, playerId: 'p2', playerName: 'Bob', team: 'B', isConnected: true, isHost: false },
+        { seatIndex: 2, playerId: null, playerName: null, team: 'A', isConnected: false, isHost: false },
+        { seatIndex: 3, playerId: null, playerName: null, team: 'B', isConnected: false, isHost: false },
+      ];
+
+      const tree = LobbyView({
+        roomCode: 'HOST1',
+        seats: seatsWithDisconnectedHost,
+        myPlayerId: 'p2',
+        isHost: false,
+        onSelectSeat: vi.fn(),
+        onStartGame: vi.fn(),
+        onLeaveLobby: vi.fn(),
+        onClaimHost,
+      });
+
+      const claimBanner = findByTestId(tree, 'claim-host-banner');
+      expect(claimBanner).not.toBeNull();
+
+      const claimBtn = findByTestId(tree, 'btn-claim-host');
+      expect(claimBtn).not.toBeNull();
+      claimBtn.props.onClick();
+      expect(onClaimHost).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders lobby-full-notice when all seats are occupied and viewer is not seated', () => {
+      const tree = LobbyView({
+        roomCode: 'FULL1',
+        seats: fullSeats4p,
+        myPlayerId: 'p_spectator',
+        isHost: false,
+        onSelectSeat: vi.fn(),
+        onStartGame: vi.fn(),
+        onLeaveLobby: vi.fn(),
+      });
+
+      const fullNotice = findByTestId(tree, 'lobby-full-notice');
+      expect(fullNotice).not.toBeNull();
+
+      const unseatedPrompt = findByTestId(tree, 'unseated-prompt');
+      expect(unseatedPrompt).toBeNull();
+    });
+
+    it('renders unseated-prompt when seats are available and viewer is not seated', () => {
+      const tree = LobbyView({
+        roomCode: 'OPEN1',
+        seats: mockSeats4p,
+        myPlayerId: 'p_new',
+        isHost: false,
+        onSelectSeat: vi.fn(),
+        onStartGame: vi.fn(),
+        onLeaveLobby: vi.fn(),
+      });
+
+      const unseatedPrompt = findByTestId(tree, 'unseated-prompt');
+      expect(unseatedPrompt).not.toBeNull();
+
+      const fullNotice = findByTestId(tree, 'lobby-full-notice');
+      expect(fullNotice).toBeNull();
+    });
   });
 
   /* ========================================================================
@@ -765,6 +844,7 @@ describe('Multiplayer UI Components', () => {
       kickPlayer: vi.fn(),
       leaveRoom: vi.fn(),
       clearError: vi.fn(),
+      claimHost: vi.fn(),
       ...overrides,
     });
 
@@ -895,6 +975,25 @@ describe('Multiplayer UI Components', () => {
       expect(createJoinView).toBeDefined();
       expect(createJoinView.props.initialRoomCode).toBe('WXYZ');
       expect(createJoinView.props.initialTab).toBe('JOIN');
+    });
+
+    it('passes claimHost from multiplayerHook down to LobbyView as onClaimHost', () => {
+      const claimHostMock = vi.fn();
+      const mockHook = createMockHook({
+        isInLobby: true,
+        roomCode: 'HOST',
+        lobbySeats: [{ seatIndex: 0, playerId: 'p1', playerName: 'Alice', team: 'A', isConnected: true, isHost: true }],
+        claimHost: claimHostMock,
+      });
+
+      const tree = MultiplayerHub({
+        onBackToMenu: vi.fn(),
+        multiplayerHook: mockHook,
+      });
+
+      const lobbyView = (tree as any).props.children[1];
+      expect(lobbyView.type).toBe(LobbyView);
+      expect(lobbyView.props.onClaimHost).toBe(claimHostMock);
     });
   });
 });

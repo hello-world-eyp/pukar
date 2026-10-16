@@ -12,7 +12,11 @@ import {
   SocketClient,
   resolveDefaultSocketUrl,
 } from '../../src/network/socket-client';
-import { useMultiplayerGame } from '../../src/network/useMultiplayerGame';
+import {
+  useMultiplayerGame,
+  syncRoomUrl,
+  getContextualSessionCredentials,
+} from '../../src/network/useMultiplayerGame';
 import { startServer } from '../../server/server';
 import { ServerMessage, ClientMessage, LobbySeat } from '../../server/types';
 import { SanitizedGameState } from '../../src/engine/types';
@@ -363,20 +367,37 @@ describe('SocketClient', () => {
       expect(client.getUrl()).toBe('ws://my-custom-host:8080');
     });
 
-    it('resolves port 3001 in dev when window.location.port is 5173', () => {
+    it('resolves port 3001 in dev when window.location.port is 5173, 5174, 5175, 4173, or 3000', () => {
       const originalLoc = window.location;
       delete (window as any).location;
-      (window as any).location = {
-        protocol: 'http:',
-        hostname: '192.168.1.10',
-        port: '5173',
-        host: '192.168.1.10:5173',
-      };
 
-      const resolved = resolveDefaultSocketUrl();
-      expect(resolved).toBe('ws://192.168.1.10:3001');
+      for (const devPort of ['5173', '5174', '5175', '5180', '4173', '3000']) {
+        (window as any).location = {
+          protocol: 'http:',
+          hostname: '192.168.1.10',
+          port: devPort,
+          host: `192.168.1.10:${devPort}`,
+        };
+
+        const resolved = resolveDefaultSocketUrl();
+        expect(resolved).toBe('ws://192.168.1.10:3001');
+      }
 
       (window as any).location = originalLoc;
+    });
+
+    it('resolves custom WebSocket URL from VITE_WS_URL environment variable', () => {
+      const originalEnv = process.env.VITE_WS_URL;
+      process.env.VITE_WS_URL = 'wss://api.custom-pukar.com/ws';
+
+      const resolved = resolveDefaultSocketUrl();
+      expect(resolved).toBe('wss://api.custom-pukar.com/ws');
+
+      if (originalEnv === undefined) {
+        delete process.env.VITE_WS_URL;
+      } else {
+        process.env.VITE_WS_URL = originalEnv;
+      }
     });
 
     it('resolves secure wss:// and preserves host in production', () => {
@@ -1426,5 +1447,145 @@ describe('useMultiplayerGame with Authoritative Server E2E', () => {
     hostClient.close();
     bobClient.close();
     errorSpy.mockRestore();
+  });
+
+  describe('Session Resume, URL Sync & Auto-Reconnection', () => {
+    it('initializes roomCode, playerId, and seatIndex immediately from stored session credentials', () => {
+      saveSessionCredentials({
+        roomCode: 'RESM',
+        playerId: 'p_resume',
+        sessionToken: 'tok_resume',
+        seatIndex: 2,
+        playerName: 'ResumedPlayer',
+      });
+
+      const client = new SocketClient({
+        url: 'ws://127.0.0.1:9999', // dummy
+        WebSocketClass: NodeWebSocket,
+      });
+
+      const hook = renderHook(() => useMultiplayerGame({ client }));
+
+      expect(hook.result.current.roomCode).toBe('RESM');
+      expect(hook.result.current.myPlayerId).toBe('p_resume');
+      expect(hook.result.current.mySeatIndex).toBe(2);
+
+      hook.unmount();
+      client.close();
+    });
+
+    it('syncRoomUrl updates history without error and handles null', () => {
+      const mockHistory = {
+        pushState: vi.fn(),
+        replaceState: vi.fn(),
+      };
+      const originalWindow = (globalThis as any).window;
+      (globalThis as any).window = {
+        history: mockHistory,
+        location: {
+          href: 'http://localhost:5173/',
+          origin: 'http://localhost:5173',
+          pathname: '/',
+          search: '',
+        },
+      };
+
+      // Set room code
+      syncRoomUrl('ABCD');
+      expect(mockHistory.replaceState).toHaveBeenCalledWith(
+        null,
+        '',
+        'http://localhost:5173/?room=ABCD'
+      );
+
+      // Clear room code
+      (globalThis as any).window.location.href = 'http://localhost:5173/?room=ABCD';
+      syncRoomUrl(null);
+      expect(mockHistory.replaceState).toHaveBeenCalledWith(
+        null,
+        '',
+        '/'
+      );
+
+      (globalThis as any).window = originalWindow;
+    });
+
+    it('getContextualSessionCredentials discards stored session if window.location has conflicting room query', () => {
+      saveSessionCredentials({
+        roomCode: 'OLD1',
+        playerId: 'p_old',
+        sessionToken: 'tok_old',
+        seatIndex: 1,
+        playerName: 'AliceOld',
+      });
+
+      const originalWindow = (globalThis as any).window;
+      (globalThis as any).window = {
+        location: {
+          search: '?room=NEW2',
+          href: 'http://localhost:5173/?room=NEW2',
+        },
+        sessionStorage: (globalThis as any).window?.sessionStorage,
+      };
+
+      // Contradicting room in URL should clear session and return null
+      const result = getContextualSessionCredentials();
+      expect(result).toBeNull();
+      expect(getSessionCredentials()).toBeNull();
+
+      (globalThis as any).window = originalWindow;
+    });
+
+    it('getContextualSessionCredentials preserves stored session when window.location has matching room query or no room query', () => {
+      saveSessionCredentials({
+        roomCode: 'SAME',
+        playerId: 'p_same',
+        sessionToken: 'tok_same',
+        seatIndex: 0,
+        playerName: 'AliceSame',
+      });
+
+      const originalWindow = (globalThis as any).window;
+
+      // 1. Matching room query
+      (globalThis as any).window = {
+        location: {
+          search: '?room=SAME',
+          href: 'http://localhost:5173/?room=SAME',
+        },
+        sessionStorage: (globalThis as any).window?.sessionStorage,
+      };
+
+      expect(getContextualSessionCredentials()?.roomCode).toBe('SAME');
+
+      // 2. No room query (regular refresh during active game)
+      (globalThis as any).window.location.search = '';
+      expect(getContextualSessionCredentials()?.roomCode).toBe('SAME');
+
+      (globalThis as any).window = originalWindow;
+    });
+
+    it('exposes claimHost function which sends CLAIM_HOST to server', async () => {
+      const port = serverInstance.port;
+      const client = new SocketClient({
+        url: `ws://127.0.0.1:${port}`,
+        WebSocketClass: NodeWebSocket,
+      });
+
+      const hook = renderHook(() => useMultiplayerGame({ client }));
+      await vi.waitFor(() => {
+        expect(hook.result.current.connectionStatus).toBe('CONNECTED');
+      });
+
+      const sendSpy = vi.spyOn(client, 'send');
+      act(() => {
+        hook.result.current.claimHost?.();
+      });
+
+      expect(sendSpy).toHaveBeenCalledWith({ type: 'CLAIM_HOST' });
+
+      hook.unmount();
+      client.close();
+    });
   });
 });

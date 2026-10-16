@@ -4,6 +4,8 @@ import {
   getSessionCredentials,
   clearSessionCredentials,
   resetMemoryFallback,
+  saveStoredPlayerName,
+  getStoredPlayerName,
 } from '../../src/network/session-storage';
 
 describe('Multiplayer Session Storage - Comprehensive Audit & Edge Cases', () => {
@@ -152,5 +154,68 @@ describe('Multiplayer Session Storage - Comprehensive Audit & Edge Cases', () =>
     }
 
     expect(getSessionCredentials()).toBeNull();
+  });
+
+  describe('Player Name Persistence', () => {
+    beforeEach(() => {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.clear();
+      }
+    });
+
+    it('saves, retrieves, and trims player name in localStorage', () => {
+      expect(getStoredPlayerName()).toBe('');
+
+      saveStoredPlayerName('  MasterPlayer  ');
+      expect(getStoredPlayerName()).toBe('MasterPlayer');
+
+      // Empty string should not overwrite existing valid name
+      saveStoredPlayerName('');
+      expect(getStoredPlayerName()).toBe('MasterPlayer');
+
+      saveStoredPlayerName('   ');
+      expect(getStoredPlayerName()).toBe('MasterPlayer');
+    });
+
+    it('persists playerName inside saveSessionCredentials and syncs to localStorage', () => {
+      saveSessionCredentials({
+        roomCode: 'ABCD',
+        playerId: 'p_123',
+        sessionToken: 'tok_123',
+        seatIndex: 0,
+        playerName: 'AliceHero',
+      });
+
+      const creds = getSessionCredentials();
+      expect(creds?.playerName).toBe('AliceHero');
+      expect(getStoredPlayerName()).toBe('AliceHero');
+    });
+
+    it('safely handles localStorage throwing errors gracefully with memory fallback', () => {
+      resetMemoryFallback();
+      const mockStorage = {
+        getItem: vi.fn(() => {
+          throw new Error('Storage disabled');
+        }),
+        setItem: vi.fn(() => {
+          throw new Error('Quota exceeded');
+        }),
+      };
+
+      const originalWindow = (globalThis as any).window;
+      (globalThis as any).window = {
+        localStorage: mockStorage,
+        sessionStorage: (globalThis as any).window?.sessionStorage,
+      };
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      expect(() => saveStoredPlayerName('BobSafe')).not.toThrow();
+      expect(() => getStoredPlayerName()).not.toThrow();
+      expect(getStoredPlayerName()).toBe('BobSafe');
+
+      warnSpy.mockRestore();
+      (globalThis as any).window = originalWindow;
+    });
   });
 });

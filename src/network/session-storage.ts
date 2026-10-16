@@ -19,6 +19,56 @@ function getStorage(): Storage | null {
   return null;
 }
 
+export const PLAYER_NAME_STORAGE_KEY = 'pukar_player_name';
+
+function getLocalStorage(): Storage | null {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage;
+    }
+    if (typeof localStorage !== 'undefined') {
+      return localStorage;
+    }
+  } catch {
+    // Access denied (e.g., cross-origin iframe or privacy mode)
+  }
+  return null;
+}
+
+/**
+ * Retrieves persisted player name from localStorage.
+ */
+export function getStoredPlayerName(): string {
+  try {
+    const storage = getLocalStorage();
+    const raw = storage ? storage.getItem(PLAYER_NAME_STORAGE_KEY) : memoryFallback[PLAYER_NAME_STORAGE_KEY];
+    return typeof raw === 'string' ? raw.trim().slice(0, 24) : '';
+  } catch {
+    return memoryFallback[PLAYER_NAME_STORAGE_KEY] || '';
+  }
+}
+
+/**
+ * Persists player name into localStorage for seamless reuse across sessions.
+ */
+export function saveStoredPlayerName(name: string): void {
+  try {
+    if (typeof name !== 'string') return;
+    const clean = name.trim().slice(0, 24);
+    if (!clean) return;
+
+    const storage = getLocalStorage();
+    if (storage) {
+      storage.setItem(PLAYER_NAME_STORAGE_KEY, clean);
+    }
+    memoryFallback[PLAYER_NAME_STORAGE_KEY] = clean;
+  } catch {
+    if (typeof name === 'string' && name.trim()) {
+      memoryFallback[PLAYER_NAME_STORAGE_KEY] = name.trim().slice(0, 24);
+    }
+  }
+}
+
 /**
  * Persists room session credentials into browser sessionStorage.
  * Wrapped defensively in try/catch to protect against storage quota or security errors.
@@ -37,11 +87,21 @@ export function saveSessionCredentials(session: StoredSession): void {
       return;
     }
 
+    const cleanPlayerName =
+      typeof session.playerName === 'string' && session.playerName.trim()
+        ? session.playerName.trim().slice(0, 24)
+        : getStoredPlayerName() || undefined;
+
+    if (cleanPlayerName) {
+      saveStoredPlayerName(cleanPlayerName);
+    }
+
     const normalizedSession: StoredSession = {
       roomCode: session.roomCode.trim(),
       playerId: session.playerId.trim(),
       sessionToken: session.sessionToken.trim(),
       seatIndex: typeof session.seatIndex === 'number' ? session.seatIndex : null,
+      playerName: cleanPlayerName,
     };
 
     const serialized = JSON.stringify(normalizedSession);
@@ -77,11 +137,17 @@ export function getSessionCredentials(): StoredSession | null {
       typeof parsed?.playerId === 'string' &&
       typeof parsed?.sessionToken === 'string'
     ) {
+      const storedName =
+        typeof parsed.playerName === 'string' && parsed.playerName.trim()
+          ? parsed.playerName.trim()
+          : getStoredPlayerName() || undefined;
+
       return {
         roomCode: parsed.roomCode,
         playerId: parsed.playerId,
         sessionToken: parsed.sessionToken,
         seatIndex: typeof parsed.seatIndex === 'number' ? parsed.seatIndex : null,
+        playerName: storedName,
       };
     }
     return null;
@@ -90,6 +156,7 @@ export function getSessionCredentials(): StoredSession | null {
     return null;
   }
 }
+
 
 /**
  * Clears stored multiplayer session credentials upon voluntary room leave.

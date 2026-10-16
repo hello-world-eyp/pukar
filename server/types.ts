@@ -30,6 +30,7 @@ export interface Room {
   hostPlayerId: string;
   createdAt: number;
   lastActivityAt?: number;
+  hostDisconnectedAt?: number | null;
   seats: LobbySeat[];
   sessions: Map<string, PlayerSession>; // playerId -> PlayerSession
   tokenToPlayerId: Map<string, string>; // sessionToken -> playerId
@@ -44,7 +45,9 @@ export type ClientMessage =
   | { type: 'START_GAME' }
   | { type: 'GAME_ACTION'; action: GameAction }
   | { type: 'KICK_PLAYER'; seatIndex: number }
-  | { type: 'LEAVE_ROOM' };
+  | { type: 'LEAVE_ROOM' }
+  | { type: 'PING' }
+  | { type: 'CLAIM_HOST' };
 
 // Server -> Client
 export type ServerMessage =
@@ -88,8 +91,13 @@ export type ServerMessage =
       type: 'ERROR';
       message: string;
       code: string;
+    }
+  | {
+      type: 'PONG';
+      timestamp?: number;
     };
 
 export type ClientMessageType = ClientMessage['type'];
 export type ServerMessageType = ServerMessage['type'];
+
 

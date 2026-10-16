@@ -301,7 +301,24 @@ export function startServer(
       // Prevent timer from keeping Node process alive if no active handles remain
       heartbeatTimer.unref?.();
 
+      // Lobby host migration check timer (migrates host if host disconnected in lobby > 30s)
+      const hostMigrationTimer = setInterval(() => {
+        try {
+          const migrated = manager.checkLobbyHostMigration(30000);
+          for (const item of migrated) {
+            const room = manager.getRoom(item.roomCode);
+            if (room) {
+              broadcastLobby(room, sockets);
+            }
+          }
+        } catch (migErr) {
+          serverLogger.error('Error during lobby host migration timer', { error: migErr });
+        }
+      }, 5000);
+      hostMigrationTimer.unref?.();
+
       wss.on('connection', (rawWs: WebSocket, req: http.IncomingMessage) => {
+
         // Origin validation check if configured
         if (options?.allowedOrigins && options.allowedOrigins.length > 0) {
           const origin = req.headers.origin;
@@ -488,10 +505,11 @@ export function startServer(
                   safeSend(ws, {
                     type: 'ERROR',
                     message: res.error,
-                    code: 'JOIN_FAILED',
+                    code: (res as any).code || 'JOIN_FAILED',
                   });
                   return;
                 }
+
 
                 // Cleanly terminate replaced ghost socket if any
                 if (ghostSocketToTerminate && ghostSocketToTerminate !== ws) {
@@ -533,6 +551,18 @@ export function startServer(
                       playerName: session.playerName,
                       isConnected: true,
                     }));
+                  }
+
+                  // Inform reconnecting player of any other seated players who are currently disconnected
+                  for (const seat of room.seats) {
+                    if (seat.seatIndex !== session.seatIndex && seat.playerId && !seat.isConnected) {
+                      safeSend(ws, {
+                        type: 'PLAYER_CONNECTION_CHANGED',
+                        seatIndex: seat.seatIndex,
+                        playerName: seat.playerName || 'Player',
+                        isConnected: false,
+                      });
+                    }
                   }
                 }
                 break;
@@ -716,7 +746,45 @@ export function startServer(
                 break;
               }
 
+              case 'PING': {
+                ws.isAlive = true;
+                const room = manager.getRoomBySocket(socketId);
+                if (room) {
+                  manager.touchRoom(room.roomCode);
+                }
+                safeSend(ws, {
+                  type: 'PONG',
+                  timestamp: Date.now(),
+                });
+                break;
+              }
+
+              case 'CLAIM_HOST': {
+                const room = manager.getRoomBySocket(socketId);
+                const session = manager.getSessionBySocket(socketId);
+                if (!room || !session) {
+                  safeSend(ws, {
+                    type: 'ERROR',
+                    message: 'Not in a room',
+                    code: 'NOT_IN_ROOM',
+                  });
+                  return;
+                }
+
+                const claimRes = manager.claimHost(room.roomCode, session.playerId);
+                if (claimRes.success) {
+                  broadcastLobby(room, sockets);
+                } else {
+                  safeSend(ws, {
+                    type: 'ACTION_REJECTED',
+                    error: claimRes.error || 'Cannot claim host',
+                  });
+                }
+                break;
+              }
+
               default: {
+
                 serverLogger.warn(`Unhandled message type: ${(msg as any).type}`, { socketId });
                 safeSend(ws, {
                   type: 'ERROR',
@@ -794,6 +862,10 @@ export function startServer(
               if (cleanupTimer) {
                 clearInterval(cleanupTimer);
               }
+              if (hostMigrationTimer) {
+                clearInterval(hostMigrationTimer);
+              }
+
 
               // Terminate all connected clients
               for (const ws of sockets.values()) {
