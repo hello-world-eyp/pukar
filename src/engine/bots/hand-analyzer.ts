@@ -24,6 +24,7 @@ export interface CandidateAddition {
 
 export interface DiscardEvaluationOptions {
   disallowedCardId?: string;
+  personality?: 'SMART_CHACHA' | 'THE_JADUGAR' | 'FAST_CHACHI' | 'THE_LONG_TERM_GUY' | 'CHEETAH';
   opponentWants?: Set<string>; // set of "SUIT_RANK" keys, e.g. "SPADES_7" or card IDs
   preferredExtremeRuns?: boolean; // For Fast Chachi: bias towards extreme runs
   partnerLikelyWants?: Set<string>; // For Smart Chacha: cards to pass to partner
@@ -765,8 +766,9 @@ export function evaluateDeadwoodAndDiscard(
   const isFinalTurn = options?.isFinalTurn ?? false;
 
   const isLockdown =
-    (options?.nextOpponentCardCount !== undefined && options.nextOpponentCardCount <= 2) ||
-    Boolean(options?.opponentNeedsLockdown);
+    options?.personality !== 'CHEETAH' &&
+    ((options?.nextOpponentCardCount !== undefined && options.nextOpponentCardCount <= 2) ||
+      Boolean(options?.opponentNeedsLockdown));
 
   const topDiscard =
     options?.discardPile && options.discardPile.length > 0
@@ -916,15 +918,22 @@ export function evaluateDeadwoodAndDiscard(
       score += 50000;
       reason = 'Critical milestone denial: completes opponent 500-point Pure 13';
     } else if (completesOpponentClean7) {
-      score += 2500;
-      reason = 'Milestone denial: completes opponent 200-point Clean 7';
+      score += (options?.personality === 'CHEETAH' && isCloseToPukar) ? 60 : 2500;
+      reason = (options?.personality === 'CHEETAH' && isCloseToPukar)
+        ? 'Cheetah aggressive rush: completes opponent 200-point Clean 7'
+        : 'Milestone denial: completes opponent 200-point Clean 7';
     } else if (completesOpponent7) {
-      score += 1200;
-      reason = 'Milestone denial: completes opponent 7-card sequence/set';
+      score += (options?.personality === 'CHEETAH' && isCloseToPukar) ? 30 : 1200;
+      reason = (options?.personality === 'CHEETAH' && isCloseToPukar)
+        ? 'Cheetah aggressive rush: completes opponent 7-card sequence/set'
+        : 'Milestone denial: completes opponent 7-card sequence/set';
     } else if (feedsOpponentMeld) {
       if (isLockdown) {
         score += 500;
         reason = 'Strict lockdown: feeds or connects to opponent table melds';
+      } else if (options?.personality === 'CHEETAH' && isCloseToPukar) {
+        score += 20;
+        reason = 'Cheetah aggressive rush: feeds opponent sequence';
       } else {
         score += 150;
         reason = 'Feeds opponent sequence on table (denial protection)';
@@ -941,6 +950,9 @@ export function evaluateDeadwoodAndDiscard(
       if (isLockdown) {
         score += 500;
         reason = 'Strict lockdown: opponent on <= 2 cards, predicted want';
+      } else if (options?.personality === 'CHEETAH' && isCloseToPukar) {
+        score += 20;
+        reason = 'Cheetah aggressive rush: opponent want tolerated for Pukar rush';
       } else {
         score += 160;
         reason = 'Opponents predicted to need this card';
@@ -1262,7 +1274,7 @@ export function isDiscardPileTopConnecting(
 }
 
 export interface DiscardPickupOptions {
-  personality: 'SMART_CHACHA' | 'THE_JADUGAR' | 'FAST_CHACHI' | 'THE_LONG_TERM_GUY';
+  personality: 'SMART_CHACHA' | 'THE_JADUGAR' | 'FAST_CHACHI' | 'THE_LONG_TERM_GUY' | 'CHEETAH';
   pukarPoolCount?: number;
   opponentWants?: Set<string>;
   allTableMelds?: Meld[];
@@ -1361,6 +1373,11 @@ export function evaluateDiscardPilePickup(
     return false;
   }
 
+  // Cheetah: when close to Pukar (hand.length <= 3), do not take loose connectors or junk
+  if (options.personality === 'CHEETAH' && hand.length <= 3) {
+    return false;
+  }
+
   // 4. The Long-Term Guy: Sequence Value Specific Evaluation
   if (options.personality === 'THE_LONG_TERM_GUY') {
     const topAddsSeqValue = isCardValuableForSequences(topCard, hand, teamMelds);
@@ -1411,6 +1428,20 @@ export function evaluateDiscardPilePickup(
       if (isDirectAdd || (isTightPairOrRun && pileLength <= 2)) {
         return true;
       }
+    } else if (options.personality === 'CHEETAH') {
+      if (hand.length <= 3) {
+        return false;
+      }
+      const isDirectAdd = teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid);
+      const isTightPairOrRun = hand.some(
+        (h) => h.rank === topCard.rank || (h.suit === topCard.suit && Math.abs(h.rank - topCard.rank) <= 1)
+      );
+      if (isDirectAdd || (isTightPairOrRun && pileLength <= 2)) {
+        return true;
+      }
+      if (pileLength <= 4 && totalConnectingInPile >= 2 && hand.length <= 10) {
+        return true;
+      }
     } else if (options.personality === 'SMART_CHACHA') {
       // Smart Chacha evaluates connecting cards:
       // - If pile is small (<= 2 cards), taking it is clean and beneficial
@@ -1433,6 +1464,10 @@ export function evaluateDiscardPilePickup(
   if (totalConnectingInPile >= 2) {
     if (options.personality === 'SMART_CHACHA') {
       if (hand.length > 4 || pileLength >= 4) {
+        return true;
+      }
+    } else if (options.personality === 'CHEETAH') {
+      if (hand.length > 3 && hand.length <= 10 && pileLength <= 4) {
         return true;
       }
     }

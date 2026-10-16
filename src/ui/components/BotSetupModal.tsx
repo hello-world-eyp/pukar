@@ -40,6 +40,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
     { id: 'the_jadugar', name: BOT_PROFILES.the_jadugar.name },
     { id: 'fast_chachi', name: BOT_PROFILES.fast_chachi.name },
     { id: 'the_long_term_guy', name: BOT_PROFILES.the_long_term_guy.name },
+    { id: 'cheetah', name: BOT_PROFILES.cheetah.name },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {

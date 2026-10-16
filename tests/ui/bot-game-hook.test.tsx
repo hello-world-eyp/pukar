@@ -1315,5 +1315,62 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       vi.advanceTimersByTime(250);
       expect(dispatchedActions.some((a) => a.type === 'DISCARD_CARD')).toBe(true);
     });
+
+    it('Cheetah executes turns 30% faster than other bots', () => {
+      vi.useFakeTimers();
+
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1;
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+
+      const botConfig: BotGameConfig = {
+        playerCount: 4,
+        seats: [
+          { seatIndex: 0, name: 'You', personality: 'smart_chacha', isHuman: true },
+          { seatIndex: 1, name: 'Cheetah', personality: 'cheetah', isHuman: false },
+          { seatIndex: 2, name: 'Sid', personality: 'smart_chacha', isHuman: false },
+          { seatIndex: 3, name: 'Harsh', personality: 'the_long_term_guy', isHuman: false },
+        ],
+      };
+
+      const dispatchedActions: any[] = [];
+      let currentState = state;
+
+      const handleAction = vi.fn((act: any) => {
+        dispatchedActions.push(act);
+        const res = pukarReducer(currentState, act);
+        if (!res.error) {
+          currentState = res.state;
+          return true;
+        }
+        return false;
+      });
+
+      const stateMap = new Map<number, any>();
+      runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: currentState,
+            botConfig,
+            handleAction,
+            turnDelayMs: 1000,
+            meldDelayMs: 2000,
+          }),
+        stateMap
+      );
+
+      // Normal bot turnDelayMs is 1000ms.
+      // Cheetah plays 30% faster: turnDelayMs * 0.70 = 700ms.
+      // At 650ms, nothing should be dispatched yet.
+      vi.advanceTimersByTime(650);
+      expect(dispatchedActions.length).toBe(0);
+
+      // Advance by another 50ms (reaching 700ms): Cheetah draws!
+      vi.advanceTimersByTime(50);
+      expect(dispatchedActions.length).toBe(1);
+      expect(['DRAW_FROM_STOCK', 'TAKE_DISCARD']).toContain(dispatchedActions[0].type);
+    });
   });
 });

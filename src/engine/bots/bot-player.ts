@@ -9,6 +9,7 @@ import { decideSmartChachaTurn } from './strategies/smart-chacha';
 import { decideTheJadugarTurn } from './strategies/the-jadugar';
 import { decideFastChachiTurn } from './strategies/fast-chachi';
 import { decideTheLongTermGuyTurn } from './strategies/the-long-term-guy';
+import { decideCheetahTurn } from './strategies/cheetah';
 import { findPotentialNewMelds } from './hand-analyzer';
 
 export function createInitialBotMemory(): BotMemory {
@@ -91,6 +92,8 @@ export function decideBotTurn(
       return decideFastChachiTurn(state, botIndex, memory);
     case 'the_long_term_guy':
       return decideTheLongTermGuyTurn(state, botIndex, memory);
+    case 'cheetah':
+      return decideCheetahTurn(state, botIndex, memory);
   }
 }
 

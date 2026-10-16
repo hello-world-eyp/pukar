@@ -170,6 +170,10 @@ export function useBotGame({
       return;
     }
 
+    const isCheetah = currentSeat.personality === 'cheetah';
+    const activeTurnDelayMs = isCheetah ? Math.round(turnDelayMs * 0.70) : turnDelayMs;
+    const activeMeldDelayMs = isCheetah ? Math.round(effectiveMeldDelayMs * 0.70) : effectiveMeldDelayMs;
+
     // Sync subphase whenever a new player takes the turn or engine phase differs
     if (lastPlayerIdxRef.current !== currentIdx) {
       lastPlayerIdxRef.current = currentIdx;
@@ -317,11 +321,11 @@ export function useBotGame({
             // Check if there are further meld actions (or mid-turn re-planned melds with retrieved Joker)
             const nextPlan = decideBotTurn(nextState, botIdx, botPersonality, botMemoryRef.current);
             if (nextPlan.meldActions && nextPlan.meldActions.length > 0) {
-              if (effectiveMeldDelayMs > 0) {
+              if (activeMeldDelayMs > 0) {
                 meldTimerRef.current = setTimeout(() => {
                   meldTimerRef.current = null;
                   executeNextMeld(nextState);
-                }, effectiveMeldDelayMs);
+                }, activeMeldDelayMs);
               } else {
                 executeNextMeld(nextState);
               }
@@ -380,7 +384,7 @@ export function useBotGame({
         }
         setBotSubPhase('DRAW');
       }
-    }, turnDelayMs);
+    }, activeTurnDelayMs);
   }, [
     appMode,
     botConfig,
@@ -390,6 +394,7 @@ export function useBotGame({
     gameState.isRoundOver,
     botSubPhase,
     turnDelayMs,
+    effectiveMeldDelayMs,
     isPaused,
   ]);
 

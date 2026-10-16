@@ -8,7 +8,8 @@ export type BotPersonality =
   | 'smart_chacha'
   | 'the_jadugar'
   | 'fast_chachi'
-  | 'the_long_term_guy';
+  | 'the_long_term_guy'
+  | 'cheetah';
 
 export interface BotProfile {
   id: BotPersonality;
@@ -31,6 +32,10 @@ export const BOT_PROFILES: Record<BotPersonality, BotProfile> = {
   the_long_term_guy: {
     id: 'the_long_term_guy',
     name: 'Harsh',
+  },
+  cheetah: {
+    id: 'cheetah',
+    name: 'Cheetah',
   },
 };
 

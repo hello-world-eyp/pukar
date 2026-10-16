@@ -113,8 +113,8 @@ describe('Bot End-Game & Pacing Bug Verifications', () => {
     expect(discardRes.state.scores.B).toBeGreaterThanOrEqual(50);
   });
 
-  it('falls back to TAKE_DISCARD when stock deck is empty across all 4 bot strategies', () => {
-    const personalities = ['smart_chacha', 'the_jadugar', 'fast_chachi', 'the_long_term_guy'] as const;
+  it('falls back to TAKE_DISCARD when stock deck is empty across all bot strategies', () => {
+    const personalities = ['smart_chacha', 'the_jadugar', 'fast_chachi', 'the_long_term_guy', 'cheetah'] as const;
 
     for (const personality of personalities) {
       const state = dealInitialState(4);

@@ -11,6 +11,7 @@ import {
 import { decideTheJadugarTurn } from '../../../src/engine/bots/strategies/the-jadugar';
 import { decideFastChachiTurn } from '../../../src/engine/bots/strategies/fast-chachi';
 import { decideTheLongTermGuyTurn } from '../../../src/engine/bots/strategies/the-long-term-guy';
+import { decideCheetahTurn } from '../../../src/engine/bots/strategies/cheetah';
 import {
   findBestMeldPlan,
   findPotentialAdditionsToMelds,
@@ -2877,6 +2878,210 @@ describe('Bot Personality Strategies', () => {
 
       const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
       expect(plan.discardAction.cardId).toBe('qd');
+    });
+  });
+
+  describe('Cheetah Strategy', () => {
+    it('Cheetah discards a 100/200 card to opponents when close to Pukar (<= 4 cards) to shed deadwood and reach Pukar', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      // Opponent Team A has a 6-card Clean Club run (ranks 5-10).
+      // Discarding J♣ would complete a Clean 7 (200 pts) for opponents.
+      const clubMeldCards: Card[] = [
+        makeCard('c5', 'CLUBS', 5),
+        makeCard('c6', 'CLUBS', 6),
+        makeCard('c7', 'CLUBS', 7),
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('c9', 'CLUBS', 9),
+        makeCard('c10', 'CLUBS', 10),
+      ];
+      state.melds.A = [
+        {
+          id: 'meld-opp-6c',
+          team: 'A',
+          type: 'RUN',
+          suit: 'CLUBS',
+          cards: clubMeldCards,
+          slots: clubMeldCards.map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            isWildcard: false,
+            representedSuit: 'CLUBS' as const,
+          })),
+          isClean: true,
+          isPure: true,
+          isPure13: false,
+          points: 0,
+        },
+      ];
+
+      // Cheetah holds 3 cards: J♣ (feeds opponent 200 Clean 7, isolated in hand)
+      // and 7♠, 8♠ (connecting pair for Cheetah's own run).
+      // Cheetah wants to shed deadwood towards Pukar, so Cheetah is willing to discard J♣!
+      state.players[1].hand = [
+        makeCard('cj', 'CLUBS', 11),
+        makeCard('s7', 'SPADES', 7),
+        makeCard('s8', 'SPADES', 8),
+      ];
+
+      const planCheetah = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(planCheetah.discardAction.cardId).toBe('cj');
+
+      // Contrast: Smart Chacha would NEVER discard J♣ here because of 2500-pt penalty
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.discardAction.cardId).not.toBe('cj');
+    });
+
+    it('Cheetah strictly denies a 500-point Pure 13 hand-out even when close to Pukar', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      // Opponent Team A has a 12-card clean run (ranks 2-K of Spades).
+      // Discarding Ace of Spades (14) would complete 500-pt Pure 13!
+      const spade12Cards: Card[] = [];
+      for (let r = 2; r <= 13; r++) {
+        spade12Cards.push(makeCard(`s${r}`, 'SPADES', r as Rank));
+      }
+      state.melds.A = [
+        {
+          id: 'meld-opp-pure12',
+          team: 'A',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: spade12Cards,
+          slots: spade12Cards.map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            isWildcard: false,
+            representedSuit: 'SPADES' as const,
+          })),
+          isClean: true,
+          isPure: true,
+          isPure13: false,
+          points: 0,
+        },
+      ];
+
+      // Cheetah holds A♠ (completes opponent 500 Pure 13) and 9♦, 3♣ (deadwood).
+      // Cheetah's damage assessment strictly forbids handing out 500 pts!
+      state.players[1].hand = [
+        makeCard('sa', 'SPADES', 14),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('c3', 'CLUBS', 3),
+      ];
+
+      const planCheetah = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(planCheetah.discardAction.cardId).not.toBe('sa');
+    });
+
+    it('Cheetah does not enter defensive lockdown when opponent is on <= 2 cards', () => {
+      const state = createTestState();
+      state.phase = 'DISCARD';
+      state.turnPhase = 'DISCARD';
+
+      // Next opponent (Player 2 or 3) has only 1 card left!
+      state.players[2].hand = [makeCard('p2_card', 'HEARTS', 5)];
+
+      // Opponent Team A has a 3-card meld 4♥, 5♥, 6♥
+      const oppMelds: Card[] = [
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h5', 'HEARTS', 5),
+        makeCard('h6', 'HEARTS', 6),
+      ];
+      state.melds.A = [
+        {
+          id: 'opp-run-h',
+          team: 'A',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: oppMelds,
+          slots: oppMelds.map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            isWildcard: false,
+            representedSuit: 'HEARTS' as const,
+          })),
+          isClean: true,
+          isPure: true,
+          isPure13: false,
+          points: 0,
+        },
+      ];
+
+      // Cheetah holds 7♥ (feeds opponent meld by 1 card) and 8♠, 9♠ (connecting run in hand)
+      state.players[1].hand = [
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+      ];
+
+      // Cheetah plays to win (rushes to Pukar) and does not play lockdown defense,
+      // preserving own connected run 8♠-9♠ and discarding 7♥
+      const planCheetah = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(planCheetah.discardAction.cardId).toBe('h7');
+
+      // In contrast, Smart Chacha under lockdown strictly refuses to discard 7♥ (+500 penalty),
+      // even if forced to sacrifice an internal run card
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.discardAction.cardId).not.toBe('h7');
+    });
+
+    it('Cheetah takes small 1-2 card discard piles with tight connectors when hand > 3 cards', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'CLUBS', 4),
+        makeCard('h3', 'DIAMONDS', 10),
+        makeCard('h4', 'HEARTS', 12),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'HEARTS', 3),
+        makeCard('dp2', 'SPADES', 8), // Tight consecutive connector to 7♠
+      ];
+
+      const plan = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('Cheetah leaves junk and loose connectors when hand <= 3 cards to stay lean for Pukar', () => {
+      const state = createTestState();
+      // Hand has 3 cards (close to Pukar)
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'CLUBS', 4),
+        makeCard('h3', 'DIAMONDS', 10),
+      ];
+      // Discard pile is 2 cards with a loose connector (e.g. 5♠, gap-2) or junk
+      state.discardPile = [
+        makeCard('dp1', 'HEARTS', 3),
+        makeCard('dp2', 'SPADES', 5),
+      ];
+
+      const plan = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('Cheetah pivots to take a 3-4 card pile when it contains 2+ connectors and hand is medium size', () => {
+      const state = createTestState();
+      state.players[1].hand = [
+        makeCard('h1', 'SPADES', 7),
+        makeCard('h2', 'CLUBS', 8),
+        makeCard('h3', 'DIAMONDS', 10),
+        makeCard('h4', 'HEARTS', 12),
+        makeCard('h5', 'CLUBS', 3),
+      ];
+      // Discard pile has 3 cards, 2 of which connect (8♠ connects with 7♠, 8♦ connects with 8♣ pair)
+      state.discardPile = [
+        makeCard('dp1', 'SPADES', 8),
+        makeCard('dp2', 'HEARTS', 3),
+        makeCard('dp3', 'DIAMONDS', 8),
+      ];
+
+      const plan = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
     });
   });
 });
