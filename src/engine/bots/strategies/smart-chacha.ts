@@ -128,6 +128,7 @@ export function decideSmartChachaTurn(
   const opponentMelds = state.melds[opponentTeam] || [];
   const allTableMelds = [...myTeamMelds, ...opponentMelds];
   const isBoardOpen = allTableMelds.length > 0;
+  const isTeamOpen = myTeamMelds.some((m) => m.isPure);
   const opponentWants = predictOpponentWants(memory, state, team);
 
   // 1. DRAW PHASE DECISION
@@ -143,6 +144,7 @@ export function decideSmartChachaTurn(
         opponentWants,
         allTableMelds,
         isBoardOpen,
+        isTeamOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -181,7 +183,7 @@ export function decideSmartChachaTurn(
         isCloseToPukar,
         isFinalTurn,
         allTableMelds,
-        requirePure: !isBoardOpen,
+        requirePure: !isTeamOpen,
       });
   const meldActions: GameAction[] = [];
 

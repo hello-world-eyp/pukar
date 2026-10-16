@@ -539,10 +539,8 @@ export function findBestMeldPlan(
 } {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const isFinalTurn = options?.isFinalTurn ?? false;
-  const isBoardOpen = options?.allTableMelds
-    ? options.allTableMelds.length > 0
-    : teamMelds.length > 0;
-  const requirePure = options?.requirePure !== undefined ? options.requirePure : !isBoardOpen;
+  const isTeamOpen = teamMelds.some((m) => m.isPure);
+  const requirePure = options?.requirePure !== undefined ? options.requirePure : !isTeamOpen;
 
   const usedCardIds = new Set<string>();
   const meldsToPlay: CandidateMeld[] = [];
@@ -1217,6 +1215,7 @@ export interface DiscardPickupOptions {
   opponentWants?: Set<string>;
   allTableMelds?: Meld[];
   isBoardOpen?: boolean;
+  isTeamOpen?: boolean;
 }
 
 /**
@@ -1236,8 +1235,8 @@ export function evaluateDiscardPilePickup(
   const pileLength = discardPile.length;
   const topCard = discardPile[pileLength - 1];
   const pukarPoolCount = options.pukarPoolCount ?? 2;
-  const isBoardOpen = options.isBoardOpen ?? (options.allTableMelds ? options.allTableMelds.length > 0 : teamMelds.length > 0);
-  const requirePure = !isBoardOpen;
+  const isTeamOpen = options.isTeamOpen ?? teamMelds.some((m) => m.isPure);
+  const requirePure = !isTeamOpen;
 
   // Critical Winning / Endgame Guard:
   // If bot has 1 card left and 0 Pukars remain (going out cleanly to win the round),

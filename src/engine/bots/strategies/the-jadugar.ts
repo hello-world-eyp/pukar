@@ -29,6 +29,7 @@ export function decideTheJadugarTurn(
   const opponentMelds = state.melds[opponentTeam] || [];
   const allTableMelds = [...myTeamMelds, ...opponentMelds];
   const isBoardOpen = allTableMelds.length > 0;
+  const isTeamOpen = myTeamMelds.some((m) => m.isPure);
 
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
@@ -42,6 +43,7 @@ export function decideTheJadugarTurn(
         pukarPoolCount: state.pukarPool.length,
         allTableMelds,
         isBoardOpen,
+        isTeamOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -77,7 +79,7 @@ export function decideTheJadugarTurn(
     isCloseToPukar,
     isFinalTurn,
     allTableMelds,
-    requirePure: !isBoardOpen,
+    requirePure: !isTeamOpen,
   });
   const meldActions: GameAction[] = [];
 

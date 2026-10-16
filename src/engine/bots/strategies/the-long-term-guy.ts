@@ -32,6 +32,7 @@ export function decideTheLongTermGuyTurn(
   const opponentMelds = state.melds[opponentTeam] || [];
   const allTableMelds = [...myTeamMelds, ...opponentMelds];
   const isBoardOpen = allTableMelds.length > 0;
+  const isTeamOpen = myTeamMelds.some((m) => m.isPure);
 
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
@@ -45,6 +46,7 @@ export function decideTheLongTermGuyTurn(
         pukarPoolCount: state.pukarPool.length,
         allTableMelds,
         isBoardOpen,
+        isTeamOpen,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -174,7 +176,7 @@ export function decideTheLongTermGuyTurn(
     };
 
     const remainingHand = hand.filter((c) => !usedCardIds.has(c.id));
-    const requirePure = !isBoardOpen && meldActions.length === 0;
+    const requirePure = !isTeamOpen && meldActions.length === 0;
     const candidateMelds = findPotentialNewMelds(remainingHand, {
       requirePure,
       isCloseToPukar,

@@ -1473,8 +1473,8 @@ describe('Bot Personality Strategies', () => {
         slots: [],
         team: 'A',
         points: 0,
-        isClean: false,
-        isPure: false,
+        isClean: true,
+        isPure: true,
         isPure13: false,
       };
 
@@ -1501,8 +1501,8 @@ describe('Bot Personality Strategies', () => {
         slots: [],
         team: 'A',
         points: 0,
-        isClean: false,
-        isPure: false,
+        isClean: true,
+        isPure: true,
         isPure13: false,
       };
 
@@ -1806,6 +1806,57 @@ describe('Bot Personality Strategies', () => {
       const plan = findBestMeldPlan(hand, [], { preserveDiscardCard: true });
       expect(plan.meldsToPlay.length).toBe(0);
       expect(plan.usedCardIds.size).toBe(0);
+    });
+
+    it('does NOT stage dirty melds like 2-2-4 or sets when opponent team has opened but bot team has no pure run', () => {
+      const state = createTestState();
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      // Team A has already opened with a pure run
+      const pureRunA = makeCard('a3', 'SPADES', 3);
+      const pureRunB = makeCard('a4', 'SPADES', 4);
+      const pureRunC = makeCard('a5', 'SPADES', 5);
+      state.melds.A = [{
+        id: 'meld-a',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [pureRunA, pureRunB, pureRunC],
+        slots: [
+          { card: pureRunA, representedRank: 3, isWildcard: false },
+          { card: pureRunB, representedRank: 4, isWildcard: false },
+          { card: pureRunC, representedRank: 5, isWildcard: false },
+        ],
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+        points: 30,
+      }];
+      state.melds.B = []; // Team B has NOT opened yet!
+
+      // Bot (Player 1, Team B) holds 2-2-4 (e.g. 2♥, 2♥, 4♥) and deadwood, but NO pure sequence
+      state.players[1].hand = [
+        makeCard('2h1', 'HEARTS', 2),
+        makeCard('2h2', 'HEARTS', 2),
+        makeCard('4h', 'HEARTS', 4),
+        makeCard('c8', 'CLUBS', 8),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('s10', 'SPADES', 10),
+      ];
+
+      const memory = createEmptyMemory();
+      const planChacha = decideSmartChachaTurn(state, 1, memory);
+      expect(planChacha.meldActions).toHaveLength(0);
+
+      const planChachi = decideFastChachiTurn(state, 1, memory);
+      expect(planChachi.meldActions).toHaveLength(0);
+
+      const planJadugar = decideTheJadugarTurn(state, 1, memory);
+      expect(planJadugar.meldActions).toHaveLength(0);
+
+      const planLongTerm = decideTheLongTermGuyTurn(state, 1, memory);
+      expect(planLongTerm.meldActions).toHaveLength(0);
     });
 
     it('Fast Chachi prioritizes non-extreme pure run over extreme dirty run on opening turn', () => {
@@ -2459,14 +2510,13 @@ describe('Bot Personality Strategies', () => {
       const h10Score = evalResult.discardScores.find((ds) => ds.card.id === 'h10')!.score;
       expect(h10Score).toBeGreaterThanOrEqual(550);
     });
-    it('all bots meld obvious dirty runs (e.g. 5♠-Joker-7♠-8♠ and 4♣-5♣-2♣-7♣) when opponent team has opened a pure sequence on the board', () => {
+    it('all bots meld obvious dirty runs (e.g. 5♠-Joker-7♠-8♠ and 4♣-5♣-2♣-7♣) when their team has opened a pure sequence on the board', () => {
       const state = createTestState();
-      // Smart Chacha is Player 1 (Team B) or Player 2 (Team A)
-      // Let Team B have a pure sequence on the board:
-      state.melds.B = [
+      // Team A has already established a pure sequence on the board:
+      state.melds.A = [
         {
-          id: 'meld-pure-b',
-          team: 'B',
+          id: 'meld-pure-a',
+          team: 'A',
           type: 'RUN',
           suit: 'HEARTS',
           cards: [
@@ -2483,8 +2533,7 @@ describe('Bot Personality Strategies', () => {
           isPure: true,
         },
       ];
-      // Team A has 0 melds on the board
-      state.melds.A = [];
+      state.melds.B = [];
 
       // Team A bot (Player 0) holds the exact cards from the user's report:
       // 5♠, 7♠, 8♠, Natural Joker (can make 5♠-Joker-7♠-8♠)
