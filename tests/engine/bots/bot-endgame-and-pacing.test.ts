@@ -338,6 +338,7 @@ describe('Bot End-Game & Pacing Bug Verifications', () => {
                 botConfig,
                 handleAction,
                 turnDelayMs: 250,
+                meldDelayMs: 0,
               }),
             stateMap
           );
@@ -355,6 +356,7 @@ describe('Bot End-Game & Pacing Bug Verifications', () => {
             botConfig,
             handleAction,
             turnDelayMs: 250,
+            meldDelayMs: 0,
           }),
         stateMap
       );

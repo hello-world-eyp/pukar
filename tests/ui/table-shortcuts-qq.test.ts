@@ -49,6 +49,28 @@ describe('useTableShortcuts - "qq" Debug Log Trigger & Keyboard Shortcuts', () =
     expect(onNotify).toHaveBeenCalledWith(expect.stringContaining('Debug log downloaded'));
   });
 
+  it('notifies failure when exportDebugLogFile returns false', () => {
+    const onAction = vi.fn();
+    const onNotify = vi.fn();
+    const exportSpy = vi.spyOn(debugLogger, 'exportDebugLogFile').mockReturnValue(false);
+
+    const handler = createTableShortcutHandler({
+      currentScreen: 'GAME',
+      onAction,
+      onNotify,
+    });
+
+    let currentTime = 15000;
+    vi.spyOn(Date, 'now').mockImplementation(() => currentTime);
+
+    handler({ key: 'q' });
+    currentTime += 200;
+    handler({ key: 'q' });
+
+    expect(exportSpy).toHaveBeenCalledTimes(1);
+    expect(onNotify).toHaveBeenCalledWith(expect.stringContaining('Failed to download debug log'));
+  });
+
   it('works with uppercase "Q" as well', () => {
     const onAction = vi.fn();
     const exportSpy = vi.spyOn(debugLogger, 'exportDebugLogFile').mockReturnValue(true);

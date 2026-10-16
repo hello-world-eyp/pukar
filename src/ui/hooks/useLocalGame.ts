@@ -91,6 +91,19 @@ export function useLocalGame({
     ? multiplayerHook.gameState!
     : gameState;
 
+  // Record multiplayer state updates for debug logging
+  const lastRecordedMultiplayerStateRef = useRef<any>(null);
+  useEffect(() => {
+    if (
+      isMultiplayerActive &&
+      multiplayerHook.gameState &&
+      multiplayerHook.gameState !== lastRecordedMultiplayerStateRef.current
+    ) {
+      lastRecordedMultiplayerStateRef.current = multiplayerHook.gameState;
+      recordGameSnapshot(multiplayerHook.gameState);
+    }
+  }, [isMultiplayerActive, multiplayerHook.gameState]);
+
   const activeTurnIndex = activeGameState.currentPlayerIndex;
   const activePlayer = activeGameState.players[activeTurnIndex];
 

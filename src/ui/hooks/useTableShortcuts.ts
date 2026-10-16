@@ -43,12 +43,17 @@ export function createTableShortcutHandler(props: UseTableShortcutsProps) {
       const now = Date.now();
       if (now - lastQTime <= 1200) {
         lastQTime = 0;
+        let success: boolean | void = true;
         if (props.onExportDebugLog) {
-          props.onExportDebugLog();
+          success = props.onExportDebugLog();
         } else {
-          exportDebugLogFile(props.gameState as GameState);
+          success = exportDebugLogFile(props.gameState as GameState);
         }
-        props.onNotify?.('Debug log downloaded! (qq)');
+        if (success === false) {
+          props.onNotify?.('Failed to download debug log');
+        } else {
+          props.onNotify?.('Debug log downloaded! (qq)');
+        }
       } else {
         lastQTime = now;
       }

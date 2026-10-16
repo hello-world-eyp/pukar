@@ -110,7 +110,8 @@ describe('Debug Logger Engine', () => {
     expect(log.gameMode).toBe('MULTIPLAYER');
   });
 
-  it('exports debug log file via browser DOM download link', () => {
+  it('exports debug log file via browser DOM download link with delayed revocation to protect browser download streams', () => {
+    vi.useFakeTimers();
     const originalWindow = globalThis.window;
     const originalDocument = globalThis.document;
 
@@ -137,6 +138,8 @@ describe('Debug Logger Engine', () => {
         createObjectURL: mockCreateObjectURL,
         revokeObjectURL: mockRevokeObjectURL,
       },
+      setTimeout: globalThis.setTimeout,
+      clearTimeout: globalThis.clearTimeout,
     } as any;
 
     try {
@@ -153,8 +156,61 @@ describe('Debug Logger Engine', () => {
       expect(mockAnchor.download).toBe('test-debug-log.json');
       expect(mockAnchor.href).toBe('blob:mock-url');
       expect(mockAnchor.click).toHaveBeenCalled();
+      // Crucial: revokeObjectURL must NOT be called synchronously, which causes browser downloads on HTTPS/Render to abort!
+      expect(mockRevokeObjectURL).not.toHaveBeenCalled();
+
+      // Advancing timer cleans up the blob URL safely
+      vi.advanceTimersByTime(3000);
       expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
       expect(downloadSpy).toHaveBeenCalledWith('test-debug-log.json');
+    } finally {
+      globalThis.window = originalWindow;
+      globalThis.document = originalDocument;
+      vi.useRealTimers();
+    }
+  });
+
+  it('falls back to data URI when createObjectURL throws or fails', () => {
+    const originalWindow = globalThis.window;
+    const originalDocument = globalThis.document;
+
+    const mockAnchor = {
+      href: '',
+      download: '',
+      click: vi.fn(),
+    };
+
+    const mockDocument = {
+      createElement: vi.fn().mockReturnValue(mockAnchor),
+      body: {
+        appendChild: vi.fn(),
+        removeChild: vi.fn(),
+      },
+    };
+
+    globalThis.document = mockDocument as any;
+    globalThis.window = {
+      URL: {
+        createObjectURL: vi.fn().mockImplementation(() => {
+          throw new Error('Blocked by CSP or browser policy');
+        }),
+      },
+    } as any;
+
+    try {
+      recordGameSnapshot(sampleState);
+      const downloadSpy = vi.fn();
+
+      const success = exportDebugLogFile(sampleState, {
+        filename: 'fallback-debug-log.json',
+        onDownload: downloadSpy,
+      });
+
+      expect(success).toBe(true);
+      expect(mockAnchor.download).toBe('fallback-debug-log.json');
+      expect(mockAnchor.href).toContain('data:application/json;charset=utf-8,');
+      expect(mockAnchor.click).toHaveBeenCalled();
+      expect(downloadSpy).toHaveBeenCalledWith('fallback-debug-log.json');
     } finally {
       globalThis.window = originalWindow;
       globalThis.document = originalDocument;

@@ -172,6 +172,23 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('New Game');
       expect(html).toContain('Menu');
     });
+
+    it('renders download debug log button when onExportDebugLog is supplied', () => {
+      const exportSpy = vi.fn();
+      const html = renderToString(
+        <TopNavBar
+          activeTab="table"
+          onTabChange={vi.fn()}
+          onOpenRules={vi.fn()}
+          players={mockPlayers}
+          currentPlayerIndex={0}
+          onExportDebugLog={exportSpy}
+        />
+      );
+
+      expect(html).toContain('data-testid="btn-download-debug-log"');
+      expect(html).toContain('Download Debug Log (Shortcut: qq)');
+    });
   });
 
   describe('SequencesPage Component', () => {

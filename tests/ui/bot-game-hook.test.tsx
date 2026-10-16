@@ -458,6 +458,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
           gameState: state,
           botConfig,
           handleAction,
+          meldDelayMs: 0,
         })
       );
 
@@ -562,6 +563,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
                 botConfig,
                 handleAction,
                 turnDelayMs: 250,
+                meldDelayMs: 0,
               }),
             stateMap
           );
@@ -578,6 +580,7 @@ describe('useBotGame & Bot Pacing Fixes', () => {
             botConfig,
             handleAction,
             turnDelayMs: 250,
+            meldDelayMs: 0,
           }),
         stateMap
       );
@@ -1236,6 +1239,81 @@ describe('useBotGame & Bot Pacing Fixes', () => {
       // Check that team B now has melds on the table and the board is open
       expect(currentState.melds.B.length).toBeGreaterThanOrEqual(1);
       expect(currentState.melds.B[0].isPure).toBe(true);
+    });
+
+    it('waits 2 seconds (meldDelayMs) between placing consecutive sequences so human players can process them', () => {
+      vi.useFakeTimers();
+      const state = dealInitialState(4);
+      state.currentPlayerIndex = 1; // Chachi
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+      state.melds = { A: [], B: [] }; // Team B opening turn
+
+      // Hand with a Pure sequence (4♠, 5♠, 6♠) AND a Dirty sequence (8♥, 9♥, Natural Joker) + discard card
+      const c4s = { id: 'c4s', suit: 'SPADES' as const, rank: 4 as const, isNaturalJoker: false, isJoker: false };
+      const c5s = { id: 'c5s', suit: 'SPADES' as const, rank: 5 as const, isNaturalJoker: false, isJoker: false };
+      const c6s = { id: 'c6s', suit: 'SPADES' as const, rank: 6 as const, isNaturalJoker: false, isJoker: false };
+
+      const c8h = { id: 'c8h', suit: 'HEARTS' as const, rank: 8 as const, isNaturalJoker: false, isJoker: false };
+      const c9h = { id: 'c9h', suit: 'HEARTS' as const, rank: 9 as const, isNaturalJoker: false, isJoker: false };
+      const cJoker = { id: 'cJoker', suit: null, rank: 0 as const, isNaturalJoker: true, isJoker: true };
+
+      const cDis = { id: 'cDis', suit: 'CLUBS' as const, rank: 2 as const, isNaturalJoker: false, isJoker: false };
+
+      state.players[1].hand = [c4s, c5s, c6s, c8h, c9h, cJoker, cDis];
+
+      const botConfig = createTestBotConfig();
+      const dispatchedActions: any[] = [];
+      let currentState = state;
+
+      const handleAction = vi.fn((act: any) => {
+        dispatchedActions.push(act);
+        const res = pukarReducer(currentState, act);
+        if (!res.error) {
+          currentState = res.state;
+          return true;
+        }
+        return false;
+      });
+
+      const stateMap = new Map<number, any>();
+      runHook(
+        () =>
+          useBotGame({
+            appMode: 'BOTS',
+            gameState: currentState,
+            botConfig,
+            handleAction,
+            turnDelayMs: 250,
+            meldDelayMs: 2000,
+          }),
+        stateMap
+      );
+
+      // Advance initial turn delay into MELD phase
+      vi.advanceTimersByTime(250);
+
+      // Sequence 1 (Pure run) must be dispatched
+      const meldsAfterFirst = dispatchedActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(meldsAfterFirst.length).toBe(1);
+
+      // Sequence 2 must NOT be dispatched yet!
+      expect(dispatchedActions.some((a) => a.type === 'DISCARD_CARD')).toBe(false);
+
+      // Advance 1000ms (< 2000ms)
+      vi.advanceTimersByTime(1000);
+      expect(dispatchedActions.filter((a) => a.type === 'PLAY_NEW_MELD').length).toBe(1);
+
+      // Advance remaining 1000ms (total 2000ms meldDelayMs elapsed)
+      vi.advanceTimersByTime(1000);
+
+      // Sequence 2 (Dirty run) must now be dispatched!
+      const meldsAfterSecond = dispatchedActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+      expect(meldsAfterSecond.length).toBe(2);
+
+      // Advance turnDelayMs to DISCARD subphase
+      vi.advanceTimersByTime(250);
+      expect(dispatchedActions.some((a) => a.type === 'DISCARD_CARD')).toBe(true);
     });
   });
 });

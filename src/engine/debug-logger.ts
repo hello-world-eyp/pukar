@@ -1,4 +1,4 @@
-import { Card, GameAction, GameState, Meld } from './types';
+import { Card, GameAction, GameState, Meld, SanitizedGameState } from './types';
 
 export interface DebugPlayerSnapshot {
   id: string;
@@ -34,7 +34,7 @@ export interface PukarDebugLog {
   appName: 'Pukar Card Game';
   exportedAt: string;
   gameMode: 'LOCAL' | 'BOTS' | 'MULTIPLAYER';
-  liveState: GameState | null;
+  liveState: GameState | SanitizedGameState | null;
   totalSnapshots: number;
   history: DebugSnapshot[];
 }
@@ -77,16 +77,29 @@ class GameDebugLogger {
     }));
   }
 
-  public recordSnapshot(state: GameState, action?: GameAction): DebugSnapshot {
+  public recordSnapshot(state: GameState | SanitizedGameState, action?: GameAction): DebugSnapshot {
     this.stepCounter += 1;
 
-    const playersSnapshot: DebugPlayerSnapshot[] = (state.players || []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      team: p.team,
-      hand: this.cloneCards(p.hand),
-      cardCount: p.hand ? p.hand.length : 0,
-    }));
+    const playersSnapshot: DebugPlayerSnapshot[] = (state.players || []).map((p) => {
+      const cardCount = 'cardCount' in p && typeof p.cardCount === 'number'
+        ? p.cardCount
+        : (p.hand ? p.hand.length : 0);
+      return {
+        id: p.id,
+        name: p.name,
+        team: p.team,
+        hand: this.cloneCards(p.hand),
+        cardCount,
+      };
+    });
+
+    const pukarPoolCount = 'pukarPool' in state && Array.isArray((state as GameState).pukarPool)
+      ? (state as GameState).pukarPool.length
+      : ('pukarPoolCount' in state && typeof state.pukarPoolCount === 'number' ? state.pukarPoolCount : 0);
+
+    const stockDeckCount = 'stockDeck' in state && Array.isArray((state as GameState).stockDeck)
+      ? (state as GameState).stockDeck.length
+      : ('stockDeckCount' in state && typeof state.stockDeckCount === 'number' ? state.stockDeckCount : 0);
 
     const snapshot: DebugSnapshot = {
       timestamp: new Date().toISOString(),
@@ -102,8 +115,8 @@ class GameDebugLogger {
         B: this.cloneMelds(state.melds?.B),
       },
       discardPile: this.cloneCards(state.discardPile),
-      pukarPoolCount: Array.isArray(state.pukarPool) ? state.pukarPool.length : 0,
-      stockDeckCount: Array.isArray(state.stockDeck) ? state.stockDeck.length : 0,
+      pukarPoolCount,
+      stockDeckCount,
       pukarsClaimed: {
         A: state.pukarsClaimed?.A ?? 0,
         B: state.pukarsClaimed?.B ?? 0,
@@ -126,8 +139,8 @@ class GameDebugLogger {
     return snapshot;
   }
 
-  public getLogData(currentState?: GameState): PukarDebugLog {
-    let liveStateClone: GameState | null = null;
+  public getLogData(currentState?: GameState | SanitizedGameState): PukarDebugLog {
+    let liveStateClone: GameState | SanitizedGameState | null = null;
     if (currentState) {
       try {
         liveStateClone = JSON.parse(JSON.stringify(currentState));
@@ -148,7 +161,7 @@ class GameDebugLogger {
   }
 
   public exportLogFile(
-    currentState?: GameState,
+    currentState?: GameState | SanitizedGameState,
     options?: {
       filename?: string;
       onDownload?: (filename: string) => void;
@@ -162,22 +175,50 @@ class GameDebugLogger {
     if (
       typeof window !== 'undefined' &&
       typeof document !== 'undefined' &&
-      typeof document.createElement === 'function' &&
-      window.URL &&
-      typeof window.URL.createObjectURL === 'function'
+      typeof document.createElement === 'function'
     ) {
+      // 1. Try Blob + createObjectURL
+      let objectUrl: string | null = null;
+      if (window.URL && typeof window.URL.createObjectURL === 'function') {
+        try {
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          objectUrl = window.URL.createObjectURL(blob);
+        } catch {
+          objectUrl = null;
+        }
+      }
+
+      // 2. Fall back to Data URI if Blob / createObjectURL failed or was blocked by CSP
+      const href =
+        objectUrl || `data:application/json;charset=utf-8,${encodeURIComponent(jsonString)}`;
+
       try {
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = href;
         a.download = filename;
+        if (a.style) {
+          a.style.display = 'none';
+        }
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        if (typeof window.URL.revokeObjectURL === 'function') {
-          window.URL.revokeObjectURL(url);
+
+        // Crucial for remote hosting (Render/HTTPS): delay revoking object URL so browser download stream is not aborted
+        if (objectUrl && typeof window.URL.revokeObjectURL === 'function') {
+          const revokeFn = () => {
+            try {
+              window.URL.revokeObjectURL(objectUrl!);
+            } catch {
+              // Ignore cleanup error
+            }
+          };
+          if (typeof window.setTimeout === 'function') {
+            window.setTimeout(revokeFn, 2500);
+          } else {
+            revokeFn();
+          }
         }
+
         options?.onDownload?.(filename);
         return true;
       } catch (err) {
@@ -195,16 +236,19 @@ class GameDebugLogger {
 // Global singleton instance for runtime state recording
 const globalDebugLogger = new GameDebugLogger();
 
-export function recordGameSnapshot(state: GameState, action?: GameAction): DebugSnapshot {
+export function recordGameSnapshot(
+  state: GameState | SanitizedGameState,
+  action?: GameAction
+): DebugSnapshot {
   return globalDebugLogger.recordSnapshot(state, action);
 }
 
-export function getDebugLogData(currentState?: GameState): PukarDebugLog {
+export function getDebugLogData(currentState?: GameState | SanitizedGameState): PukarDebugLog {
   return globalDebugLogger.getLogData(currentState);
 }
 
 export function exportDebugLogFile(
-  currentState?: GameState,
+  currentState?: GameState | SanitizedGameState,
   options?: {
     filename?: string;
     onDownload?: (filename: string) => void;

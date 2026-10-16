@@ -1,5 +1,5 @@
 import React from 'react';
-import { RotateCcw, Volume2, VolumeX, Home } from 'lucide-react';
+import { RotateCcw, Volume2, VolumeX, Home, Download } from 'lucide-react';
 
 export interface PlayerInfo {
   id: string;
@@ -18,6 +18,7 @@ export interface TopNavBarProps {
   onToggleMute?: () => void;
   onNewGame?: () => void;
   onExitToMenu?: () => void;
+  onExportDebugLog?: () => void;
   gameTitle?: string;
   roomCode?: string | null;
   consolidatePlayers?: boolean;
@@ -41,6 +42,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onToggleMute,
   onNewGame,
   onExitToMenu,
+  onExportDebugLog,
   gameTitle,
   roomCode,
   consolidatePlayers,
@@ -286,6 +288,20 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             aria-label={isMuted ? 'Unmute Sound' : 'Mute Sound'}
           >
             {isMuted ? <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" /> : <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" />}
+          </button>
+        )}
+
+        {/* Download Debug Log */}
+        {onExportDebugLog && (
+          <button
+            type="button"
+            data-testid="btn-download-debug-log"
+            onClick={onExportDebugLog}
+            className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center justify-center cursor-pointer shrink-0 shadow-sm"
+            title="Download Debug Log (Shortcut: qq)"
+            aria-label="Download Debug Log"
+          >
+            <Download className="w-4 h-4 sm:w-5 sm:h-5 text-lime-400" />
           </button>
         )}
 

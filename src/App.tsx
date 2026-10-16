@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GameState, SanitizedGameState } from './engine/types';
+import { exportDebugLogFile } from './engine/debug-logger';
 import { TopNavBar } from './ui/components/TopNavBar';
 import { SequencesPage } from './ui/components/SequencesPage';
 import { ScoreboardPage } from './ui/components/ScoreboardPage';
@@ -284,6 +285,7 @@ export function App({
     botConfig,
     handleAction,
     turnDelayMs: 1500,
+    meldDelayMs: 2000,
     isPaused: isBotPaused,
   });
 
@@ -447,6 +449,14 @@ export function App({
               setCurrentScreen('MENU');
             }}
             roomCode={isMultiplayerActive ? multiplayerHook.roomCode : null}
+            onExportDebugLog={() => {
+              const success = exportDebugLogFile(activeGameState as GameState);
+              if (success) {
+                setExhaustNotification('Debug log downloaded!');
+              } else {
+                setExhaustNotification('Failed to download debug log');
+              }
+            }}
           />
 
       {/* Persistent Multiplayer Status Bar when inside an active online room */}
