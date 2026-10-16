@@ -459,4 +459,139 @@ describe('Normal Joker Pickup & Immutability vs "2" Wildcard', () => {
       expect(addResult.state.lastPickedUpCard?.id).toBe('card-joker-d');
     });
   });
+
+  describe('Normal Joker Replacement in 13-Card Sequences', () => {
+    it('allows replacing a Normal Joker in a 13-card sequence with the matching natural card and promotes to Pure 13 (500 pts)', () => {
+      // Create a 13-card Heart sequence with ranks 2..14, where rank 5 is represented by a Normal Joker
+      const naturalCards = [
+        makeCard('h2', 'HEARTS', 2),
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('h11', 'HEARTS', 11),
+        makeCard('h12', 'HEARTS', 12),
+        makeCard('h13', 'HEARTS', 13),
+        makeCard('h14', 'HEARTS', 14),
+      ];
+      const joker = makeCard('joker-h5', null, 0, true);
+
+      const tableMeld: Meld = {
+        id: 'meld-hearts-13c-joker',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [...naturalCards, joker],
+        slots: [
+          { card: naturalCards[0], representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[1], representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[2], representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: joker, representedRank: 5, representedSuit: 'HEARTS', isWildcard: true },
+          ...naturalCards.slice(3).map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            representedSuit: 'HEARTS' as const,
+            isWildcard: false,
+          })),
+        ],
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+        points: 100,
+      };
+
+      const card5 = makeCard('h5', 'HEARTS', 5);
+
+      // 1. canAddCardsToMeld must be valid and return pickedUpCard = joker
+      const result = canAddCardsToMeld(tableMeld, [card5]);
+      expect(result.valid).toBe(true);
+      expect(result.pickedUpCard).toBeDefined();
+      expect(result.pickedUpCard?.id).toBe('joker-h5');
+      expect(result.updatedSlots).toHaveLength(13);
+      expect(result.updatedSlots?.every((s) => !s.isWildcard)).toBe(true);
+
+      // 2. pukarReducer must process ADD_TO_MELD, update meld to 500 pts / Pure 13, and put Joker in hand
+      const initialState = dealInitialState(4);
+      const stateWithMeld = {
+        ...initialState,
+        currentPlayerIndex: 0,
+        phase: 'MELD' as const,
+        turnPhase: 'MELD' as const,
+        melds: {
+          ...initialState.melds,
+          A: [tableMeld],
+        },
+        players: initialState.players.map((p, idx) =>
+          idx === 0 ? { ...p, team: 'A' as const, hand: [card5, makeCard('extra-card', 'SPADES', 10)] } : p
+        ),
+      };
+
+      const addResult = pukarReducer(stateWithMeld, {
+        type: 'ADD_TO_MELD',
+        meldId: 'meld-hearts-13c-joker',
+        cardIds: ['h5'],
+      });
+
+      expect(addResult.error).toBeUndefined();
+      const updatedMeld = addResult.state.melds.A[0];
+      expect(updatedMeld.points).toBe(500);
+      expect(updatedMeld.isPure13).toBe(true);
+      expect(updatedMeld.cards.some((c) => c.id === 'joker-h5')).toBe(false);
+      expect(updatedMeld.cards.some((c) => c.id === 'h5')).toBe(true);
+
+      // Player hand has the picked-up Joker
+      const activeHand = addResult.state.players[0].hand;
+      expect(activeHand.some((c) => c.id === 'joker-h5')).toBe(true);
+      expect(activeHand.some((c) => c.id === 'h5')).toBe(false);
+    });
+
+    it('rejects adding a card to a 13-card sequence if it does not replace the Joker', () => {
+      const naturalCards = [
+        makeCard('h2', 'HEARTS', 2),
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('h11', 'HEARTS', 11),
+        makeCard('h12', 'HEARTS', 12),
+        makeCard('h13', 'HEARTS', 13),
+        makeCard('h14', 'HEARTS', 14),
+      ];
+      const joker = makeCard('joker-h5', null, 0, true);
+
+      const tableMeld: Meld = {
+        id: 'meld-hearts-13c-joker',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [...naturalCards, joker],
+        slots: [
+          { card: naturalCards[0], representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[1], representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[2], representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: joker, representedRank: 5, representedSuit: 'HEARTS', isWildcard: true },
+          ...naturalCards.slice(3).map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            representedSuit: 'HEARTS' as const,
+            isWildcard: false,
+          })),
+        ],
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+        points: 100,
+      };
+
+      const wrongCard = makeCard('h7-duplicate', 'HEARTS', 7);
+      const result = canAddCardsToMeld(tableMeld, [wrongCard]);
+      expect(result.valid).toBe(false);
+    });
+  });
 });

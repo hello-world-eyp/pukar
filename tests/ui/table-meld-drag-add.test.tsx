@@ -13,6 +13,16 @@ describe('TableMeldBoard: Drag-and-Drop Cards to Sequences', () => {
   const heartK: Card = { id: 'hK', suit: 'HEARTS', rank: 13 };
   const fillerCard: Card = { id: 'filler', suit: 'CLUBS', rank: 2 };
 
+  function makeCard(id: string, suit: Card['suit'], rank: number, isNaturalJoker = false): Card {
+    return {
+      id,
+      suit,
+      rank: rank as Rank,
+      isNaturalJoker,
+      isJoker: isNaturalJoker || rank === 2,
+    };
+  }
+
   const teamARunMeld: Meld = {
     id: 'meld-A-spades',
     type: 'RUN',
@@ -231,6 +241,115 @@ describe('TableMeldBoard: Drag-and-Drop Cards to Sequences', () => {
 
       expect(result.valid).toBe(false);
       expect(result.error).toBe('No cards in flight');
+    });
+
+    it('allows dropping a natural replacement card onto a 13-card impure sequence containing a Normal Joker', () => {
+      const naturalCards = [
+        makeCard('h2', 'HEARTS', 2),
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('h11', 'HEARTS', 11),
+        makeCard('h12', 'HEARTS', 12),
+        makeCard('h13', 'HEARTS', 13),
+        makeCard('h14', 'HEARTS', 14),
+      ];
+      const jokerCard = makeCard('joker-h5', null, 0, true);
+      const impure13Meld: Meld = {
+        id: 'meld-A-impure13',
+        type: 'RUN',
+        team: 'A',
+        suit: 'HEARTS',
+        cards: [...naturalCards, jokerCard],
+        points: 100,
+        isClean: false,
+        isPure13: false,
+        slots: [
+          { card: naturalCards[0], representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[1], representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[2], representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: jokerCard, representedRank: 5, representedSuit: 'HEARTS', isWildcard: true },
+          ...naturalCards.slice(3).map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            representedSuit: 'HEARTS' as const,
+            isWildcard: false,
+          })),
+        ],
+      };
+
+      const heart5 = makeCard('h5', 'HEARTS', 5);
+      const allHandCards = [heart5, fillerCard];
+
+      const result = canDropCardsOnMeld({
+        meld: impure13Meld,
+        cardsInFlight: [heart5],
+        allHandCards,
+        canAdd: true,
+        isOwnTeam: true,
+      });
+
+      expect(result.valid).toBe(true);
+      expect((result as any).pickedUpCard?.id).toBe('joker-h5');
+    });
+
+    it('allows dropping replacement card even when hand has only 1 card, because the Joker is retrieved into hand', () => {
+      const naturalCards = [
+        makeCard('h2', 'HEARTS', 2),
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h7', 'HEARTS', 7),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('h11', 'HEARTS', 11),
+        makeCard('h12', 'HEARTS', 12),
+        makeCard('h13', 'HEARTS', 13),
+        makeCard('h14', 'HEARTS', 14),
+      ];
+      const jokerCard = makeCard('joker-h5', null, 0, true);
+      const impure13Meld: Meld = {
+        id: 'meld-A-impure13',
+        type: 'RUN',
+        team: 'A',
+        suit: 'HEARTS',
+        cards: [...naturalCards, jokerCard],
+        points: 100,
+        isClean: false,
+        isPure13: false,
+        slots: [
+          { card: naturalCards[0], representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[1], representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: naturalCards[2], representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: jokerCard, representedRank: 5, representedSuit: 'HEARTS', isWildcard: true },
+          ...naturalCards.slice(3).map((c) => ({
+            card: c,
+            representedRank: c.rank,
+            representedSuit: 'HEARTS' as const,
+            isWildcard: false,
+          })),
+        ],
+      };
+
+      const heart5 = makeCard('h5', 'HEARTS', 5);
+      // Hand has only 1 card (heart5)
+      const allHandCards = [heart5];
+
+      const result = canDropCardsOnMeld({
+        meld: impure13Meld,
+        cardsInFlight: [heart5],
+        allHandCards,
+        canAdd: true,
+        isOwnTeam: true,
+      });
+
+      expect(result.valid).toBe(true);
+      expect((result as any).pickedUpCard?.id).toBe('joker-h5');
     });
   });
 });

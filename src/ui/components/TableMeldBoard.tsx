@@ -316,11 +316,15 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
             // Check if all selected cards can be added to this sequence
             // Complete 500-pt sequences are closed - nothing can be added
             const isOwnTeam = isActive;
+            const rawValidation =
+              canAdd && isOwnTeam && selectedCards && selectedCards.length > 0 && !isCompleteSequence
+                ? canAddCardsToMeld(meld, selectedCards)
+                : { valid: false };
             const willLeaveEmptyHand = Boolean(
               allHandCards &&
                 allHandCards.length > 0 &&
                 selectedCards &&
-                selectedCards.length >= allHandCards.length
+                selectedCards.length - (rawValidation.pickedUpCard ? 1 : 0) >= allHandCards.length
             );
             const canAttemptAdd = Boolean(
               !isCompleteSequence &&
@@ -330,9 +334,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 selectedCards.length > 0 &&
                 !willLeaveEmptyHand
             );
-            const addValidation = canAttemptAdd
-              ? canAddCardsToMeld(meld, selectedCards!)
-              : { valid: false };
+            const addValidation = canAttemptAdd ? rawValidation : { valid: false };
             const isEligibleToAutoAdd = Boolean(canAttemptAdd && addValidation.valid);
             const canSelectThisMeld = Boolean(onSelectMeld) && !isCompleteSequence;
 
@@ -427,10 +429,18 @@ export function canDropCardsOnMeld({
     if (!cardsInFlight || cardsInFlight.length === 0) {
       return { valid: false, error: 'No cards in flight' };
     }
-    if (allHandCards && allHandCards.length <= cardsInFlight.length) {
+    const validation = canAddCardsToMeld(meld, cardsInFlight);
+    if (!validation.valid) {
+      return validation;
+    }
+    const netHandRemaining =
+      (allHandCards ? allHandCards.length : 0) -
+      cardsInFlight.length +
+      (validation.pickedUpCard ? 1 : 0);
+    if (allHandCards && netHandRemaining <= 0) {
       return { valid: false, error: 'Cannot meld all cards; must keep at least 1 card in hand' };
     }
-    return canAddCardsToMeld(meld, cardsInFlight);
+    return validation;
   } catch (err) {
     console.error('Error validating drop cards on meld:', err);
     return { valid: false, error: 'Validation error' };
