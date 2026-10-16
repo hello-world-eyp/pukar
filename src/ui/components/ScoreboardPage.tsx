@@ -13,6 +13,7 @@ import {
   Layers,
   History,
 } from 'lucide-react';
+import { MatchAnalyticsView } from './MatchAnalyticsView';
 
 export interface ScoreboardPageProps {
   gameState: GameState | SanitizedGameState;
@@ -27,6 +28,7 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
   onOpenRules,
   className = '',
 }) => {
+  const [activeTab, setActiveTab] = React.useState<'SCORES' | 'AWARDS'>('SCORES');
   const round = gameState.round ?? 1;
   const roundStatus: RoundStatus = gameState.roundStatus ?? 'PLAYING';
 
@@ -281,6 +283,48 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
         )}
       </div>
 
+      {/* =====================================================================
+          TAB NAVIGATION (SCORES vs AWARDS)
+      ====================================================================== */}
+      <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/60 p-2.5 rounded-2xl">
+        <button
+          type="button"
+          data-testid="tab-scoreboard-overview"
+          onClick={() => setActiveTab('SCORES')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === 'SCORES'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Scores & Sequences</span>
+        </button>
+        <button
+          type="button"
+          data-testid="tab-scoreboard-awards"
+          onClick={() => setActiveTab('AWARDS')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer ${
+            activeTab === 'AWARDS'
+              ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Award className="w-4 h-4" />
+          <span>Match Awards & Analytics</span>
+        </button>
+      </div>
+
+      {activeTab === 'AWARDS' ? (
+        <MatchAnalyticsView
+          matchStats={gameState.matchStats}
+          players={gameState.players}
+          winnerTeam={teamALeading ? 'A' : teamBLeading ? 'B' : 'TIE'}
+          roundScores={roundScores}
+          totalScores={totalScores}
+        />
+      ) : (
+        <>
       {/* =====================================================================
           2. HERO MATCH STANDINGS (TEAM A VS TEAM B)
       ====================================================================== */}
@@ -782,6 +826,8 @@ export const ScoreboardPage: React.FC<ScoreboardPageProps> = ({
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

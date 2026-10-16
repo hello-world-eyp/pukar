@@ -1012,6 +1012,9 @@ export function App({
         totalScores={activeGameState.totalScores ?? activeGameState.scores}
         melds={activeGameState.melds}
         pukarsClaimed={activeGameState.pukarsClaimed}
+        isGameOver={activeGameState.roundStatus === 'GAME_OVER'}
+        matchStats={activeGameState.matchStats}
+        players={activeGameState.players}
         onStartNextRound={() => handleAction({ type: 'START_NEXT_ROUND' })}
       />
 

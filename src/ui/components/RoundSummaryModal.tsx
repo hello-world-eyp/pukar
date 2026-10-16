@@ -1,11 +1,13 @@
 import React from 'react';
-import { Meld, Team } from '../../engine/types';
+import { Meld, Team, MatchStats, Player, SanitizedPlayer } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
+import { MatchAnalyticsView } from './MatchAnalyticsView';
 import { Trophy, Crown, ArrowRight, Shield, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export interface RoundSummaryModalProps {
   isOpen?: boolean;
   isRoundOver?: boolean;
+  isGameOver?: boolean;
   round?: number;
   roundScores?: { A: number; B: number };
   totalScores?: { A: number; B: number };
@@ -19,6 +21,8 @@ export interface RoundSummaryModalProps {
   };
   winnerTeam?: Team | 'TIE' | null;
   winningReason?: string;
+  matchStats?: MatchStats;
+  players?: Array<Player | SanitizedPlayer>;
   onStartNextRound: () => void;
   onClose?: () => void;
   className?: string;
@@ -27,6 +31,7 @@ export interface RoundSummaryModalProps {
 export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
   isOpen,
   isRoundOver,
+  isGameOver = false,
   round = 1,
   roundScores = { A: 0, B: 0 },
   totalScores = { A: 0, B: 0 },
@@ -34,10 +39,16 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
   pukarsClaimed = { A: 0, B: 0 },
   winnerTeam,
   winningReason,
+  matchStats,
+  players = [],
   onStartNextRound,
   onClose,
   className = '',
 }) => {
+  const [activeTab, setActiveTab] = React.useState<'ROUND' | 'AWARDS'>(() =>
+    isGameOver ? 'AWARDS' : 'ROUND'
+  );
+
   // Modal open condition
   const shouldShow = isOpen !== undefined ? isOpen : Boolean(isRoundOver);
   if (!shouldShow) return null;
@@ -122,8 +133,47 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
           )}
         </div>
 
-        {/* POINTS BREAKDOWN BODY */}
-        <div className="p-6 overflow-y-auto max-h-[60vh] flex flex-col gap-6">
+        {/* TABS SWITCHER */}
+        <div className="flex items-center justify-center gap-2 border-b border-slate-800 bg-slate-900/60 p-2.5">
+          <button
+            type="button"
+            data-testid="tab-round-breakdown"
+            onClick={() => setActiveTab('ROUND')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              activeTab === 'ROUND'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            📋 Round Breakdown
+          </button>
+          <button
+            type="button"
+            data-testid="tab-match-awards"
+            onClick={() => setActiveTab('AWARDS')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              activeTab === 'AWARDS'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            🏆 Match Awards & Analytics
+          </button>
+        </div>
+
+        {/* BODY (ROUND BREAKDOWN OR MATCH AWARDS) */}
+        {activeTab === 'AWARDS' ? (
+          <div className="p-6 overflow-y-auto max-h-[60vh]">
+            <MatchAnalyticsView
+              matchStats={matchStats}
+              players={players}
+              winnerTeam={determinedWinner}
+              roundScores={roundScores}
+              totalScores={totalScores}
+            />
+          </div>
+        ) : (
+          <div className="p-6 overflow-y-auto max-h-[60vh] flex flex-col gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* TEAM A BREAKDOWN */}
             <div
@@ -255,41 +305,51 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
               </div>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* MODAL FOOTER ACTION */}
-        <div className="bg-slate-900/90 border-t border-slate-800 px-6 py-4 flex items-center justify-end gap-3">
-          {onClose && (
+        <div className="bg-slate-900/90 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="text-xs text-slate-400 font-medium truncate w-full sm:w-auto">
+            <span>{`Starting Round ${round + 1}: `}</span>
+            <span className="font-bold text-amber-300">
+              {`${players[(round) % (players.length || 4)]?.name || `Player ${((round) % (players.length || 4)) + 1}`} (Seat ${((round) % (players.length || 4)) + 1})`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            {onClose && (
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    onClose();
+                  } catch (err) {
+                    console.error('Error in RoundSummaryModal onClose:', err);
+                  }
+                }}
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              >
+                Close
+              </button>
+            )}
+
             <button
               type="button"
+              data-testid="btn-next-round"
               onClick={() => {
                 try {
-                  onClose();
+                  onStartNextRound();
                 } catch (err) {
-                  console.error('Error in RoundSummaryModal onClose:', err);
+                  console.error('Error in onStartNextRound:', err);
                 }
               }}
-              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+              className="w-full sm:w-auto h-12 px-7 rounded-xl btn-game-primary font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
-              Close
+              <span>Next Round</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
-          )}
-
-          <button
-            type="button"
-            data-testid="btn-next-round"
-            onClick={() => {
-              try {
-                onStartNextRound();
-              } catch (err) {
-                console.error('Error in onStartNextRound:', err);
-              }
-            }}
-            className="w-full sm:w-auto h-12 px-7 rounded-xl btn-game-primary font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-          >
-            <span>Next Round</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          </div>
         </div>
       </div>
     </div>

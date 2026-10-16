@@ -113,6 +113,18 @@ export function dealInitialState(
   // 4. Remaining cards form the face-down Stock Deck
   const stockDeck: Card[] = deck;
 
+  // 5. Initialize clean Match Analytics
+  const playerStats: Record<number, any> = {};
+  for (let i = 0; i < playerCount; i++) {
+    playerStats[i] = {
+      pointsContributed: 0,
+      jokersStolen: 0,
+      cardsFedToOpponents: 0,
+      pukarsClaimed: 0,
+      meldsCreated: 0,
+    };
+  }
+
   return {
     playerCount,
     players,
@@ -136,5 +148,9 @@ export function dealInitialState(
     finalTurnPlayerIndex: null,
     newlyPickedUpCardIds: [],
     cardsPickedUpThisTurn: [],
+    matchStats: {
+      playerStats,
+      scoreTimeline: [{ round: 1, scoreA: 0, scoreB: 0 }],
+    },
   };
 }

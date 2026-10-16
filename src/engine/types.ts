@@ -106,6 +106,35 @@ export interface GameState {
   initialHandSizeThisTurn?: number;
   frustrationCooldownUntil?: number;
   activeFrustration?: { playerName: string; triggeredAt: number } | null;
+  matchStats?: MatchStats;
+}
+
+export interface PlayerMatchStats {
+  pointsContributed: number;
+  jokersStolen: number;          // Natural Joker replacements from table melds
+  cardsFedToOpponents: number;   // Discards scooped up by opposing team
+  pukarsClaimed: number;
+  meldsCreated: number;
+}
+
+export interface LongestSequenceRecord {
+  cardCount: number;
+  description: string;
+  team: Team;
+  playerIndex?: number;
+  cards: Card[];
+}
+
+export interface ScoreTimelineEntry {
+  round: number;
+  scoreA: number;
+  scoreB: number;
+}
+
+export interface MatchStats {
+  playerStats: Record<number, PlayerMatchStats>;
+  longestSequence?: LongestSequenceRecord;
+  scoreTimeline: ScoreTimelineEntry[];
 }
 
 export interface RoundHistoryEntry {
@@ -195,6 +224,7 @@ export interface SanitizedGameState {
   initialHandSizeThisTurn?: number;
   frustrationCooldownUntil?: number;
   activeFrustration?: { playerName: string; triggeredAt: number } | null;
+  matchStats?: MatchStats;
 }
 
 /**

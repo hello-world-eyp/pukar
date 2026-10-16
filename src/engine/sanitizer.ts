@@ -75,6 +75,9 @@ export function sanitizeStateForPlayer(
       activeFrustration: state?.activeFrustration
         ? { ...state.activeFrustration }
         : null,
+      matchStats: state?.matchStats
+        ? JSON.parse(JSON.stringify(state.matchStats))
+        : undefined,
     };
   } catch (err) {
     console.error('Error in sanitizeStateForPlayer:', err);

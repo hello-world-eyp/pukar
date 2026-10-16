@@ -413,7 +413,8 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
       expect(next.isRoundOver).toBeFalsy();
       expect(next.totalScores).toEqual({ A: 250, B: 100 });
       expect(next.scores).toEqual({ A: 250, B: 100 });
-      expect(next.currentPlayerIndex).toBe(0);
+      // Round 2 starting player rotates to Seat 1 (Player 2)
+      expect(next.currentPlayerIndex).toBe(1);
       // Fresh 13-card hands
       next.players.forEach((p) => {
         expect(p.hand).toHaveLength(13);

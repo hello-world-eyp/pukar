@@ -8,6 +8,7 @@ import {
   RoundHistoryEntry,
   isWildcard,
   isNaturalJoker,
+  MatchStats,
 } from './types';
 import { dealInitialState, shuffleDeck } from './deck';
 import {
@@ -16,6 +17,11 @@ import {
   evaluateMeldScore,
   isPureRun,
 } from './meld-validator';
+import {
+  createInitialPlayerStats,
+  createInitialMatchStats,
+  describeSequence,
+} from './match-analytics';
 
 /**
  * Calculates end-of-round points for both teams based on melds on the table
@@ -286,6 +292,26 @@ function handleTakeDiscard(state: GameState): {
     initialHandSizeThisTurn: initialHandSize,
   };
 
+  let updatedMatchStats = state.matchStats;
+  if (updatedMatchStats) {
+    const prevIdx = (state.currentPlayerIndex + state.playerCount - 1) % state.playerCount;
+    const prevPlayer = state.players[prevIdx];
+    if (prevPlayer && prevPlayer.team !== activePlayer.team) {
+      const prevStats = updatedMatchStats.playerStats[prevIdx] || createInitialPlayerStats();
+      updatedMatchStats = {
+        ...updatedMatchStats,
+        playerStats: {
+          ...updatedMatchStats.playerStats,
+          [prevIdx]: {
+            ...prevStats,
+            cardsFedToOpponents: prevStats.cardsFedToOpponents + cardsFromDiscard.length,
+          },
+        },
+      };
+      nextState.matchStats = updatedMatchStats;
+    }
+  }
+
   return { state: nextState };
 }
 
@@ -371,7 +397,35 @@ function handlePlayNewMeld(
     [team]: [...state.melds[team], newMeld],
   };
 
-  return handlePostMeldState(state, remainingHand, updatedMelds);
+  let updatedMatchStats = state.matchStats;
+  if (updatedMatchStats) {
+    const currentIdx = state.currentPlayerIndex;
+    const currentStats = updatedMatchStats.playerStats[currentIdx] || createInitialPlayerStats();
+    let longestSeq = updatedMatchStats.longestSequence;
+    if (newMeld.type === 'RUN' && (!longestSeq || newMeld.cards.length > longestSeq.cardCount)) {
+      longestSeq = {
+        cardCount: newMeld.cards.length,
+        description: describeSequence(newMeld.cards),
+        team,
+        playerIndex: currentIdx,
+        cards: [...newMeld.cards],
+      };
+    }
+    updatedMatchStats = {
+      ...updatedMatchStats,
+      longestSequence: longestSeq,
+      playerStats: {
+        ...updatedMatchStats.playerStats,
+        [currentIdx]: {
+          ...currentStats,
+          meldsCreated: currentStats.meldsCreated + 1,
+          pointsContributed: currentStats.pointsContributed + (newMeld.points ?? 0),
+        },
+      },
+    };
+  }
+
+  return handlePostMeldState(state, remainingHand, updatedMelds, updatedMatchStats);
 }
 
 function handleAddToMeld(
@@ -461,7 +515,42 @@ function handleAddToMeld(
     [team]: state.melds[team].map((m) => (m.id === meldId ? updatedMeld : m)),
   };
 
-  const postResult = handlePostMeldState(state, remainingHand, updatedMelds);
+  let updatedMatchStats = state.matchStats;
+  if (updatedMatchStats) {
+    const currentIdx = state.currentPlayerIndex;
+    const currentStats = updatedMatchStats.playerStats[currentIdx] || createInitialPlayerStats();
+    const pointsDiff = Math.max(0, updatedMeld.points - (existingMeld.points ?? 0));
+    const jokersStolen =
+      validation.pickedUpCard && isWildcard(validation.pickedUpCard)
+        ? currentStats.jokersStolen + 1
+        : currentStats.jokersStolen;
+
+    let longestSeq = updatedMatchStats.longestSequence;
+    if (updatedMeld.type === 'RUN' && (!longestSeq || updatedMeld.cards.length > longestSeq.cardCount)) {
+      longestSeq = {
+        cardCount: updatedMeld.cards.length,
+        description: describeSequence(updatedMeld.cards),
+        team,
+        playerIndex: currentIdx,
+        cards: [...updatedMeld.cards],
+      };
+    }
+
+    updatedMatchStats = {
+      ...updatedMatchStats,
+      longestSequence: longestSeq,
+      playerStats: {
+        ...updatedMatchStats.playerStats,
+        [currentIdx]: {
+          ...currentStats,
+          pointsContributed: currentStats.pointsContributed + pointsDiff,
+          jokersStolen,
+        },
+      },
+    };
+  }
+
+  const postResult = handlePostMeldState(state, remainingHand, updatedMelds, updatedMatchStats);
   if (validation.pickedUpCard) {
     postResult.state = {
       ...postResult.state,
@@ -482,7 +571,8 @@ function handleAddToMeld(
 function handlePostMeldState(
   state: GameState,
   remainingHand: Card[],
-  updatedMelds: { A: Meld[]; B: Meld[] }
+  updatedMelds: { A: Meld[]; B: Meld[] },
+  newMatchStats?: MatchStats
 ): { state: GameState; error?: string } {
   const updatedPlayers = state.players.map((p, idx) => {
     if (idx !== state.currentPlayerIndex) return p;
@@ -496,6 +586,7 @@ function handlePostMeldState(
     ...state,
     players: updatedPlayers,
     melds: updatedMelds,
+    ...(newMatchStats ? { matchStats: newMatchStats } : {}),
   };
 
   return { state: nextState };
@@ -636,6 +727,23 @@ function handleDiscardCard(
     };
   });
 
+  let updatedMatchStats = state.matchStats;
+  if (updatedMatchStats && (claimedPukarMidDiscard || remainingHand.length === 0)) {
+    const currentIdx = state.currentPlayerIndex;
+    const currentStats = updatedMatchStats.playerStats[currentIdx] || createInitialPlayerStats();
+    updatedMatchStats = {
+      ...updatedMatchStats,
+      playerStats: {
+        ...updatedMatchStats.playerStats,
+        [currentIdx]: {
+          ...currentStats,
+          pukarsClaimed: currentStats.pukarsClaimed + 1,
+          pointsContributed: currentStats.pointsContributed + 50,
+        },
+      },
+    };
+  }
+
   let nextState: GameState = {
     ...state,
     players: updatedPlayers,
@@ -656,15 +764,30 @@ function handleDiscardCard(
     newlyPickedUpCardIds,
     cardsPickedUpThisTurn,
     initialHandSizeThisTurn,
+    ...(updatedMatchStats ? { matchStats: updatedMatchStats } : {}),
   };
 
   if (isRoundOver) {
     const finalScores = calculateRoundEndScores(nextState);
+    if (updatedMatchStats) {
+      updatedMatchStats = {
+        ...updatedMatchStats,
+        scoreTimeline: [
+          ...updatedMatchStats.scoreTimeline,
+          {
+            round: nextState.round,
+            scoreA: finalScores.totalScores.A,
+            scoreB: finalScores.totalScores.B,
+          },
+        ],
+      };
+    }
     nextState = {
       ...nextState,
       roundScores: finalScores.roundScores,
       scores: finalScores.totalScores,
       totalScores: finalScores.totalScores,
+      ...(updatedMatchStats ? { matchStats: updatedMatchStats } : {}),
     };
   }
 
@@ -714,9 +837,13 @@ function handleStartNextRound(state: GameState): {
         : 'TIE',
   };
 
+  const nextRound = state.round + 1;
+  const startingPlayerIndex = (nextRound - 1) % state.playerCount;
+
   const nextState: GameState = {
     ...freshState,
-    round: state.round + 1,
+    round: nextRound,
+    currentPlayerIndex: startingPlayerIndex,
     scores: preservedScores,
     totalScores: preservedScores,
     roundScores: { A: 0, B: 0 },
@@ -730,6 +857,19 @@ function handleStartNextRound(state: GameState): {
     newlyPickedUpCardIds: [],
     cardsPickedUpThisTurn: [],
     initialHandSizeThisTurn: undefined,
+    matchStats: state.matchStats
+      ? {
+          ...state.matchStats,
+          scoreTimeline: [
+            ...state.matchStats.scoreTimeline,
+            {
+              round: nextRound,
+              scoreA: preservedScores.A ?? 0,
+              scoreB: preservedScores.B ?? 0,
+            },
+          ],
+        }
+      : createInitialMatchStats(state.playerCount),
   };
 
   return { state: nextState };
@@ -765,6 +905,7 @@ function handleResetGame(
     newlyPickedUpCardIds: [],
     cardsPickedUpThisTurn: [],
     initialHandSizeThisTurn: undefined,
+    matchStats: createInitialMatchStats(count),
   };
 
   return { state: nextState };
