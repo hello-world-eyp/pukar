@@ -405,7 +405,8 @@ describe('Hooks Interactive Execution & Edge Cases (Stage 3)', () => {
 
       expect(success).toBe(true);
       expect(setJokerPickupBanner).toHaveBeenCalledWith({ playerName: 'Player 1' });
-      // Crucial requirement: Joker pickup must play normal card place voice ('meld'), NEVER thud ('pukar')
+      // Crucial requirement: Joker pickup must play normal card place voice ('meld'), NEVER thud ('pukar'), and only once (no duplicate chime)
+      expect(triggerSound).toHaveBeenCalledTimes(1);
       expect(triggerSound).toHaveBeenCalledWith('meld');
       expect(triggerSound).not.toHaveBeenCalledWith('pukar');
     });
