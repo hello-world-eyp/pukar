@@ -259,10 +259,12 @@ export function App({
     setJokerPromptData,
   });
 
-  // 5. Global table shortcuts (keystroke optimization)
+  // 5. Global table shortcuts (keystroke optimization and debug logger)
   useTableShortcuts({
     currentScreen,
     onAction: handleAction,
+    gameState: activeGameState as GameState,
+    onNotify: (msg) => setExhaustNotification(msg),
   });
 
   // Determine if bot execution should pause (e.g. while overlays/modals are active)

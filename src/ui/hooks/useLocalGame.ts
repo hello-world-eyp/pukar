@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   GameState,
   SanitizedGameState,
@@ -9,6 +9,12 @@ import {
 } from '../../engine/types';
 import { dealInitialState } from '../../engine/deck';
 import { pukarReducer } from '../../engine/reducer';
+import {
+  recordGameSnapshot,
+  setDebugGameMode,
+  exportDebugLogFile,
+  getDebugLogData,
+} from '../../engine/debug-logger';
 import {
   getRunCandidateOptions,
   getAddToRunCandidateOptions,
@@ -46,9 +52,18 @@ export function useLocalGame({
   setJokerPromptData,
 }: UseLocalGameProps) {
   // Core Local Game State
-  const [gameState, setGameState] = useState<GameState>(() => initialState ?? dealInitialState(4));
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const state = initialState ?? dealInitialState(4);
+    recordGameSnapshot(state);
+    return state;
+  });
   const gameStateRef = useRef<GameState>(gameState);
   gameStateRef.current = gameState;
+
+  // Sync debug logger mode with appMode
+  useEffect(() => {
+    setDebugGameMode(appMode);
+  }, [appMode]);
 
   // Selection state
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
@@ -63,6 +78,8 @@ export function useLocalGame({
       ...(window as any).__PUKAR_GAME__,
       gameState,
       setGameState,
+      exportDebugLog: exportDebugLogFile,
+      getDebugLog: getDebugLogData,
     };
   }
 
@@ -187,6 +204,7 @@ export function useLocalGame({
 
         const next = result.state;
         gameStateRef.current = next;
+        recordGameSnapshot(next, action);
 
         // Detect Pukar claim (+50 pts)
         const nextPukarsA = next.pukarsClaimed?.A ?? 0;

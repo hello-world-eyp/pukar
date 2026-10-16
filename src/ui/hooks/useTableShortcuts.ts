@@ -1,49 +1,101 @@
 import { useEffect, useRef } from 'react';
-import { GameAction } from '../../engine/types';
+import { GameAction, GameState, SanitizedGameState } from '../../engine/types';
+import { exportDebugLogFile } from '../../engine/debug-logger';
 
 export interface UseTableShortcutsProps {
   currentScreen: 'MENU' | 'GAME' | 'MULTIPLAYER_HUB';
   onAction: (action: GameAction) => boolean;
+  onExportDebugLog?: () => boolean | void;
+  onNotify?: (msg: string) => void;
+  gameState?: GameState | SanitizedGameState;
 }
 
-export function useTableShortcuts({ currentScreen, onAction }: UseTableShortcutsProps) {
+export function createTableShortcutHandler(props: UseTableShortcutsProps) {
+  let lastJTime = 0;
+  let lastQTime = 0;
+
+  return (e: { key: string; target?: any }) => {
+    if (props.currentScreen !== 'GAME') return;
+
+    // Ignore typing in form fields or editable areas
+    const target = e.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+
+    const key = e.key.toLowerCase();
+
+    if (key === 'j') {
+      const now = Date.now();
+      if (now - lastJTime <= 1200) {
+        lastJTime = 0;
+        props.onAction({ type: 'OPTIMIZE_DECK_ORDER' });
+      } else {
+        lastJTime = now;
+      }
+      lastQTime = 0;
+    } else if (key === 'q') {
+      const now = Date.now();
+      if (now - lastQTime <= 1200) {
+        lastQTime = 0;
+        if (props.onExportDebugLog) {
+          props.onExportDebugLog();
+        } else {
+          exportDebugLogFile(props.gameState as GameState);
+        }
+        props.onNotify?.('Debug log downloaded! (qq)');
+      } else {
+        lastQTime = now;
+      }
+      lastJTime = 0;
+    } else {
+      lastJTime = 0;
+      lastQTime = 0;
+    }
+  };
+}
+
+export function useTableShortcuts({
+  currentScreen,
+  onAction,
+  onExportDebugLog,
+  onNotify,
+  gameState,
+}: UseTableShortcutsProps) {
   const onActionRef = useRef(onAction);
   onActionRef.current = onAction;
+
+  const onExportDebugLogRef = useRef(onExportDebugLog);
+  onExportDebugLogRef.current = onExportDebugLog;
+
+  const onNotifyRef = useRef(onNotify);
+  onNotifyRef.current = onNotify;
+
+  const gameStateRef = useRef(gameState);
+  gameStateRef.current = gameState;
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.addEventListener !== 'function') return;
     if (currentScreen !== 'GAME') return;
 
-    let lastJTime = 0;
+    const handler = createTableShortcutHandler({
+      currentScreen,
+      onAction: (act) => onActionRef.current(act),
+      onExportDebugLog: () => onExportDebugLogRef.current?.(),
+      onNotify: (msg) => onNotifyRef.current?.(msg),
+      get gameState() {
+        return gameStateRef.current;
+      },
+    });
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore typing in form fields or editable areas
-      const target = e.target as HTMLElement | null;
-      if (
-        target &&
-        (target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.isContentEditable)
-      ) {
-        return;
-      }
-
-      if (e.key === 'j' || e.key === 'J') {
-        const now = Date.now();
-        if (now - lastJTime <= 1200) {
-          lastJTime = 0;
-          onActionRef.current({ type: 'OPTIMIZE_DECK_ORDER' });
-        } else {
-          lastJTime = now;
-        }
-      } else {
-        lastJTime = 0;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handler);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handler);
     };
   }, [currentScreen]);
 }
