@@ -534,6 +534,181 @@ describe('Bot Personality Strategies', () => {
       // Chacha predicts opponent needs 7♠, so Chacha discards 10♦ instead!
       expect(plan.discardAction.cardId).toBe('c2');
     });
+
+    it('draws from stock deck to hunt for missing 13th card of a 12-card sequence (500 pts) rather than taking irrelevant discard', () => {
+      const state = createTestState();
+      state.currentPlayerIndex = 2; // Sid (Player 2, Team A)
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      // Hand has [6♥, 13♦, 9♠] (3 cards, close to Pukar!)
+      state.players[2].hand = [
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('d13', 'DIAMONDS', 13),
+        makeCard('s9', 'SPADES', 9),
+      ];
+
+      // Discard pile has 7♥ (discarded by Chachi, Team B)
+      state.discardPile = [makeCard('h7', 'HEARTS', 7)];
+      state.stockDeck = [
+        makeCard('s13', 'SPADES', 13), // King of Spades is in stock deck!
+        makeCard('d5', 'DIAMONDS', 5),
+        makeCard('c8', 'CLUBS', 8),
+      ];
+
+      // Team A has a 12-card Spades run on the board (ranks 1 to 12), missing K♠ (rank 13) for 500-pt Dirty 13!
+      const spadesRunCards: Card[] = [
+        makeCard('s14', 'SPADES', 14),
+        makeCard('s2', 'SPADES', 2),
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('j0', null, 0, true), // Joker representing rank 7
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9b', 'SPADES', 9),
+        makeCard('s10', 'SPADES', 10),
+        makeCard('s11', 'SPADES', 11),
+        makeCard('s12', 'SPADES', 12),
+      ];
+      const slots = [
+        { card: spadesRunCards[0], representedRank: 1, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[1], representedRank: 2, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[2], representedRank: 3, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[3], representedRank: 4, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[4], representedRank: 5, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[5], representedRank: 6, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[6], representedRank: 7, representedSuit: 'SPADES' as const, isWildcard: true },
+        { card: spadesRunCards[7], representedRank: 8, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[8], representedRank: 9, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[9], representedRank: 10, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[10], representedRank: 11, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[11], representedRank: 12, representedSuit: 'SPADES' as const, isWildcard: false },
+      ];
+
+      state.melds.A = [
+        {
+          id: 'meld-r1-A-spades',
+          team: 'A',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: spadesRunCards,
+          slots,
+          isPure: false,
+          isPure13: false,
+          points: 100,
+        },
+      ];
+
+      // Memory where Chachi previously picked up 7♥, but then discarded 7♥
+      const memory: BotMemory = {
+        cardLog: [],
+        bottomPickupsByPlayer: {
+          1: [makeCard('h7-prev', 'HEARTS', 7)],
+        },
+        discardsByPlayer: {
+          1: [makeCard('h7', 'HEARTS', 7)],
+        },
+      };
+
+      const plan = decideSmartChachaTurn(state, 2, memory);
+
+      // Sid MUST draw from stock deck to hunt for K♠, NOT pick up 7♥!
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    it('takes discard pile when top card provides the missing card to complete the 13-card 500-pt sequence', () => {
+      const state = createTestState();
+      state.currentPlayerIndex = 2; // Sid (Player 2, Team A)
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      state.players[2].hand = [
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('d13', 'DIAMONDS', 13),
+        makeCard('s9', 'SPADES', 9),
+      ];
+
+      // Discard pile top card IS K♠!
+      state.discardPile = [makeCard('s13-top', 'SPADES', 13)];
+      state.stockDeck = [makeCard('d5', 'DIAMONDS', 5)];
+
+      const spadesRunCards: Card[] = [
+        makeCard('s14', 'SPADES', 14),
+        makeCard('s2', 'SPADES', 2),
+        makeCard('s3', 'SPADES', 3),
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('j0', null, 0, true),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9b', 'SPADES', 9),
+        makeCard('s10', 'SPADES', 10),
+        makeCard('s11', 'SPADES', 11),
+        makeCard('s12', 'SPADES', 12),
+      ];
+      const slots = [
+        { card: spadesRunCards[0], representedRank: 1, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[1], representedRank: 2, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[2], representedRank: 3, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[3], representedRank: 4, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[4], representedRank: 5, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[5], representedRank: 6, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[6], representedRank: 7, representedSuit: 'SPADES' as const, isWildcard: true },
+        { card: spadesRunCards[7], representedRank: 8, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[8], representedRank: 9, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[9], representedRank: 10, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[10], representedRank: 11, representedSuit: 'SPADES' as const, isWildcard: false },
+        { card: spadesRunCards[11], representedRank: 12, representedSuit: 'SPADES' as const, isWildcard: false },
+      ];
+
+      state.melds.A = [
+        {
+          id: 'meld-r1-A-spades',
+          team: 'A',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: spadesRunCards,
+          slots,
+          isPure: false,
+          isPure13: false,
+          points: 100,
+        },
+      ];
+
+      const plan = decideSmartChachaTurn(state, 2, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('refuses to take a card for opponent denial if the opponent literally just discarded it', () => {
+      const state = createTestState();
+      state.currentPlayerIndex = 2; // Sid (Team A)
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      state.players[2].hand = [
+        makeCard('c1', 'CLUBS', 4),
+        makeCard('c2', 'DIAMONDS', 9),
+        makeCard('c3', 'SPADES', 12),
+        makeCard('c4', 'HEARTS', 4),
+        makeCard('c5', 'CLUBS', 14),
+      ];
+
+      // Discard is 7♥, discarded by Player 1 (Chachi, Team B)
+      state.discardPile = [makeCard('h7', 'HEARTS', 7)];
+
+      // Memory where Player 1 picked up a card near 7 earlier, but then discarded 7♥
+      const memory: BotMemory = {
+        cardLog: [],
+        bottomPickupsByPlayer: {
+          1: [makeCard('h8', 'HEARTS', 8)],
+        },
+        discardsByPlayer: {
+          1: [makeCard('h7', 'HEARTS', 7)],
+        },
+      };
+
+      const plan = decideSmartChachaTurn(state, 2, memory);
+      // Chachi discarded 7♥, so Chachi does not want it. Sid should NOT scoop it up to "deny" it!
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
   });
 
   describe('Discard Pile Pickup & Joker Intelligence', () => {

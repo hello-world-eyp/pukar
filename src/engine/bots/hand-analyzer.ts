@@ -4,7 +4,7 @@
  * Pure TypeScript with zero DOM dependencies.
  */
 import { Card, Meld, Suit, isNaturalJoker, isWildcard } from '../types';
-import { canAddCardsToMeld, doesCardMatchRank, evaluateMeldScore, validateNewMeld } from '../meld-validator';
+import { canAddCardsToMeld, doesCardMatchRank, evaluateMeldScore, isPureRun, validateNewMeld } from '../meld-validator';
 
 export interface CandidateMeld {
   cards: Card[];
@@ -1273,6 +1273,68 @@ export function isDiscardPileTopConnecting(
   return false;
 }
 
+export interface MilestoneRunTarget {
+  meld: Meld;
+  targetCount: 7 | 13;
+  targetPoints: 100 | 200 | 500;
+  missingRanks: number[];
+  suit: Suit;
+}
+
+/**
+ * Identifies active team RUN sequences that are close to completing high-value milestones:
+ * - 10-12 cards chasing 13 cards (500 pts for Pure/Dirty 13)
+ * - 5-6 cards chasing 7 cards (200 pts for Clean 7 if pure, or 100 pts for 7-card run)
+ */
+export function getTeamMilestoneRunTargets(teamMelds: Meld[]): MilestoneRunTarget[] {
+  const targets: MilestoneRunTarget[] = [];
+  if (!teamMelds || teamMelds.length === 0) return targets;
+
+  for (const meld of teamMelds) {
+    if (meld.type !== 'RUN' || !meld.suit) continue;
+    const cards = meld.cards || meld.slots?.map((s) => s.card) || [];
+    const count = cards.length;
+
+    if (count >= 10 && count < 13) {
+      const ranksInMeld = new Set(meld.slots.map((s) => s.representedRank));
+      const missingRanks: number[] = [];
+      for (let r = 1; r <= 14; r++) {
+        if (!ranksInMeld.has(r)) {
+          missingRanks.push(r);
+        }
+      }
+      targets.push({
+        meld,
+        targetCount: 13,
+        targetPoints: 500,
+        missingRanks,
+        suit: meld.suit,
+      });
+    } else if (count >= 5 && count < 7) {
+      const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+      const missingRanks: number[] = [];
+      if (ranks.length > 0) {
+        const minR = ranks[0];
+        const maxR = ranks[ranks.length - 1];
+        if (minR > 2) missingRanks.push(minR - 1);
+        if (maxR < 14) missingRanks.push(maxR + 1);
+        if (minR === 2) missingRanks.push(1);
+        if (maxR === 13) missingRanks.push(14);
+      }
+      const isPure = isPureRun(cards, meld.slots);
+      targets.push({
+        meld,
+        targetCount: 7,
+        targetPoints: isPure ? 200 : 100,
+        missingRanks,
+        suit: meld.suit,
+      });
+    }
+  }
+
+  return targets;
+}
+
 export interface DiscardPickupOptions {
   personality: 'SMART_CHACHA' | 'THE_JADUGAR' | 'FAST_CHACHI' | 'THE_LONG_TERM_GUY' | 'CHEETAH';
   pukarPoolCount?: number;
@@ -1280,6 +1342,10 @@ export interface DiscardPickupOptions {
   allTableMelds?: Meld[];
   isBoardOpen?: boolean;
   isTeamOpen?: boolean;
+  stockDeckCount?: number;
+  nextOpponentCardCount?: number;
+  lastDiscarderTeam?: import('../types').Team;
+  botTeam?: import('../types').Team;
 }
 
 /**
@@ -1341,6 +1407,32 @@ export function evaluateDiscardPilePickup(
     );
     if (hasExtremeMeld) return true;
     if (hand.length <= 14) return false;
+  }
+
+  // Milestone Sequence Priority:
+  // If the team has an active sequence chasing a 500-pt 13-card milestone (10-12 cards),
+  // fishing from the stock deck is vastly superior to taking small discard piles of deadwood.
+  // Unless the discard pile contains a Joker/wildcard (handled in Section 1), or directly
+  // extends/completes the milestone run, or is a large pile (>= 4 cards), refuse the discard pile and draw from stock!
+  const milestone13Melds = teamMelds.filter(
+    (m) =>
+      m.type === 'RUN' &&
+      (m.cards?.length ?? m.slots?.length ?? 0) >= 10 &&
+      (m.cards?.length ?? m.slots?.length ?? 0) < 13
+  );
+  if (
+    milestone13Melds.length > 0 &&
+    (options.stockDeckCount === undefined || options.stockDeckCount > 0)
+  ) {
+    const pileAddsToMilestone13 = milestone13Melds.some(
+      (m) => canAddCardsToMeld(m, [topCard]).valid || canAddCardsToMeld(m, discardPile).valid
+    );
+    if (pileAddsToMilestone13) {
+      return true;
+    }
+    if (pileLength < 4) {
+      return false;
+    }
   }
 
   // 3. Melds / Additions from whole pile
@@ -1443,18 +1535,34 @@ export function evaluateDiscardPilePickup(
         return true;
       }
     } else if (options.personality === 'SMART_CHACHA') {
+      const isDirectAdd = teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid);
+      const isTightPairOrRun = hand.some(
+        (h) =>
+          !isWildcard(h) &&
+          (h.rank === topCard.rank ||
+            (h.suit !== null &&
+              topCard.suit !== null &&
+              h.suit === topCard.suit &&
+              Math.abs(h.rank - topCard.rank) === 1))
+      );
+
       // Smart Chacha evaluates connecting cards:
-      // - If pile is small (<= 2 cards), taking it is clean and beneficial
-      // - If pile has 3+ cards with 2+ connectors and hand has room
-      // - If pile has 4+ cards and top card connects, take it (do not leave 4 cards easily!)
-      if (pileLength <= 2 && hand.length > 3) {
-        return true;
-      }
-      if (pileLength >= 3 && totalConnectingInPile >= 2 && hand.length > 4) {
-        return true;
-      }
-      if (pileLength >= 4 && hand.length > 1) {
-        return true;
+      // - If pile is small (<= 2 cards), require tight connection (direct table add or pair/adjacent run)
+      //   AND hand has room (hand.length > 3, so lean hands on <= 3 cards don't get bloated)
+      if (pileLength <= 2) {
+        if ((isDirectAdd || isTightPairOrRun) && hand.length > 3) {
+          return true;
+        }
+      } else if (pileLength === 3) {
+        // If pile has 3 cards, require 2+ connectors and hand has room
+        if (totalConnectingInPile >= 2 && hand.length > 4) {
+          return true;
+        }
+      } else if (pileLength >= 4) {
+        // If pile has 4+ cards and top card connects, take it (large volume advantage)
+        if (hand.length > 1) {
+          return true;
+        }
       }
     } else {
       return true;
@@ -1463,7 +1571,7 @@ export function evaluateDiscardPilePickup(
 
   if (totalConnectingInPile >= 2) {
     if (options.personality === 'SMART_CHACHA') {
-      if (hand.length > 4 || pileLength >= 4) {
+      if (hand.length > 4 && pileLength >= 3) {
         return true;
       }
     } else if (options.personality === 'CHEETAH') {
@@ -1475,18 +1583,30 @@ export function evaluateDiscardPilePickup(
 
   // 6. Opponent Denial (Smart Chacha)
   if (options.personality === 'SMART_CHACHA' && options.opponentWants) {
-    const topKey = topCard.suit ? `${topCard.suit}_${topCard.rank}` : 'WILD';
-    if (options.opponentWants.has(topKey) || options.opponentWants.has(topCard.id)) {
-      return true;
-    }
-    // If pile has >= 4 cards and opponents want any card in the pile, deny them!
-    if (pileLength >= 4 && hand.length > 1) {
-      const oppWantsCard = discardPile.some((c) => {
-        const k = c.suit ? `${c.suit}_${c.rank}` : 'WILD';
-        return options.opponentWants?.has(k) || options.opponentWants?.has(c.id);
-      });
-      if (oppWantsCard) {
-        return true;
+    // Only deny if bot has room in hand (not lean / close to Pukar)
+    if (hand.length > 4) {
+      const isJustDiscardedByOpponent =
+        options.lastDiscarderTeam !== undefined &&
+        options.botTeam !== undefined &&
+        options.lastDiscarderTeam !== options.botTeam &&
+        pileLength === 1;
+
+      if (!isJustDiscardedByOpponent) {
+        const topKey = topCard.suit ? `${topCard.suit}_${topCard.rank}` : 'WILD';
+        if (options.opponentWants.has(topKey) || options.opponentWants.has(topCard.id)) {
+          return true;
+        }
+      }
+
+      // If pile has >= 4 cards and opponents want any card in the pile, deny them!
+      if (pileLength >= 4) {
+        const oppWantsCard = discardPile.some((c) => {
+          const k = c.suit ? `${c.suit}_${c.rank}` : 'WILD';
+          return options.opponentWants?.has(k) || options.opponentWants?.has(c.id);
+        });
+        if (oppWantsCard) {
+          return true;
+        }
       }
     }
   }

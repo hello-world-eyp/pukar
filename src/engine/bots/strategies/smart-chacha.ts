@@ -60,6 +60,19 @@ export function predictOpponentWants(
     }
   }
 
+  // 3. Remove cards that opponents discarded (they threw them away as deadwood!)
+  state.players.forEach((player, pIdx) => {
+    if (player.team === opponentTeam) {
+      const discards = memory.discardsByPlayer[pIdx] || [];
+      for (const card of discards) {
+        if (card.suit) {
+          wants.delete(`${card.suit}_${card.rank}`);
+        }
+        wants.delete(card.id);
+      }
+    }
+  });
+
   return wants;
 }
 
@@ -131,6 +144,16 @@ export function decideSmartChachaTurn(
   const isTeamOpen = Boolean(state.hasOpened?.[team] || myTeamMelds.length > 0 || myTeamMelds.some((m) => m.isPure));
   const opponentWants = predictOpponentWants(memory, state, team);
 
+  const nextPlayerIndex = (botIndex + 1) % state.playerCount;
+  const nextPlayer = state.players[nextPlayerIndex];
+  const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;
+  const nextOpponentCardCount = isNextPlayerOpponent
+    ? ((nextPlayer as any).cardCount ?? nextPlayer.hand?.length ?? 0)
+    : undefined;
+  const lastPlayerIndex = (botIndex + state.playerCount - 1) % state.playerCount;
+  const lastPlayer = state.players[lastPlayerIndex];
+  const lastDiscarderTeam = lastPlayer?.team;
+
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
     type: 'DRAW_FROM_STOCK',
@@ -145,6 +168,10 @@ export function decideSmartChachaTurn(
         allTableMelds,
         isBoardOpen,
         isTeamOpen,
+        stockDeckCount: state.stockDeck.length,
+        nextOpponentCardCount,
+        lastDiscarderTeam,
+        botTeam: team,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
@@ -207,12 +234,6 @@ export function decideSmartChachaTurn(
   const candidatePool = remainingHand.length > 0 ? remainingHand : hand;
   const partnerLikelyWants = new Set<string>();
   const protectedCardIds = new Set<string>();
-  const nextPlayerIndex = (botIndex + 1) % state.playerCount;
-  const nextPlayer = state.players[nextPlayerIndex];
-  const isNextPlayerOpponent = nextPlayer && nextPlayer.team === opponentTeam;
-  const nextOpponentCardCount = isNextPlayerOpponent
-    ? ((nextPlayer as any).cardCount ?? nextPlayer.hand?.length ?? 0)
-    : undefined;
   const anyOpponentOnTwoOrFewer = state.players.some(
     (p) => p.team === opponentTeam && (((p as any).cardCount ?? p.hand?.length ?? 0) <= 2)
   );

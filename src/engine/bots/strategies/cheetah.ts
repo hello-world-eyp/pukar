@@ -56,6 +56,8 @@ export function decideCheetahTurn(
         allTableMelds,
         isBoardOpen,
         isTeamOpen,
+        stockDeckCount: state.stockDeck.length,
+        botTeam: team,
       })
     ) {
       drawAction = { type: 'TAKE_DISCARD' };
