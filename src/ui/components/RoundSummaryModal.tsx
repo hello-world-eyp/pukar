@@ -101,10 +101,10 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
       aria-modal="true"
       aria-labelledby="round-summary-title"
       data-testid="round-summary-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 lg:p-8 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className={`relative w-full max-w-3xl lg:max-w-4xl game-modal-frame rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
+        className={`relative w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[1450px] game-modal-frame rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
       >
         {/* HEADER HERO BANNER */}
         <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 px-6 py-6 border-b border-slate-800 text-center relative">
@@ -163,7 +163,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
 
         {/* BODY (ROUND BREAKDOWN OR MATCH AWARDS) */}
         {activeTab === 'AWARDS' ? (
-          <div className="p-6 overflow-y-auto max-h-[60vh]">
+          <div className="p-6 sm:p-8 overflow-y-auto max-h-[76vh]">
             <MatchAnalyticsView
               matchStats={matchStats}
               players={players}
@@ -173,7 +173,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
             />
           </div>
         ) : (
-          <div className="p-6 overflow-y-auto max-h-[60vh] flex flex-col gap-6">
+          <div className="p-6 sm:p-8 overflow-y-auto max-h-[76vh] flex flex-col gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* TEAM A BREAKDOWN */}
             <div
