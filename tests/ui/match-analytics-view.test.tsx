@@ -121,6 +121,50 @@ describe('Match Analytics View & End-Game Summary Awards', () => {
     expect(html).toContain('stroke="#f59e0b"'); // Team B amber stroke
   });
 
+  it('deduplicates multiple entries per round so each round appears once and displays Start baseline', () => {
+    const duplicateRoundStats: MatchStats = {
+      ...sampleMatchStats,
+      scoreTimeline: [
+        { round: 1, scoreA: 0, scoreB: 0 },
+        { round: 1, scoreA: 500, scoreB: 150 },
+        { round: 2, scoreA: 500, scoreB: 150 },
+        { round: 2, scoreA: 1100, scoreB: 250 },
+        { round: 3, scoreA: 1100, scoreB: 250 },
+        { round: 3, scoreA: 2600, scoreB: 700 },
+      ],
+    };
+
+    const html = renderToString(
+      <MatchAnalyticsView
+        matchStats={duplicateRoundStats}
+        players={samplePlayers}
+        winnerTeam="A"
+        totalScores={{ A: 2600, B: 700 }}
+      />
+    );
+
+    // Initial baseline labeled Start
+    expect(html).toContain('Start');
+
+    // Exactly one card per completed round (Round 1, Round 2, Round 3)
+    expect(html).toContain('data-testid="milestone-card-1"');
+    expect(html).toContain('data-testid="milestone-card-2"');
+    expect(html).toContain('data-testid="milestone-card-3"');
+
+    // Accurate point diffs for each round
+    expect(html).toContain('+500'); // Round 1 Team A
+    expect(html).toContain('+150'); // Round 1 Team B
+    expect(html).toContain('+600'); // Round 2 Team A
+    expect(html).toContain('+100'); // Round 2 Team B
+    expect(html).toContain('+1500'); // Round 3 Team A
+    expect(html).toContain('+450'); // Round 3 Team B
+
+    // Axis labels: count occurrences of "Round 1" in SVG axis text
+    const axisRound1Count = (html.match(/Round 1/g) || []).length;
+    // 1 in SVG axis + 1 in milestone card = exactly 2 occurrences in the entire view (NOT 3 or 4)
+    expect(axisRound1Count).toBe(2);
+  });
+
   it('renders RoundSummaryModal with tabs, next round starting player, and match analytics', () => {
     const onStartNextRound = vi.fn();
 

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   MatchStats,
   Player,
   SanitizedPlayer,
   Team,
+  ScoreTimelineEntry,
 } from '../../engine/types';
 import {
   calculateMatchMVP,
@@ -33,7 +34,38 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
   const heist = getBiggestHeistAward(matchStats, players);
   const feeder = getChiefFeederAward(matchStats, players);
   const longestSeq = matchStats?.longestSequence;
-  const timeline = matchStats?.scoreTimeline || [];
+  // Normalize score timeline: deduplicate multiple entries per round and ensure single point per round
+  const timeline = useMemo(() => {
+    const raw = matchStats?.scoreTimeline || [];
+    if (raw.length === 0) return [];
+
+    // Group entries by round number, taking the latest (completed) score for each round
+    const roundMap = new Map<number, ScoreTimelineEntry>();
+
+    for (const entry of raw) {
+      if (
+        entry.round === 0 ||
+        (entry.round === 1 && entry.scoreA === 0 && entry.scoreB === 0 && raw.length > 1)
+      ) {
+        // Initial 0-0 state represents the match Start (Round 0)
+        roundMap.set(0, { round: 0, scoreA: 0, scoreB: 0 });
+      } else {
+        roundMap.set(entry.round, entry);
+      }
+    }
+
+    // Ensure we always have an initial baseline at Start (0, 0) if any rounds exist
+    if (!roundMap.has(0) && roundMap.size > 0) {
+      roundMap.set(0, { round: 0, scoreA: 0, scoreB: 0 });
+    }
+
+    // Sort ascending by round number
+    return Array.from(roundMap.values()).sort((a, b) => a.round - b.round);
+  }, [matchStats?.scoreTimeline]);
+
+  const milestoneRounds = useMemo(() => {
+    return timeline.filter((entry) => entry.round > 0);
+  }, [timeline]);
 
   // SVG Chart Dimensions - Expanded for wide cinematic layout
   const chartWidth = 900;
@@ -433,6 +465,7 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
               {/* X Axis Round Labels - positioned cleanly below Team B baseline score */}
               {timeline.map((entry, idx) => {
                 const cx = getX(idx, timeline.length);
+                const label = entry.round === 0 ? 'Start' : `Round ${entry.round}`;
                 return (
                   <text
                     key={`round-label-${idx}`}
@@ -443,7 +476,7 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
                     textAnchor="middle"
                     fontWeight="bold"
                   >
-                    Round {entry.round}
+                    {label}
                   </text>
                 );
               })}
@@ -452,25 +485,27 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
         </div>
 
         {/* Round Progression Milestones Cards */}
-        {timeline.length > 0 && (
+        {milestoneRounds.length > 0 && (
           <div className="pt-3 border-t border-slate-800 flex flex-col gap-2.5">
             <div className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Round Progression Milestones
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {timeline.map((entry, idx) => {
-                const prevA = idx > 0 ? timeline[idx - 1].scoreA : 0;
-                const prevB = idx > 0 ? timeline[idx - 1].scoreB : 0;
+              {milestoneRounds.map((entry) => {
+                const prevEntry = timeline.find((t) => t.round === entry.round - 1);
+                const prevA = prevEntry ? prevEntry.scoreA : 0;
+                const prevB = prevEntry ? prevEntry.scoreB : 0;
                 const diffA = entry.scoreA - prevA;
                 const diffB = entry.scoreB - prevB;
                 const leader = entry.scoreA > entry.scoreB ? 'A' : entry.scoreB > entry.scoreA ? 'B' : 'TIED';
                 return (
                   <div
-                    key={`round-card-${idx}`}
+                    key={`round-card-${entry.round}`}
+                    data-testid={`milestone-card-${entry.round}`}
                     className="bg-slate-950/70 rounded-xl p-3 border border-slate-800 flex flex-col gap-1.5 shadow-sm"
                   >
                     <div className="flex items-center justify-between pb-1 border-b border-slate-800/80">
-                      <span className="text-[11px] font-black text-white">Round {entry.round}</span>
+                      <span className="text-[11px] font-black text-white">{`Round ${entry.round}`}</span>
                       <span
                         className={`text-[9px] font-black px-1.5 py-0.5 rounded ${
                           leader === 'A'
@@ -487,22 +522,18 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
                       <span className="text-blue-300 font-bold">Team A</span>
                       <div className="flex items-center gap-1 font-mono">
                         <span className="font-black text-white">{entry.scoreA}</span>
-                        {idx > 0 && (
-                          <span className={`text-[10px] ${diffA >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {diffA >= 0 ? `+${diffA}` : diffA}
-                          </span>
-                        )}
+                        <span className={`text-[10px] ${diffA >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {diffA >= 0 ? `+${diffA}` : diffA}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-amber-300 font-bold">Team B</span>
                       <div className="flex items-center gap-1 font-mono">
                         <span className="font-black text-white">{entry.scoreB}</span>
-                        {idx > 0 && (
-                          <span className={`text-[10px] ${diffB >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            {diffB >= 0 ? `+${diffB}` : diffB}
-                          </span>
-                        )}
+                        <span className={`text-[10px] ${diffB >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {diffB >= 0 ? `+${diffB}` : diffB}
+                        </span>
                       </div>
                     </div>
                   </div>

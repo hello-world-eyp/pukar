@@ -22,7 +22,7 @@ describe('Match Analytics & Awards Engine', () => {
       meldsCreated: 0,
     });
     expect(state.matchStats!.scoreTimeline).toEqual([
-      { round: 1, scoreA: 0, scoreB: 0 },
+      { round: 0, scoreA: 0, scoreB: 0 },
     ]);
   });
 
@@ -175,6 +175,10 @@ describe('Match Analytics & Awards Engine', () => {
     state.round = 1;
     state.roundStatus = 'ROUND_OVER';
     state.isRoundOver = true;
+    state.matchStats!.scoreTimeline = [
+      { round: 0, scoreA: 0, scoreB: 0 },
+      { round: 1, scoreA: 200, scoreB: 50 },
+    ];
     state.matchStats!.playerStats[0].meldsCreated = 2;
 
     const result = pukarReducer(state, { type: 'START_NEXT_ROUND' });
@@ -186,7 +190,10 @@ describe('Match Analytics & Awards Engine', () => {
     expect(nextState.currentPlayerIndex).toBe(1);
     // Preserved match stats
     expect(nextState.matchStats!.playerStats[0].meldsCreated).toBe(2);
-    // Score timeline updated for round 2
-    expect(nextState.matchStats!.scoreTimeline.length).toBe(2);
+    // Score timeline preserved without premature duplicate entry for round 2
+    expect(nextState.matchStats!.scoreTimeline).toEqual([
+      { round: 0, scoreA: 0, scoreB: 0 },
+      { round: 1, scoreA: 200, scoreB: 50 },
+    ]);
   });
 });

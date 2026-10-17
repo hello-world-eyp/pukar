@@ -778,16 +778,22 @@ function handleDiscardCard(
   if (isRoundOver) {
     const finalScores = calculateRoundEndScores(nextState);
     if (updatedMatchStats) {
+      const existingIdx = updatedMatchStats.scoreTimeline.findIndex(
+        (t) => t.round === nextState.round
+      );
+      const roundEntry = {
+        round: nextState.round,
+        scoreA: finalScores.totalScores.A,
+        scoreB: finalScores.totalScores.B,
+      };
+      const updatedTimeline =
+        existingIdx >= 0
+          ? updatedMatchStats.scoreTimeline.map((t, idx) => (idx === existingIdx ? roundEntry : t))
+          : [...updatedMatchStats.scoreTimeline, roundEntry];
+
       updatedMatchStats = {
         ...updatedMatchStats,
-        scoreTimeline: [
-          ...updatedMatchStats.scoreTimeline,
-          {
-            round: nextState.round,
-            scoreA: finalScores.totalScores.A,
-            scoreB: finalScores.totalScores.B,
-          },
-        ],
+        scoreTimeline: updatedTimeline,
       };
     }
     nextState = {
@@ -869,14 +875,6 @@ function handleStartNextRound(state: GameState): {
     matchStats: state.matchStats
       ? {
           ...state.matchStats,
-          scoreTimeline: [
-            ...state.matchStats.scoreTimeline,
-            {
-              round: nextRound,
-              scoreA: preservedScores.A ?? 0,
-              scoreB: preservedScores.B ?? 0,
-            },
-          ],
         }
       : createInitialMatchStats(state.playerCount),
   };

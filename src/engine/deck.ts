@@ -154,7 +154,7 @@ export function dealInitialState(
     cardsPickedUpThisTurn: [],
     matchStats: {
       playerStats,
-      scoreTimeline: [{ round: 1, scoreA: 0, scoreB: 0 }],
+      scoreTimeline: [{ round: 0, scoreA: 0, scoreB: 0 }],
     },
   };
 }
