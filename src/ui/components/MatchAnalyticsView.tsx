@@ -69,10 +69,10 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
 
   // SVG Chart Dimensions - Expanded for wide cinematic layout
   const chartWidth = 900;
-  const chartHeight = 220;
+  const chartHeight = 175;
   const paddingX = 60;
-  const paddingYTop = 30;
-  const paddingYBottom = 45;
+  const paddingYTop = 22;
+  const paddingYBottom = 34;
 
   const maxScore = Math.max(
     100,
@@ -101,10 +101,10 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
   return (
     <div
       data-testid="match-analytics-view"
-      className={`flex flex-col gap-6 text-slate-100 ${className}`}
+      className={`flex flex-col gap-4 sm:gap-5 text-slate-100 ${className}`}
     >
       {/* 1. SPOTLIGHT AWARDS GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* MVP AWARD */}
         <div
           data-testid="award-match-mvp"
@@ -329,23 +329,23 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
       {/* 2. SCORE PROGRESSION TIMELINE GRAPH */}
       <div
         data-testid="score-timeline-graph"
-        className="rounded-2xl bg-slate-900/90 border-2 border-slate-800 p-6 shadow-2xl flex flex-col gap-5"
+        className="rounded-2xl bg-slate-900/90 border-2 border-slate-800 p-4 sm:p-5 shadow-2xl flex flex-col gap-3.5"
       >
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-2.5">
-            <TrendingUp className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-lg font-black text-white">Score Progression Timeline</h3>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 border-b border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-emerald-400" />
+            <h3 className="text-base sm:text-lg font-black text-white">Score Progression Timeline</h3>
           </div>
-          <div className="flex items-center gap-5 text-xs font-bold">
+          <div className="flex items-center gap-4 text-xs font-bold">
             <div className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded-full bg-blue-500 inline-block shadow-sm shadow-blue-500/50" />
+              <span className="w-3 h-3 rounded-full bg-blue-500 inline-block shadow-sm shadow-blue-500/50" />
               <span className="text-blue-300">Team A</span>
               <span className="text-white font-black ml-1 text-sm font-mono">
                 ({totalScores?.A ?? timeline[timeline.length - 1]?.scoreA ?? 0} pts)
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block shadow-sm shadow-amber-400/50" />
+              <span className="w-3 h-3 rounded-full bg-amber-400 inline-block shadow-sm shadow-amber-400/50" />
               <span className="text-amber-300">Team B</span>
               <span className="text-white font-black ml-1 text-sm font-mono">
                 ({totalScores?.B ?? timeline[timeline.length - 1]?.scoreB ?? 0} pts)
@@ -359,7 +359,7 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
           <div className="min-w-[650px]">
             <svg
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full h-52 overflow-visible"
+              className="w-full h-40 sm:h-44 overflow-visible"
             >
               {/* Grid Lines */}
               <line

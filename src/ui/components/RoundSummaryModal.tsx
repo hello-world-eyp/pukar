@@ -101,24 +101,24 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
       aria-modal="true"
       aria-labelledby="round-summary-title"
       data-testid="round-summary-modal"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 lg:p-8 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 md:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className={`relative w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[1450px] game-modal-frame rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
+        className={`relative w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl 2xl:max-w-[1450px] max-h-[92vh] sm:max-h-[90vh] game-modal-frame rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col ${className}`}
       >
         {/* HEADER HERO BANNER */}
-        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 px-6 py-6 border-b border-slate-800 text-center relative">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-2">
+        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-800 text-center relative shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1.5">
             <Sparkles className="w-3.5 h-3.5" />
             {`Round ${round} Completed`}
           </div>
 
-          <h2 id="round-summary-title" className="text-2xl sm:text-3xl font-black text-slate-100 tracking-tight">
+          <h2 id="round-summary-title" className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight">
             {determinedWinner === 'TIE' ? (
               <span className="text-amber-400">Round Tied!</span>
             ) : (
               <span className="flex items-center justify-center gap-2">
-                <Crown className="w-7 h-7 text-amber-400 fill-amber-400" />
+                <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 fill-amber-400" />
                 <span>
                   Team <span className={determinedWinner === 'A' ? 'text-blue-400' : 'text-amber-400'}>{determinedWinner}</span>{` Wins Round ${round}!`}
                 </span>
@@ -127,19 +127,19 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
           </h2>
 
           {winningReason && (
-            <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+            <p className="text-xs text-slate-400 mt-0.5 max-w-md mx-auto">
               {winningReason}
             </p>
           )}
         </div>
 
         {/* TABS SWITCHER */}
-        <div className="flex items-center justify-center gap-2 border-b border-slate-800 bg-slate-900/60 p-2.5">
+        <div className="flex items-center justify-center gap-2 border-b border-slate-800 bg-slate-900/60 px-3 py-2 shrink-0">
           <button
             type="button"
             data-testid="tab-round-breakdown"
             onClick={() => setActiveTab('ROUND')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               activeTab === 'ROUND'
                 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-950/50'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -151,7 +151,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
             type="button"
             data-testid="tab-match-awards"
             onClick={() => setActiveTab('AWARDS')}
-            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
               activeTab === 'AWARDS'
                 ? 'bg-amber-600 text-white shadow-lg shadow-amber-950/50'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -163,7 +163,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
 
         {/* BODY (ROUND BREAKDOWN OR MATCH AWARDS) */}
         {activeTab === 'AWARDS' ? (
-          <div className="p-6 sm:p-8 overflow-y-auto max-h-[76vh]">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 scrollbar-thin">
             <MatchAnalyticsView
               matchStats={matchStats}
               players={players}
@@ -173,7 +173,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
             />
           </div>
         ) : (
-          <div className="p-6 sm:p-8 overflow-y-auto max-h-[76vh] flex flex-col gap-6">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 flex flex-col gap-5 scrollbar-thin">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* TEAM A BREAKDOWN */}
             <div
@@ -309,7 +309,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
         )}
 
         {/* MODAL FOOTER ACTION */}
-        <div className="bg-slate-900/90 border-t border-slate-800 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="bg-slate-900/95 border-t border-slate-800 px-4 sm:px-6 py-2.5 sm:py-3 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-2.5">
           <div className="text-xs text-slate-400 font-medium truncate w-full sm:w-auto">
             <span>{`Starting Round ${round + 1}: `}</span>
             <span className="font-bold text-amber-300">
@@ -317,7 +317,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
             {onClose && (
               <button
                 type="button"
@@ -328,7 +328,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                     console.error('Error in RoundSummaryModal onClose:', err);
                   }
                 }}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
               >
                 Close
               </button>
@@ -344,7 +344,7 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
                   console.error('Error in onStartNextRound:', err);
                 }
               }}
-              className="w-full sm:w-auto h-12 px-7 rounded-xl btn-game-primary font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+              className="w-full sm:w-auto h-10 sm:h-11 px-6 rounded-xl btn-game-primary font-black text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
               <span>Next Round</span>
               <ArrowRight className="w-4 h-4" />
