@@ -213,7 +213,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
-                        {opt.name} — {opt.title} ({opt.badge})
+                        {opt.name}
                       </option>
                     ))}
                   </select>
@@ -241,7 +241,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     >
                       {botOptions.map((opt) => (
                         <option key={opt.id} value={opt.id}>
-                          {opt.name} — {opt.title} ({opt.badge})
+                          {opt.name}
                         </option>
                       ))}
                     </select>
@@ -277,7 +277,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
-                        {opt.name} — {opt.title} ({opt.badge})
+                        {opt.name}
                       </option>
                     ))}
                   </select>
@@ -304,7 +304,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                   >
                     {botOptions.map((opt) => (
                       <option key={opt.id} value={opt.id}>
-                        {opt.name} — {opt.title} ({opt.badge})
+                        {opt.name}
                       </option>
                     ))}
                   </select>
@@ -332,7 +332,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     >
                       {botOptions.map((opt) => (
                         <option key={opt.id} value={opt.id}>
-                          {opt.name} — {opt.title} ({opt.badge})
+                          {opt.name}
                         </option>
                       ))}
                     </select>

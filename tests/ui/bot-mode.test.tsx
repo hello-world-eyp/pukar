@@ -33,16 +33,23 @@ describe('Bot Mode UI Components & Integration', () => {
       expect(html).toContain('data-testid="select-bot-opponent-1"');
       expect(html).toContain('data-testid="select-bot-opponent-2"');
 
-      // Verify bot names are displayed without strategy leaks
+      // Verify bot names are displayed without strategy leaks or extra title/badge info
       expect(html).toContain('Sid');
       expect(html).toContain('Heman');
       expect(html).toContain('Chachi');
       expect(html).toContain('Harsh');
+      expect(html).toContain('Cheetah');
 
-      // Ensure strategy details are NOT leaked in markup
-      expect(html).not.toContain('discard hoarder');
-      expect(html).not.toContain('extreme ends');
-      expect(html).not.toContain('predicts opponent');
+      // Dropdown option tags should contain ONLY the bot name
+      expect(html).toContain('<option value="smart_chacha">Sid</option>');
+      expect(html).toContain('<option value="fast_chachi">Chachi</option>');
+      expect(html).toContain('<option value="the_long_term_guy">Harsh</option>');
+      expect(html).toContain('<option value="the_jadugar">Heman</option>');
+      expect(html).toContain('<option value="cheetah">Cheetah</option>');
+
+      // Ensure strategy details are NOT leaked in dropdown option labels
+      expect(html).not.toContain('Sid — Smart Chacha');
+      expect(html).not.toContain('Chachi — Fast Chachi');
     });
 
     it('renders 6-player format with 2nd partner and 3rd opponent dropdowns when playerCount is 6', () => {
