@@ -72,6 +72,143 @@ describe('Bot Personality Strategies', () => {
       expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
     });
 
+    it('takes a single connected card from discard when it directly adds to an existing team table sequence', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      state.players[1].hand = [
+        makeCard('h1', 'HEARTS', 10),
+        makeCard('h2', 'DIAMONDS', 4),
+        makeCard('h3', 'CLUBS', 9),
+      ];
+      // Team B has a table sequence of Spades (5♠-6♠-7♠)
+      const spadesRunCards: Card[] = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('s7', 'SPADES', 7),
+      ];
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: spadesRunCards,
+          slots: [
+            { card: spadesRunCards[0], representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+            { card: spadesRunCards[1], representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+            { card: spadesRunCards[2], representedRank: 7, representedSuit: 'SPADES', isWildcard: false },
+          ],
+          isPure: true,
+          points: 0,
+        },
+      ];
+
+      // Discard pile has 1 card: 8♠ (directly extends table sequence)
+      state.discardPile = [makeCard('s8', 'SPADES', 8)];
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('takes a single connected card from discard when it forms a new sequence with hand cards', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      // Hand has 5♠ and 6♠ (and deadwood)
+      state.players[1].hand = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('h1', 'HEARTS', 10),
+        makeCard('h2', 'DIAMONDS', 4),
+      ];
+
+      // Discard pile has 1 card: 7♠ (forms 5♠-6♠-7♠ pure run)
+      state.discardPile = [makeCard('s7', 'SPADES', 7)];
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('takes a single connected card from discard when it connects adjacent to a sequence card in hand', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      // Hand has 8♠
+      state.players[1].hand = [
+        makeCard('s8', 'SPADES', 8),
+        makeCard('h1', 'HEARTS', 10),
+        makeCard('h2', 'DIAMONDS', 4),
+      ];
+
+      // Discard pile has 1 card: 9♠ (adjacent run connector)
+      state.discardPile = [makeCard('s9', 'SPADES', 9)];
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    it('refuses a single connected card when defending against an opponent 500 (taking it forces discarding opponent 500 card)', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      // Table has Team B sequence 5♠-6♠-7♠
+      const spadesRunCards: Card[] = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('s7', 'SPADES', 7),
+      ];
+      state.melds.B = [
+        {
+          id: 'meld-b-spades',
+          team: 'B',
+          type: 'RUN',
+          suit: 'SPADES',
+          cards: spadesRunCards,
+          slots: [
+            { card: spadesRunCards[0], representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+            { card: spadesRunCards[1], representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+            { card: spadesRunCards[2], representedRank: 7, representedSuit: 'SPADES', isWildcard: false },
+          ],
+          isPure: true,
+          points: 0,
+        },
+      ];
+
+      // Opponent Team A has a 12-card Heart run (ranks 2 to 13), needing Ace of Hearts (rank 14) for 500-pt Pure 13
+      const heartsRunCards: Card[] = [];
+      const heartSlots = [];
+      for (let r = 2; r <= 13; r++) {
+        const c = makeCard(`h${r}`, 'HEARTS', r as any);
+        heartsRunCards.push(c);
+        heartSlots.push({ card: c, representedRank: r, representedSuit: 'HEARTS' as const, isWildcard: false });
+      }
+      state.melds.A = [
+        {
+          id: 'meld-a-hearts-12',
+          team: 'A',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: heartsRunCards,
+          slots: heartSlots,
+          isPure: true,
+          points: 200,
+        },
+      ];
+
+      // Fast Chachi holds ONLY A♥ (rank 14, the exact card completing Opponent's 500 Pure 13!)
+      state.players[1].hand = [makeCard('h14', 'HEARTS', 14)];
+
+      // Discard has 8♠ (which connects to Team B's table sequence).
+      // If Chachi takes 8♠, she adds it to 5♠-6♠-7♠ and is FORCED to discard A♥, giving opponent 500!
+      state.discardPile = [makeCard('s8', 'SPADES', 8)];
+      state.stockDeck = [makeCard('safeCard', 'CLUBS', 3)];
+
+      const plan = decideFastChachiTurn(state, 1, createEmptyMemory());
+      // Chachi MUST draw from stock to defend against the opponent 500!
+      expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
     it('never discards rank 2 or Natural Joker wildcards', () => {
       const state = createTestState();
       state.phase = 'DISCARD';

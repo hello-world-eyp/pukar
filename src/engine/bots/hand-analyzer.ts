@@ -1406,6 +1406,68 @@ export function evaluateDiscardPilePickup(
         m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
     );
     if (hasExtremeMeld) return true;
+
+    // Check if single card (or small pile) directly connects to one of the sequences
+    const connectsToTableRun = teamMelds.some(
+      (m) => m.type === 'RUN' && canAddCardsToMeld(m, [topCard]).valid
+    );
+    const createsNewRun = newMelds.some(
+      (m) => m.type === 'RUN' && m.cards.some((c) => c.id === topCard.id)
+    );
+    const connectsToHandRun =
+      hand.length <= 14 &&
+      hand.some(
+        (h) =>
+          !isWildcard(h) &&
+          h.suit !== null &&
+          topCard.suit !== null &&
+          h.suit === topCard.suit &&
+          Math.abs(h.rank - topCard.rank) === 1
+      );
+
+    if (connectsToTableRun || createsNewRun || connectsToHandRun) {
+      // Defending against an opponent 500:
+      // If an opponent has a 12-card sequence chasing 500-pt Pure 13:
+      const opponentMelds = options.allTableMelds
+        ? options.allTableMelds.filter((m) => m.team !== (options.botTeam ?? teamMelds[0]?.team))
+        : [];
+      const opp500Run = opponentMelds.find(
+        (m) =>
+          m.type === 'RUN' &&
+          (m.cards?.length ?? m.slots?.length ?? 0) === 12 &&
+          (m.isPure || !m.slots.some((s) => s.isWildcard))
+      );
+
+      if (opp500Run) {
+        // If topCard completes the opponent 500, picking it up is DENIAL!
+        if (canAddCardsToMeld(opp500Run, [topCard]).valid) {
+          return true;
+        }
+
+        // Check if taking topCard would leave bot with no safe discard:
+        let uncommittedHand = hand;
+        if (connectsToTableRun) {
+          uncommittedHand = hand;
+        } else {
+          const newRun = newMelds.find(
+            (m) => m.type === 'RUN' && m.cards.some((c) => c.id === topCard.id)
+          );
+          if (newRun) {
+            const usedInRun = new Set(newRun.cards.map((c) => c.id));
+            uncommittedHand = hand.filter((c) => !usedInRun.has(c.id));
+          }
+        }
+        const safeDiscards = uncommittedHand.filter(
+          (c) => !canAddCardsToMeld(opp500Run, [c]).valid
+        );
+        if (safeDiscards.length === 0) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     if (hand.length <= 14) return false;
   }
 
