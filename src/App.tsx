@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { GameState, SanitizedGameState } from './engine/types';
+import { hasTeamOpened } from './engine/meld-validator';
 import { exportDebugLogFile } from './engine/debug-logger';
 import { TopNavBar } from './ui/components/TopNavBar';
 import { SequencesPage } from './ui/components/SequencesPage';
@@ -906,8 +907,7 @@ export function App({
                     unifiedMode={true}
                     showDrawButtons={false}
                     requiresPureSequence={
-                      (activeGameState.melds?.A?.length ?? 0) === 0 &&
-                      (activeGameState.melds?.B?.length ?? 0) === 0
+                      !hasTeamOpened(activeGameState, viewingPlayer?.team ?? 'A')
                     }
                     cardsPickedUpThisTurn={activeGameState.cardsPickedUpThisTurn}
                     initialHandSizeThisTurn={activeGameState.initialHandSizeThisTurn}

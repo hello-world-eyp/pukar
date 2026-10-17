@@ -107,6 +107,10 @@ export interface GameState {
   frustrationCooldownUntil?: number;
   activeFrustration?: { playerName: string; triggeredAt: number } | null;
   matchStats?: MatchStats;
+  hasOpened?: {
+    A: boolean;
+    B: boolean;
+  };
 }
 
 export interface PlayerMatchStats {
@@ -225,6 +229,10 @@ export interface SanitizedGameState {
   frustrationCooldownUntil?: number;
   activeFrustration?: { playerName: string; triggeredAt: number } | null;
   matchStats?: MatchStats;
+  hasOpened?: {
+    A: boolean;
+    B: boolean;
+  };
 }
 
 /**

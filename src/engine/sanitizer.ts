@@ -1,4 +1,5 @@
 import { GameState, SanitizedGameState, SanitizedPlayer } from './types';
+import { hasTeamOpened } from './meld-validator';
 
 /**
  * Sanitizes the game state for a specific player perspective.
@@ -78,6 +79,10 @@ export function sanitizeStateForPlayer(
       matchStats: state?.matchStats
         ? JSON.parse(JSON.stringify(state.matchStats))
         : undefined,
+      hasOpened: {
+        A: hasTeamOpened(state, 'A'),
+        B: hasTeamOpened(state, 'B'),
+      },
     };
   } catch (err) {
     console.error('Error in sanitizeStateForPlayer:', err);

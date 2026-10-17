@@ -16,6 +16,7 @@ import {
   canAddCardsToMeld,
   evaluateMeldScore,
   isPureRun,
+  hasTeamOpened,
 } from './meld-validator';
 import {
   createInitialPlayerStats,
@@ -351,8 +352,9 @@ function handlePlayNewMeld(
 
   const team = activePlayer.team;
   // Each team needs to have a pure sequence first before they can open.
-  const teamHasPureMeld = (state.melds[team] || []).some((m) => m.isPure);
-  const requirePure = !teamHasPureMeld;
+  // Once a pure sequence has been established for a team, they can play subsequent dirty runs and sets.
+  const teamHasOpened = hasTeamOpened(state, team);
+  const requirePure = !teamHasOpened;
 
   const meldValidation = validateNewMeld(cardsToMeld, jokerRepresentedRank, { requirePure });
   if (!meldValidation.valid || !meldValidation.slots || !meldValidation.type) {
@@ -582,10 +584,16 @@ function handlePostMeldState(
     };
   });
 
+  const nextHasOpened = {
+    A: Boolean(state.hasOpened?.A || updatedMelds.A.length > 0),
+    B: Boolean(state.hasOpened?.B || updatedMelds.B.length > 0),
+  };
+
   const nextState: GameState = {
     ...state,
     players: updatedPlayers,
     melds: updatedMelds,
+    hasOpened: nextHasOpened,
     ...(newMatchStats ? { matchStats: newMatchStats } : {}),
   };
 
@@ -848,6 +856,7 @@ function handleStartNextRound(state: GameState): {
     totalScores: preservedScores,
     roundScores: { A: 0, B: 0 },
     pukarsClaimed: { A: 0, B: 0 },
+    hasOpened: { A: false, B: false },
     roundHistory: [...(state.roundHistory || []), finishedRoundHistory],
     roundStatus: 'PLAYING',
     isRoundOver: false,
@@ -896,6 +905,7 @@ function handleResetGame(
     totalScores: { A: 0, B: 0 },
     roundScores: { A: 0, B: 0 },
     pukarsClaimed: { A: 0, B: 0 },
+    hasOpened: { A: false, B: false },
     roundHistory: [],
     roundStatus: 'PLAYING',
     isRoundOver: false,

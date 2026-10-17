@@ -266,5 +266,124 @@ describe('Pure Opening Sequence Rule (Per Team)', () => {
       expect(teamBSubsequentDirty.error).toBeUndefined();
       expect(teamBSubsequentDirty.state.melds.B).toHaveLength(2);
     });
+
+    it('allows playing dirty sequences (e.g. 5, 4, and 2) when a pure sequence was established even if existing melds became dirty from wildcard additions', () => {
+      const state = dealInitialState(4);
+      state.phase = 'MELD';
+      state.turnPhase = 'MELD';
+
+      // 1. Team A active player establishes opening pure sequence (8♠-9♠-10♠-11♠)
+      const pure8s = makeCard('p0-8s', 'SPADES', 8);
+      const pure9s = makeCard('p0-9s', 'SPADES', 9);
+      const pure10s = makeCard('p0-10s', 'SPADES', 10);
+      const pure11s = makeCard('p0-11s', 'SPADES', 11);
+      const wild2s = makeCard('p0-2s', 'SPADES', 2);
+      const dirty5s = makeCard('p0-5s', 'SPADES', 5);
+      const dirty4s = makeCard('p0-4s', 'SPADES', 4);
+      const wild2h = makeCard('p0-2h', 'HEARTS', 2);
+      const discardCard = makeCard('p0-3c', 'CLUBS', 3);
+
+      state.players[0].hand = [
+        pure8s,
+        pure9s,
+        pure10s,
+        pure11s,
+        wild2s,
+        dirty5s,
+        dirty4s,
+        wild2h,
+        discardCard,
+      ];
+
+      // Play the pure sequence
+      const openResult = pukarReducer(state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: [pure8s.id, pure9s.id, pure10s.id, pure11s.id],
+      });
+      expect(openResult.error).toBeUndefined();
+      const meldId = openResult.state.melds.A[0].id;
+      expect(openResult.state.melds.A[0].isPure).toBe(true);
+
+      // 2. Add wildcard 2♠ to that pure sequence, making it dirty (isPure = false)
+      const addWildResult = pukarReducer(openResult.state, {
+        type: 'ADD_TO_MELD',
+        meldId,
+        cardIds: [wild2s.id],
+      });
+      expect(addWildResult.error).toBeUndefined();
+      // Notice: The meld itself is now dirty!
+      expect(addWildResult.state.melds.A[0].isPure).toBe(false);
+      // And ALL of Team A's table melds are now impure:
+      expect(addWildResult.state.melds.A.every((m) => !m.isPure)).toBe(true);
+
+      // 3. Now player attempts to play 5♠, 4♠, and 2♥ (representing 3♠ or 6♠) as a new dirty sequence
+      const playDirtyMeldResult = pukarReducer(addWildResult.state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: [dirty5s.id, dirty4s.id, wild2h.id],
+        jokerRepresentedRank: 3,
+      });
+
+      // MUST SUCCEED because Team A has already opened in this round!
+      expect(playDirtyMeldResult.error).toBeUndefined();
+      expect(playDirtyMeldResult.state.melds.A).toHaveLength(2);
+      expect(playDirtyMeldResult.state.melds.A[1].type).toBe('RUN');
+      expect(playDirtyMeldResult.state.melds.A[1].isPure).toBe(false);
+    });
+
+    it('allows player p1 to play 5♠, 4♠, and 2♥ on liveState from user debug log where all team melds on table are impure', () => {
+      const debugState: any = {
+        playerCount: 4,
+        players: [
+          {
+            id: 'p1',
+            name: 'You',
+            team: 'A',
+            hand: [
+              { id: 'deck-1-SPADES-5', suit: 'SPADES', rank: 5, isNaturalJoker: false, isJoker: false },
+              { id: 'deck-1-SPADES-4', suit: 'SPADES', rank: 4, isNaturalJoker: false, isJoker: false },
+              { id: 'deck-0-CLUBS-3', suit: 'CLUBS', rank: 3, isNaturalJoker: false, isJoker: false },
+              { id: 'deck-1-HEARTS-2', suit: 'HEARTS', rank: 2, isNaturalJoker: false, isJoker: false },
+            ],
+          },
+          { id: 'p2', name: 'Chachi', team: 'B', hand: [] },
+          { id: 'p3', name: 'Sid', team: 'A', hand: [] },
+          { id: 'p4', name: 'Cheetah', team: 'B', hand: [] },
+        ],
+        currentPlayerIndex: 0,
+        phase: 'MELD',
+        turnPhase: 'MELD',
+        stockDeck: [],
+        discardPile: [],
+        pukarPool: [],
+        melds: {
+          A: [
+            { id: 'meld-r2-A-1', team: 'A', type: 'RUN', cards: [], isPure: false },
+            { id: 'meld-r2-A-2', team: 'A', type: 'RUN', cards: [], isPure: false },
+            { id: 'meld-r2-A-3', team: 'A', type: 'RUN', cards: [], isPure: false },
+            { id: 'meld-r2-A-4', team: 'A', type: 'RUN', cards: [], isPure: false },
+            { id: 'meld-r2-A-5', team: 'A', type: 'RUN', cards: [], isPure: false },
+          ],
+          B: [],
+        },
+        scores: { A: 100, B: 0 },
+        round: 2,
+        roundStatus: 'PLAYING',
+      };
+
+      const result = pukarReducer(debugState, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['deck-1-SPADES-5', 'deck-1-SPADES-4', 'deck-1-HEARTS-2'],
+        jokerRepresentedRank: 3,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.state.melds.A).toHaveLength(6);
+      expect(result.state.melds.A[5].cards.map((c: any) => c.id)).toEqual([
+        'deck-1-SPADES-5',
+        'deck-1-SPADES-4',
+        'deck-1-HEARTS-2',
+      ]);
+    });
   });
 });
+

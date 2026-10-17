@@ -540,7 +540,7 @@ export function findBestMeldPlan(
 } {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const isFinalTurn = options?.isFinalTurn ?? false;
-  const isTeamOpen = teamMelds.some((m) => m.isPure);
+  const isTeamOpen = teamMelds.length > 0 || teamMelds.some((m) => m.isPure);
   const requirePure = options?.requirePure !== undefined ? options.requirePure : !isTeamOpen;
 
   const usedCardIds = new Set<string>();
@@ -1299,7 +1299,7 @@ export function evaluateDiscardPilePickup(
   const pileLength = discardPile.length;
   const topCard = discardPile[pileLength - 1];
   const pukarPoolCount = options.pukarPoolCount ?? 2;
-  const isTeamOpen = options.isTeamOpen ?? teamMelds.some((m) => m.isPure);
+  const isTeamOpen = options.isTeamOpen ?? (teamMelds.length > 0 || teamMelds.some((m) => m.isPure));
   const requirePure = !isTeamOpen;
 
   // Critical Winning / Endgame Guard:

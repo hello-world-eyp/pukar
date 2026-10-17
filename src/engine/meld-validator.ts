@@ -4,11 +4,36 @@ import {
   MeldSlot,
   MeldType,
   Suit,
+  Team,
   isWildcard,
   isNaturalJoker,
 } from './types';
 
 export { isWildcard, isNaturalJoker };
+
+/**
+ * Determines whether a team has established an initial pure sequence and opened for the current round.
+ * Once a team has opened, they may play dirty sequences, sets, and table additions.
+ */
+export function hasTeamOpened(
+  state: {
+    hasOpened?: { A: boolean; B: boolean };
+    melds?: { A: Meld[]; B: Meld[] };
+  },
+  team: Team
+): boolean {
+  if (state?.hasOpened?.[team]) {
+    return true;
+  }
+  const teamMelds = state?.melds?.[team] || [];
+  // If the team already has any melds on the table, they must have established their opening pure sequence
+  // (the engine strictly forbids placing any meld before opening).
+  if (teamMelds.length > 0) {
+    return true;
+  }
+  return false;
+}
+
 
 /**
  * Calculates the minimum number of wildcards required if cards form a run of the given suit.

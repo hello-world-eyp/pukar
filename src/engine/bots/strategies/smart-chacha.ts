@@ -128,7 +128,7 @@ export function decideSmartChachaTurn(
   const opponentMelds = state.melds[opponentTeam] || [];
   const allTableMelds = [...myTeamMelds, ...opponentMelds];
   const isBoardOpen = allTableMelds.length > 0;
-  const isTeamOpen = myTeamMelds.some((m) => m.isPure);
+  const isTeamOpen = Boolean(state.hasOpened?.[team] || myTeamMelds.length > 0 || myTeamMelds.some((m) => m.isPure));
   const opponentWants = predictOpponentWants(memory, state, team);
 
   // 1. DRAW PHASE DECISION

@@ -138,6 +138,10 @@ export function dealInitialState(
       A: [],
       B: [],
     },
+    hasOpened: {
+      A: false,
+      B: false,
+    },
     scores: {
       A: 0,
       B: 0,
