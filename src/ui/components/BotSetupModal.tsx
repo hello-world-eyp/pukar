@@ -115,7 +115,7 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                 Play With Bots
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                Choose your teammate and opponent bot personalities for the match.
+                Choose your teammate and opponents for the match.
               </p>
             </div>
           </div>
@@ -218,10 +218,6 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     ))}
                   </select>
                 </div>
-                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-800/40 text-[11px] text-cyan-200 leading-snug">
-                  <span className="font-bold text-cyan-300 shrink-0">{BOT_PROFILES[seat2Personality].badge}</span>
-                  <span className="text-slate-300">{BOT_PROFILES[seat2Personality].description}</span>
-                </div>
               </div>
 
               {/* Seat 4 (Partner 2 if 6p) */}
@@ -245,10 +241,6 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                         </option>
                       ))}
                     </select>
-                  </div>
-                  <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-cyan-950/70 border border-cyan-800/40 text-[11px] text-cyan-200 leading-snug">
-                    <span className="font-bold text-cyan-300 shrink-0">{BOT_PROFILES[seat4Personality].badge}</span>
-                    <span className="text-slate-300">{BOT_PROFILES[seat4Personality].description}</span>
                   </div>
                 </div>
               )}
@@ -282,10 +274,6 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                     ))}
                   </select>
                 </div>
-                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-800/40 text-[11px] text-amber-200 leading-snug">
-                  <span className="font-bold text-amber-300 shrink-0">{BOT_PROFILES[seat1Personality].badge}</span>
-                  <span className="text-slate-300">{BOT_PROFILES[seat1Personality].description}</span>
-                </div>
               </div>
 
               {/* Seat 3 (Opponent 2) */}
@@ -308,10 +296,6 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-800/40 text-[11px] text-amber-200 leading-snug">
-                  <span className="font-bold text-amber-300 shrink-0">{BOT_PROFILES[seat3Personality].badge}</span>
-                  <span className="text-slate-300">{BOT_PROFILES[seat3Personality].description}</span>
                 </div>
               </div>
 
@@ -336,10 +320,6 @@ export const BotSetupModal: React.FC<BotSetupModalProps> = ({
                         </option>
                       ))}
                     </select>
-                  </div>
-                  <div className="flex items-start gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-800/40 text-[11px] text-amber-200 leading-snug">
-                    <span className="font-bold text-amber-300 shrink-0">{BOT_PROFILES[seat5Personality].badge}</span>
-                    <span className="text-slate-300">{BOT_PROFILES[seat5Personality].description}</span>
                   </div>
                 </div>
               )}

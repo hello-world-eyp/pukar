@@ -47,9 +47,13 @@ describe('Bot Mode UI Components & Integration', () => {
       expect(html).toContain('<option value="the_jadugar">Heman</option>');
       expect(html).toContain('<option value="cheetah">Cheetah</option>');
 
-      // Ensure strategy details are NOT leaked in dropdown option labels
+      // Ensure strategy details and badges are NOT leaked in dropdown option labels or markup
       expect(html).not.toContain('Sid — Smart Chacha');
       expect(html).not.toContain('Chachi — Fast Chachi');
+      expect(html).not.toContain('Strategic Defense');
+      expect(html).not.toContain('Extreme Cards');
+      expect(html).not.toContain('7+ Card Runs');
+      expect(html).not.toContain('Speed Finisher');
     });
 
     it('renders 6-player format with 2nd partner and 3rd opponent dropdowns when playerCount is 6', () => {
