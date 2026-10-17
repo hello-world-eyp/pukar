@@ -356,6 +356,7 @@ describe('UI Components', () => {
             A: [pureMeld],
             B: [],
           }}
+          onZoomMeld={() => {}}
         />
       );
 
@@ -364,8 +365,9 @@ describe('UI Components', () => {
       expect(html).toContain('data-complete="true"');
       expect(html).toContain('grayscale-[45%]');
       expect(html).toContain('cursor-not-allowed');
-      expect(html).toContain('data-testid="badge-complete-locked-pure-meld"');
-      expect(html).toContain('Closed');
+      expect(html).not.toContain('badge-complete-locked');
+      expect(html).not.toContain('Closed');
+      expect(html).not.toContain('btn-zoom-meld');
     });
 
     it('collapses pure vs impure sequence text to points or card count when compactMeldHeaders is enabled', () => {

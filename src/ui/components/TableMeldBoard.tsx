@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Meld, Team, Suit, Card } from '../../engine/types';
 import { evaluateMeldScore, canAddCardsToMeld } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
-import { Shield, Sparkles, CheckCircle2, PlusCircle, ZoomIn, Lock } from 'lucide-react';
+import { Shield, Sparkles, CheckCircle2, PlusCircle, ZoomIn } from 'lucide-react';
 
 export type MeldSortDirection = 'desc' | 'asc';
 
@@ -469,6 +469,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
   selectedCards,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
+  const isCompleteSequence = isPure13 || evaluation.points === 500;
 
   const headerRef = useRef<HTMLDivElement | null>(null);
   const uncollapsedWidthRef = useRef<number | null>(null);
@@ -523,9 +524,9 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
   let compactBadgeText = '';
   let badgeClass = '';
 
-  if (isPure13) {
+  if (isCompleteSequence) {
     fullBadgeText = 'Complete Sequence - 500 pts';
-    compactBadgeText = '500 pts';
+    compactBadgeText = 'Complete Sequence - 500 pts';
     badgeClass =
       'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 font-black border-yellow-300 shadow-md';
   } else if (isComplete7) {
@@ -595,7 +596,6 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
     });
   }, [meld.slots, meld.cards, sortDirection]);
 
-  const isCompleteSequence = isPure13 || evaluation.points === 500;
   const [isAbsorbing, setIsAbsorbing] = useState(false);
   const [isDragOverTarget, setIsDragOverTarget] = useState(false);
   const [dragHoverCardCount, setDragHoverCardCount] = useState(0);
@@ -822,8 +822,8 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
             title={fullBadgeText}
             className={`text-xs sm:text-sm font-bold px-2 sm:px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${badgeClass}`}
           >
-            {isPure13 && <Sparkles className="w-3.5 h-3.5 text-amber-900 shrink-0" />}
-            {isComplete7 && !isPure13 && (
+            {isCompleteSequence && <Sparkles className="w-3.5 h-3.5 text-amber-900 shrink-0" />}
+            {isComplete7 && !isCompleteSequence && (
               <CheckCircle2
                 className={`w-3.5 h-3.5 shrink-0 ${
                   evaluation.points === 200 ? 'text-emerald-500' : 'text-blue-400'
@@ -833,7 +833,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
             <span>{badgeText}</span>
           </span>
 
-          {meld.suit && (
+          {!isCompleteSequence && meld.suit && (
             <span
               className="text-xs sm:text-sm font-extrabold text-stone-700 uppercase tracking-wider whitespace-nowrap shrink-0"
               title={meld.suit}
@@ -841,49 +841,40 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
               {meld.suit}
             </span>
           )}
-
-          {isCompleteSequence && (
-            <span
-              data-testid={`badge-complete-locked-${meld.id}`}
-              className="text-[10px] sm:text-xs font-black uppercase px-1.5 sm:px-2 py-0.5 rounded-md bg-stone-300/80 border border-stone-400/80 text-stone-700 flex items-center gap-1 shadow-sm shrink-0"
-              title="Complete Sequence is full (13 cards). No cards can be added."
-            >
-              <Lock className="w-3 h-3 text-stone-600 shrink-0" />
-              <span className={isCompact ? 'hidden sm:inline' : 'inline'}>Closed</span>
-            </span>
-          )}
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {onZoom && (
-            <button
-              type="button"
-              data-testid={`btn-zoom-meld-${meld.id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                try {
-                  onZoom(meld);
-                } catch (err) {
-                  console.error('Error invoking onZoom:', err);
-                }
-              }}
-              title="Zoom into sequence to inspect cards in detail"
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer hover:scale-105 shrink-0 whitespace-nowrap shadow-sm filter-none opacity-100"
-            >
-              <ZoomIn className="w-3.5 h-3.5" />
-              <span>Zoom</span>
-            </button>
-          )}
+        {!isCompleteSequence && (
+          <div className="flex items-center gap-1.5 shrink-0">
+            {onZoom && (
+              <button
+                type="button"
+                data-testid={`btn-zoom-meld-${meld.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  try {
+                    onZoom(meld);
+                  } catch (err) {
+                    console.error('Error invoking onZoom:', err);
+                  }
+                }}
+                title="Zoom into sequence to inspect cards in detail"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs sm:text-sm font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 transition-all cursor-pointer hover:scale-105 shrink-0 whitespace-nowrap shadow-sm filter-none opacity-100"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+                <span>Zoom</span>
+              </button>
+            )}
 
-          {isEligibleToAutoAdd && (
-            <div className="flex items-center gap-1 text-sm">
-              <span className="px-2 py-0.5 rounded bg-yellow-400 text-stone-950 font-black flex items-center gap-1 shadow-sm">
-                <PlusCircle className="w-4 h-4" />
-                <span>Auto-Add</span>
-              </span>
-            </div>
-          )}
-        </div>
+            {isEligibleToAutoAdd && (
+              <div className="flex items-center gap-1 text-sm">
+                <span className="px-2 py-0.5 rounded bg-yellow-400 text-stone-950 font-black flex items-center gap-1 shadow-sm">
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Auto-Add</span>
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Sequential Cards Layout (Overlapping for compact fit) */}
