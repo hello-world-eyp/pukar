@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "src/ui/components/TableMeldBoard.tsx": {
-    "mtime": 1792326301.7907572,
-    "seen": 1792326352.148876,
-    "ast_hash": "d929badc3110a1cc39f4d49d0a470250",
+    "mtime": 1792327591.2243433,
+    "seen": 1792327662.076261,
+    "ast_hash": "914e13cecc73bd55fca5a22f7179694b",
     "semantic_hash": ""
   },
   "src/ui/components/TableSeating.tsx": {
@@ -1020,9 +1020,9 @@
     "semantic_hash": ""
   },
   "tests/ui/sequence-card-spacing.test.tsx": {
-    "mtime": 1792325704.9448571,
-    "seen": 1792325734.2577019,
-    "ast_hash": "eb75f45a9c22e92f610296b405b8df82",
+    "mtime": 1792327618.790294,
+    "seen": 1792327662.0763571,
+    "ast_hash": "30ef795fa660dc59469743cb1a612d72",
     "semantic_hash": ""
   },
   "src/ui/components/YourTurnModal.tsx": {

@@ -433,31 +433,31 @@ export function calculateMeldCardOverlapMargin({
       ? 80
       : 96;
 
-  // Minimum exposed width required to keep corner rank & suit index visible
+  // Minimum exposed width required to keep corner rank & suit index visible (+5% increase for legibility)
   const minExposed =
     cardSize === 'sm'
-      ? isSmallScreen ? 7 : 8
+      ? isSmallScreen ? 8 : 9
       : cardCount > 10
-      ? 9
-      : isSmallScreen ? 10 : 11;
+      ? 10
+      : isSmallScreen ? 11 : 12;
 
-  // Maximum exposed width when there are few cards (prevents huge awkward gaps for 2-3 cards)
+  // Maximum exposed width when there are few cards (+5% increase for legibility)
   const maxExposed =
     cardSize === 'sm'
       ? cardCount <= 3
-        ? isSmallScreen ? 22 : 28
+        ? isSmallScreen ? 23 : 29
         : cardCount <= 5
-        ? isSmallScreen ? 16 : 20
+        ? isSmallScreen ? 17 : 21
         : cardCount <= 7
-        ? isSmallScreen ? 14 : 17
-        : isSmallScreen ? 12 : 15
+        ? isSmallScreen ? 15 : 18
+        : isSmallScreen ? 13 : 16
       : cardCount <= 3
-      ? isSmallScreen ? 36 : 44
+      ? isSmallScreen ? 38 : 46
       : cardCount <= 5
-      ? isSmallScreen ? 26 : 32
+      ? isSmallScreen ? 27 : 34
       : cardCount <= 7
-      ? isSmallScreen ? 20 : 24
-      : isSmallScreen ? 16 : 19;
+      ? isSmallScreen ? 21 : 25
+      : isSmallScreen ? 17 : 20;
 
   // Available container width: use measured container if available, or standard column width
   // (220px on mobile, 260px on desktop) so that 10 cards occupy the same space immediately
@@ -467,7 +467,8 @@ export function calculateMeldCardOverlapMargin({
       : isSmallScreen ? 220 : 260;
 
   const availWidth = Math.max(cardWidth, effectiveContainer - 16);
-  const availPerOverlap = Math.floor((availWidth - cardWidth) / (cardCount - 1));
+  // Increase exposed spacing between cards by 5% as requested to enhance top card and corner visibility
+  const availPerOverlap = Math.floor(((availWidth - cardWidth) / (cardCount - 1)) * 1.05);
   const targetExposed = Math.max(minExposed, Math.min(maxExposed, availPerOverlap));
 
   return targetExposed - cardWidth;

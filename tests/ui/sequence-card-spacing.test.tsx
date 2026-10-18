@@ -94,6 +94,26 @@ describe('Compact Sequence Card Spacing (Up to 10+ Cards without Horizontal Scro
       const totalWidth = 80 + 9 * exposedWidth;
       expect(totalWidth).toBeLessThanOrEqual(210); // Fits easily in mobile viewport without overflow
     });
+
+    it('applies a 5% spacing increase so that the top of overlapping cards and badges are clearly visible', () => {
+      const margin10 = calculateMeldCardOverlapMargin({
+        cardCount: 10,
+        cardSize: 'md',
+        isSmallScreen: false,
+      });
+      const exposed10 = 96 + margin10;
+      // 17px exposed width (~5% wider than base 16px)
+      expect(exposed10).toBe(17);
+
+      const margin7 = calculateMeldCardOverlapMargin({
+        cardCount: 7,
+        cardSize: 'md',
+        isSmallScreen: false,
+      });
+      const exposed7 = 96 + margin7;
+      // 25px exposed width (~5% wider than base 24px)
+      expect(exposed7).toBe(25);
+    });
   });
 
   describe('TableMeldBoard Component 10-Card Sequence Rendering', () => {
