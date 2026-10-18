@@ -1,17 +1,17 @@
 # Graph Report - Pukar game  (2026-10-18)
 
 ## Corpus Check
-- 171 files · ~226,682 words
+- 171 files · ~226,895 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .css 1, .command 1)
 
 ## Summary
 - 867 nodes · 2920 edges · 39 communities (32 shown, 7 thin omitted)
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 100 edges (avg confidence: 0.94)
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 105 edges (avg confidence: 0.93)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f99c8513`
+- Built from commit: `9987d8dc`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

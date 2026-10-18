@@ -4365,8 +4365,57 @@ describe('Bot Personality Strategies', () => {
         expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
       });
     });
+
+    describe('Single Picked Up Card Discard Restriction Across All Bots', () => {
+      const bots = [
+        { name: 'Smart Chacha', fn: decideSmartChachaTurn },
+        { name: 'Cheetah', fn: decideCheetahTurn },
+        { name: 'Fast Chachi', fn: decideFastChachiTurn },
+        { name: 'The Jadugar', fn: decideTheJadugarTurn },
+        { name: 'The Long-Term Guy', fn: decideTheLongTermGuyTurn },
+      ];
+
+      for (const bot of bots) {
+        it(`${bot.name} never discards a single picked up card when initial hand size > 1`, () => {
+          const state = createTestState();
+          state.phase = 'MELD';
+          state.turnPhase = 'MELD';
+
+          const soloPickedCard = makeCard('solo-picked', 'HEARTS', 8);
+          const handCardA = makeCard('hand-a', 'SPADES', 10);
+          const handCardB = makeCard('hand-b', 'CLUBS', 4);
+
+          state.players[1].hand = [soloPickedCard, handCardA, handCardB];
+          state.cardsPickedUpThisTurn = [soloPickedCard.id];
+          state.initialHandSizeThisTurn = 2; // started with > 1 card
+
+          const plan = bot.fn(state, 1, createEmptyMemory());
+          expect(plan.discardAction.cardId).not.toBe(soloPickedCard.id);
+          expect([handCardA.id, handCardB.id]).toContain(plan.discardAction.cardId);
+        });
+
+        it(`${bot.name} allows discarding either card when 2 cards were picked up from bottom`, () => {
+          const state = createTestState();
+          state.phase = 'MELD';
+          state.turnPhase = 'MELD';
+
+          const pickedCard1 = makeCard('picked-1', 'HEARTS', 8);
+          const pickedCard2 = makeCard('picked-2', 'SPADES', 9);
+          const handCard = makeCard('hand-card', 'CLUBS', 4);
+
+          state.players[1].hand = [pickedCard1, pickedCard2, handCard];
+          state.cardsPickedUpThisTurn = [pickedCard1.id, pickedCard2.id];
+          state.initialHandSizeThisTurn = 2;
+
+          const plan = bot.fn(state, 1, createEmptyMemory());
+          // When 2 cards were picked up, discarding any legal card in hand is valid
+          expect([pickedCard1.id, pickedCard2.id, handCard.id]).toContain(plan.discardAction.cardId);
+        });
+      }
+    });
   });
 });
+
 
 
 
