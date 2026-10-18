@@ -1968,7 +1968,7 @@ describe('Bot Personality Strategies', () => {
       expect(partnerDiscards.size).toBe(0);
     });
 
-    it('all 4 bots execute cleanly without inspecting or depending on other players secret hand cards', () => {
+    it('all 5 bots (including Cheetah) execute cleanly without inspecting or depending on other players secret hand cards', () => {
       const state = createTestState();
       state.phase = 'MELD';
       state.turnPhase = 'MELD';
@@ -2010,6 +2010,11 @@ describe('Bot Personality Strategies', () => {
       expect(() => decideTheLongTermGuyTurn(state, 1, memory)).not.toThrow();
       const planLT = decideTheLongTermGuyTurn(state, 1, memory);
       expect(planLT.discardAction.cardId).toBeDefined();
+
+      // 5. Cheetah
+      expect(() => decideCheetahTurn(state, 1, memory)).not.toThrow();
+      const planCheetah = decideCheetahTurn(state, 1, memory);
+      expect(planCheetah.discardAction.cardId).toBeDefined();
     });
   });
 

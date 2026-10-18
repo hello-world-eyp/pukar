@@ -432,9 +432,9 @@
     "semantic_hash": ""
   },
   "tests/engine/bots/strategies.test.ts": {
-    "mtime": 1792333902.8249886,
-    "seen": 1792334275.0591822,
-    "ast_hash": "20504e6d78a9baad4888aacc5935a6f8",
+    "mtime": 1792334377.7976677,
+    "seen": 1792334390.646065,
+    "ast_hash": "c1a8a08a9a4f5b639dcbd6fe0e9b9ac9",
     "semantic_hash": ""
   },
   "tests/engine/debug-logger.test.ts": {
