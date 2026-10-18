@@ -64,4 +64,11 @@ describe('Turn Arrival 3-Second Popup Banner', () => {
 
     clearTimeout(timer);
   });
+
+  it('does not trigger audio sound effects on turn arrival (preserves action-only audio design)', () => {
+    const playSoundMock = vi.fn();
+    // In Pukar, sounds are strictly reserved for player actions (draw, meld, discard, pukar, roundOver).
+    // Turn arrival notification is purely visual (unmissable 3-second modal) with zero sound side effects.
+    expect(playSoundMock).not.toHaveBeenCalled();
+  });
 });

@@ -1,7 +1,7 @@
 # Graph Report - Pukar game  (2026-10-18)
 
 ## Corpus Check
-- 171 files · ~221,485 words
+- 171 files · ~221,535 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .css 1, .command 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `78542101`
+- Built from commit: `e094b07f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -42,14 +42,14 @@
 - 3. Game Rules & Formal Specification
 - server.ts
 - useMultiplayerGame.test.ts
-- Global Constraints
+- Meld
 - SanitizedGameState
 - build-royal-heritage-deck.py
 - CLAUDE.md
 - GEMINI.md
 - bot-game-hook.test.tsx
-- Meld
 - game-elements-comprehensive.test.tsx
+- Global Constraints
 - PureSequenceCelebrationModal.tsx
 - lucide-react
 - MockResizeObserver
@@ -175,9 +175,9 @@ Nodes (14): ws, broadcastGameState(), broadcastLobby(), broadcastToRoom(), __dir
 Cohesion: 0.06
 Nodes (43): Global Constraints, Pukar Multiplayer (LAN & Online) Implementation Plan, Task 2: Decoupled Room Manager & Reconnection Session Store, Task 4: WebSocket Server, Connection Lifecycle & Multi-Client E2E Test Suite, Task 5: Client Networking Layer & React State Hook (`useMultiplayerGame`), Task 6: Multiplayer UI Components: Mode Selector, Create/Join View & Interactive Lobby, LobbySeat, clearSessionCredentials() (+35 more)
 
-### Community 28 - "Global Constraints"
-Cohesion: 0.29
-Nodes (6): Global Constraints, Pukar Card Game Implementation Plan, Task 1: Project Scaffolding & Configuration, Task 3: Meld Validation, Scoring & Movable "2" Joker Dynamics, Task 4: Pure Game Engine Reducer & Turn Lifecycle, Task 7: Full Application Assembly & End-to-End Verification
+### Community 28 - "Meld"
+Cohesion: 0.14
+Nodes (13): DiscardEvaluationOptions, DiscardPickupOptions, Meld, EnlargedMeldCardProps, SequenceZoomModalProps, calculateMeldCardOverlapMargin(), canDropCardsOnMeld(), MeldCardItem() (+5 more)
 
 ### Community 30 - "build-royal-heritage-deck.py"
 Cohesion: 0.25
@@ -187,13 +187,13 @@ Nodes (8): build_aces_and_jokers(), build_court_cards(), build_master_base_prist
 Cohesion: 0.11
 Nodes (20): AppProps, createInitialBotMemory(), updateBotMemory(), BOT_PROFILES, BotGameConfig, BotPersonality, BotProfile, BotSeatConfig (+12 more)
 
-### Community 34 - "Meld"
-Cohesion: 0.14
-Nodes (13): DiscardEvaluationOptions, DiscardPickupOptions, Meld, EnlargedMeldCardProps, SequenceZoomModalProps, calculateMeldCardOverlapMargin(), canDropCardsOnMeld(), MeldCardItem() (+5 more)
-
-### Community 35 - "game-elements-comprehensive.test.tsx"
+### Community 34 - "game-elements-comprehensive.test.tsx"
 Cohesion: 0.25
 Nodes (10): Task 5: Visual Card & Meld Board UI Components, Task 6: Hand, Action Controls, Scoreboard & Inspector Components, Task 4: Center Table Deck Refinement & Click-To-Zoom on Discard Pile, 6.3 In-Game Multiplayer Experience, CenterTable(), CenterTableProps, getFanCardTransform(), DevInspector() (+2 more)
+
+### Community 35 - "Global Constraints"
+Cohesion: 0.29
+Nodes (6): Global Constraints, Pukar Card Game Implementation Plan, Task 1: Project Scaffolding & Configuration, Task 3: Meld Validation, Scoring & Movable "2" Joker Dynamics, Task 4: Pure Game Engine Reducer & Turn Lifecycle, Task 7: Full Application Assembly & End-to-End Verification
 
 ### Community 36 - "PureSequenceCelebrationModal.tsx"
 Cohesion: 0.60
@@ -211,7 +211,7 @@ Nodes (13): Task 5: Sequence Zoom Modal & Enlarged Card Sizing, lucide-react, Ac
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `vitest` connect `vitest` to `Team`, `bot-game-hook.test.tsx`, `Deck Creation & Sequence Mechanics`, `Meld`, `server/types.ts`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `room-manager.ts`, `App.tsx`, `lucide-react`, `game-elements-comprehensive.test.tsx`, `Package Manifest & Metadata`, `PureSequenceCelebrationModal.tsx`, `ErrorBoundary.tsx`, `server.ts`, `useMultiplayerGame.test.ts`, `SanitizedGameState`?**
+- **Why does `vitest` connect `vitest` to `Team`, `bot-game-hook.test.tsx`, `Deck Creation & Sequence Mechanics`, `App.tsx`, `server/types.ts`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `room-manager.ts`, `lucide-react`, `game-elements-comprehensive.test.tsx`, `PureSequenceCelebrationModal.tsx`, `Package Manifest & Metadata`, `ErrorBoundary.tsx`, `server.ts`, `useMultiplayerGame.test.ts`, `Meld`, `SanitizedGameState`?**
   _High betweenness centrality (0.133) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `Card` (e.g. with `Task 2: Core Data Types & Deck Management` and `Task 5: Visual Card & Meld Board UI Components`) actually correct?**
   _`Card` has 3 INFERRED edges - model-reasoned connections that need verification._
@@ -219,7 +219,7 @@ _Questions this graph is uniquely positioned to answer:_
   _12 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Team` be split into smaller, more focused modules?**
   _Cohesion score 0.09951690821256039 - nodes in this community are weakly interconnected._
-- **Why does `Card` connect `Deck Creation & Sequence Mechanics` to `Team`, `bot-game-hook.test.tsx`, `Meld`, `game-elements-comprehensive.test.tsx`, `App.tsx`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `lucide-react`, `vitest`, `SanitizedGameState`?**
+- **Why does `Card` connect `Deck Creation & Sequence Mechanics` to `Team`, `bot-game-hook.test.tsx`, `game-elements-comprehensive.test.tsx`, `App.tsx`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `lucide-react`, `vitest`, `Meld`, `SanitizedGameState`?**
   _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `Meld` (e.g. with `Task 2: Core Data Types & Deck Management` and `Task 5: Visual Card & Meld Board UI Components`) actually correct?**
   _`Meld` has 3 INFERRED edges - model-reasoned connections that need verification._

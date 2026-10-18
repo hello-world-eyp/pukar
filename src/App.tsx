@@ -343,11 +343,10 @@ export function App({
     const prevTurn = prevActiveTurnRef.current;
     if (isViewingActivePlayer && prevTurn !== activeTurnIndex) {
       triggerYourTurnNotification();
-      triggerSound('meld');
       setIsHandCollapsed(false); // Restore hand cards visibility on your turn
     }
     prevActiveTurnRef.current = activeTurnIndex;
-  }, [activeTurnIndex, isViewingActivePlayer, activeGameState.roundStatus, triggerYourTurnNotification, triggerSound]);
+  }, [activeTurnIndex, isViewingActivePlayer, activeGameState.roundStatus, triggerYourTurnNotification]);
 
   // 5. Global table shortcuts (keystroke optimization and debug logger)
   useTableShortcuts({
