@@ -305,7 +305,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
       </div>
 
       {/* Sequences List: Strictly 2 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2.5 min-h-[75px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2.5 min-h-[75px] w-full min-w-0">
         {sortedMelds.length === 0 ? (
           <div className="col-span-full flex-1 flex flex-col items-center justify-center p-2 sm:p-3 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-xs sm:text-sm text-center bg-white/40 min-h-[60px]">
             <p className="font-bold text-stone-700">No sequences placed yet</p>
@@ -411,8 +411,9 @@ export interface MeldCardItemProps {
 
 /**
  * Calculates negative margin between cards in table sequences to ensure compact fit.
- * Specifically engineered so that up to 10+ cards can be seen without a horizontal scroll,
- * while keeping each card's corner rank and suit index cleanly visible and legible.
+ * Automatically decreases horizontal spacing as card count increases or container space contracts,
+ * guaranteeing that up to 10 (and even full 13-card) sequences fit within the SAME space as fewer cards,
+ * with zero horizontal overflow outside the sequence box, while keeping corner rank and suit indices visible.
  */
 export function calculateMeldCardOverlapMargin({
   cardCount,
@@ -439,33 +440,44 @@ export function calculateMeldCardOverlapMargin({
       ? 80
       : 96;
 
-  // Minimum exposed width required to keep corner rank & suit index 100% visible
-  const minExposed = cardSize === 'sm' ? (isSmallScreen ? 12 : 14) : (isSmallScreen ? 16 : 19);
+  // Minimum exposed width required to keep corner rank & suit index visible
+  const minExposed =
+    cardSize === 'sm'
+      ? isSmallScreen ? 7 : 8
+      : cardCount > 10
+      ? 9
+      : isSmallScreen ? 10 : 11;
 
-  // Maximum exposed width when there are few cards
+  // Maximum exposed width when there are few cards (prevents huge awkward gaps for 2-3 cards)
   const maxExposed =
     cardSize === 'sm'
       ? cardCount <= 3
-        ? isSmallScreen ? 24 : 32
-        : isSmallScreen ? 16 : 22
+        ? isSmallScreen ? 22 : 28
+        : cardCount <= 5
+        ? isSmallScreen ? 16 : 20
+        : cardCount <= 7
+        ? isSmallScreen ? 14 : 17
+        : isSmallScreen ? 12 : 15
       : cardCount <= 3
-      ? isSmallScreen ? 38 : 46
+      ? isSmallScreen ? 36 : 44
       : cardCount <= 5
-      ? isSmallScreen ? 28 : 34
+      ? isSmallScreen ? 26 : 32
       : cardCount <= 7
-      ? isSmallScreen ? 22 : 26
-      : isSmallScreen ? 17 : 21;
+      ? isSmallScreen ? 20 : 24
+      : isSmallScreen ? 16 : 19;
 
-  // If container width is measured, dynamically fit all cards within available space
-  if (containerWidth && containerWidth > cardWidth) {
-    const availWidth = Math.max(cardWidth, containerWidth - 16);
-    const availPerOverlap = Math.floor((availWidth - cardWidth) / (cardCount - 1));
-    const targetExposed = Math.max(minExposed, Math.min(maxExposed, availPerOverlap));
-    return targetExposed - cardWidth;
-  }
+  // Available container width: use measured container if available, or standard column width
+  // (220px on mobile, 260px on desktop) so that 10 cards occupy the same space immediately
+  const effectiveContainer =
+    containerWidth && containerWidth > cardWidth
+      ? containerWidth
+      : isSmallScreen ? 220 : 260;
 
-  // Static fallback when container width is not yet measured (e.g. SSR, initial render, or tests)
-  return maxExposed - cardWidth;
+  const availWidth = Math.max(cardWidth, effectiveContainer - 16);
+  const availPerOverlap = Math.floor((availWidth - cardWidth) / (cardCount - 1));
+  const targetExposed = Math.max(minExposed, Math.min(maxExposed, availPerOverlap));
+
+  return targetExposed - cardWidth;
 }
 
 /**
@@ -548,6 +560,15 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
   // If compactMeldHeaders is passed explicitly, it overrides auto-detection
   const isCompact =
     compactMeldHeaders !== undefined ? compactMeldHeaders : isAutoCompact;
+
+  const useIsomorphicLayoutEffect =
+    typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
+
+  useIsomorphicLayoutEffect(() => {
+    if (cardsRowRef.current && cardsRowRef.current.clientWidth > 0) {
+      setMeasuredRowWidth(cardsRowRef.current.clientWidth);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -836,7 +857,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
           ? 'Complete Sequence (500 pts) • Full 13-card sequence; no cards can be added'
           : undefined
       }
-      className={`relative group rounded-xl p-2 sm:p-2.5 transition-all ${
+      className={`relative group rounded-xl p-2 sm:p-2.5 transition-all w-full min-w-0 max-w-full [overflow-x:clip] ${
         isCompleteSequence
           ? 'cursor-not-allowed'
           : isDragOverTarget
@@ -957,7 +978,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
         ref={cardsRowRef}
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center pt-4 pb-2.5 px-2 overflow-x-hidden"
+        className="flex items-center pt-4 pb-2.5 px-2 w-full max-w-full min-w-0 overflow-x-hidden"
       >
         {(() => {
           const isSmallScreen = typeof window !== 'undefined' ? window.innerWidth < 640 : false;

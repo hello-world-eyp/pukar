@@ -37,7 +37,7 @@ describe('Compact Sequence Card Spacing (Up to 10+ Cards without Horizontal Scro
       expect(totalWidth).toBeLessThanOrEqual(270);
     });
 
-    it('ensures up to 10 cards fit in standard desktop column (< 320px) without horizontal scroll', () => {
+    it('ensures up to 10 cards fit in the same space as 7 cards (< 255px) without horizontal scroll', () => {
       const margin = calculateMeldCardOverlapMargin({
         cardCount: 10,
         cardSize: 'md',
@@ -47,11 +47,11 @@ describe('Compact Sequence Card Spacing (Up to 10+ Cards without Horizontal Scro
       // Desktop md card width is 96px
       expect(margin).toBeLessThanOrEqual(-72);
       const exposedWidth = 96 + margin;
-      expect(exposedWidth).toBeGreaterThanOrEqual(19); // Corner index visible
+      expect(exposedWidth).toBeGreaterThanOrEqual(15); // Corner index visible
 
       // Total width of all 10 cards: 1 full card (96px) + 9 exposed strips
       const totalWidth = 96 + 9 * exposedWidth;
-      expect(totalWidth).toBeLessThanOrEqual(300); // Fits easily in 320px-380px column without scroll
+      expect(totalWidth).toBeLessThanOrEqual(255); // Fits in the same ~240px-255px space as 7 cards without overflow
     });
 
     it('dynamically adapts to measured containerWidth if column is narrower', () => {
@@ -90,9 +90,9 @@ describe('Compact Sequence Card Spacing (Up to 10+ Cards without Horizontal Scro
 
       // Mobile md card width is 80px
       const exposedWidth = 80 + margin;
-      expect(exposedWidth).toBeGreaterThanOrEqual(16); // Corner index visible on mobile
+      expect(exposedWidth).toBeGreaterThanOrEqual(12); // Corner index visible on mobile
       const totalWidth = 80 + 9 * exposedWidth;
-      expect(totalWidth).toBeLessThanOrEqual(250); // Fits easily in mobile viewport
+      expect(totalWidth).toBeLessThanOrEqual(210); // Fits easily in mobile viewport without overflow
     });
   });
 
@@ -144,7 +144,7 @@ describe('Compact Sequence Card Spacing (Up to 10+ Cards without Horizontal Scro
       }
 
       // Verify compact negative margin is applied
-      expect(html).toMatch(/margin-left:-(7[0-9]|6[8-9])px/);
+      expect(html).toMatch(/margin-left:-(8[0-9]|7[0-9]|6[8-9])px/);
     });
   });
 });
