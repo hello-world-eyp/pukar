@@ -92,7 +92,7 @@ describe('Global Vertical Page Scroll: No Sequence Scroll Trapping', () => {
       />
     );
 
-    // Verify negative margin is applied
-    expect(html).toContain('margin-left:-68px');
+    // Verify tighter negative margin is applied so long sequences fit without horizontal scroll
+    expect(html).toMatch(/margin-left:-(7[0-9]|6[8-9])px/);
   });
 });

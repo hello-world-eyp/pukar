@@ -410,6 +410,65 @@ export interface MeldCardItemProps {
 }
 
 /**
+ * Calculates negative margin between cards in table sequences to ensure compact fit.
+ * Specifically engineered so that up to 10+ cards can be seen without a horizontal scroll,
+ * while keeping each card's corner rank and suit index cleanly visible and legible.
+ */
+export function calculateMeldCardOverlapMargin({
+  cardCount,
+  cardSize = 'md',
+  containerWidth,
+  isSmallScreen = false,
+}: {
+  cardCount: number;
+  cardSize?: 'sm' | 'md';
+  containerWidth?: number | null;
+  isSmallScreen?: boolean;
+}): number {
+  if (cardCount <= 1) return 0;
+
+  // Card widths defined in PlayingCard.tsx sizeStyles:
+  // md: w-20 (80px) on mobile, sm:w-24 (96px) on desktop (>=640px)
+  // sm: w-12 (48px) on mobile, sm:w-16 (64px) on desktop (>=640px)
+  const cardWidth =
+    cardSize === 'sm'
+      ? isSmallScreen
+        ? 48
+        : 64
+      : isSmallScreen
+      ? 80
+      : 96;
+
+  // Minimum exposed width required to keep corner rank & suit index 100% visible
+  const minExposed = cardSize === 'sm' ? (isSmallScreen ? 12 : 14) : (isSmallScreen ? 16 : 19);
+
+  // Maximum exposed width when there are few cards
+  const maxExposed =
+    cardSize === 'sm'
+      ? cardCount <= 3
+        ? isSmallScreen ? 24 : 32
+        : isSmallScreen ? 16 : 22
+      : cardCount <= 3
+      ? isSmallScreen ? 38 : 46
+      : cardCount <= 5
+      ? isSmallScreen ? 28 : 34
+      : cardCount <= 7
+      ? isSmallScreen ? 22 : 26
+      : isSmallScreen ? 17 : 21;
+
+  // If container width is measured, dynamically fit all cards within available space
+  if (containerWidth && containerWidth > cardWidth) {
+    const availWidth = Math.max(cardWidth, containerWidth - 16);
+    const availPerOverlap = Math.floor((availWidth - cardWidth) / (cardCount - 1));
+    const targetExposed = Math.max(minExposed, Math.min(maxExposed, availPerOverlap));
+    return targetExposed - cardWidth;
+  }
+
+  // Static fallback when container width is not yet measured (e.g. SSR, initial render, or tests)
+  return maxExposed - cardWidth;
+}
+
+/**
  * Pure validation helper for drag-and-drop targeting on a table meld.
  * Checks phase, team ownership, pure 13 completeness, hand exhaustion rule, and meld rules.
  */
@@ -481,8 +540,10 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
   const isCompleteSequence = isPure13 || evaluation.points === 500;
 
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const cardsRowRef = useRef<HTMLDivElement | null>(null);
   const uncollapsedWidthRef = useRef<number | null>(null);
   const [isAutoCompact, setIsAutoCompact] = useState(false);
+  const [measuredRowWidth, setMeasuredRowWidth] = useState<number | null>(null);
 
   // If compactMeldHeaders is passed explicitly, it overrides auto-detection
   const isCompact =
@@ -490,25 +551,29 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (compactMeldHeaders !== undefined) return;
 
     const checkOverflow = () => {
       const el = headerRef.current;
-      if (!el) return;
+      if (el && compactMeldHeaders === undefined) {
+        if (!isCompact) {
+          // If content overflows or container width is under 290px, switch to compact mode
+          if (el.scrollWidth - el.clientWidth > 1 || el.clientWidth < 290) {
+            uncollapsedWidthRef.current = Math.max(el.scrollWidth, 305);
+            setIsAutoCompact(true);
+          }
+        } else {
+          // Only restore full text if container widens enough to fit full badge comfortably
+          const threshold = uncollapsedWidthRef.current ?? 305;
+          if (el.clientWidth >= threshold + 16) {
+            setIsAutoCompact(false);
+            uncollapsedWidthRef.current = null;
+          }
+        }
+      }
 
-      if (!isCompact) {
-        // If content overflows or container width is under 290px, switch to compact mode
-        if (el.scrollWidth - el.clientWidth > 1 || el.clientWidth < 290) {
-          uncollapsedWidthRef.current = Math.max(el.scrollWidth, 305);
-          setIsAutoCompact(true);
-        }
-      } else {
-        // Only restore full text if container widens enough to fit full badge comfortably
-        const threshold = uncollapsedWidthRef.current ?? 305;
-        if (el.clientWidth >= threshold + 16) {
-          setIsAutoCompact(false);
-          uncollapsedWidthRef.current = null;
-        }
+      const rowEl = cardsRowRef.current;
+      if (rowEl && rowEl.clientWidth > 0) {
+        setMeasuredRowWidth(rowEl.clientWidth);
       }
     };
 
@@ -517,9 +582,10 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
     window.addEventListener('resize', checkOverflow);
 
     let ro: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined' && headerRef.current) {
+    if (typeof ResizeObserver !== 'undefined') {
       ro = new ResizeObserver(checkOverflow);
-      ro.observe(headerRef.current);
+      if (headerRef.current) ro.observe(headerRef.current);
+      if (cardsRowRef.current) ro.observe(cardsRowRef.current);
     }
 
     return () => {
@@ -888,56 +954,59 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
 
       {/* Sequential Cards Layout (Overlapping for compact fit without scroll trapping) */}
       <div
+        ref={cardsRowRef}
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center pt-4 pb-2.5 px-2"
+        className="flex items-center pt-4 pb-2.5 px-2 overflow-x-hidden"
       >
-        {sortedSlots.map((slot, index) => {
-          const card = slot.card;
-          const isSlotWild = slot.isWildcard;
-          let wildLabel: string | undefined = undefined;
+        {(() => {
+          const isSmallScreen = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+          const overlapMargin = calculateMeldCardOverlapMargin({
+            cardCount: sortedSlots.length,
+            cardSize,
+            containerWidth: measuredRowWidth,
+            isSmallScreen,
+          });
 
-          if (isSlotWild) {
-            const repRank = getRankLabel(slot.representedRank);
-            const repSuit = getSuitSymbol(slot.representedSuit ?? meld.suit ?? card.suit);
-            wildLabel = cardSize === 'sm' ? `W (${repRank}${repSuit})` : `Wild (${repRank}${repSuit})`;
-          } else if (isSlotWild === false) {
-            // Natural 2 that slid down
-            wildLabel = undefined;
-          }
+          return sortedSlots.map((slot, index) => {
+            const card = slot.card;
+            const isSlotWild = slot.isWildcard;
+            let wildLabel: string | undefined = undefined;
 
-          const baseMargin = cardSize === 'md' ? -44 : -26;
-          const overlapMargin =
-            sortedSlots.length > 7
-              ? cardSize === 'md'
-                ? Math.max(-68, baseMargin - (sortedSlots.length - 7) * 4)
-                : Math.max(-42, baseMargin - (sortedSlots.length - 7) * 3)
-              : baseMargin;
+            if (isSlotWild) {
+              const repRank = getRankLabel(slot.representedRank);
+              const repSuit = getSuitSymbol(slot.representedSuit ?? meld.suit ?? card.suit);
+              wildLabel = cardSize === 'sm' ? `W (${repRank}${repSuit})` : `Wild (${repRank}${repSuit})`;
+            } else if (isSlotWild === false) {
+              // Natural 2 that slid down
+              wildLabel = undefined;
+            }
 
-          return (
-            <div
-              key={`${card.id}-${slot.representedRank}-${index}`}
-              style={{
-                marginLeft: index === 0 ? 0 : `${overlapMargin}px`,
-                zIndex: index + 1,
-                animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
-              }}
-              className={`relative transition-transform hover:-translate-y-1.5 hover:!z-30 shrink-0 ${
-                isRippling ? 'animate-card-ripple' : 'animate-sequence-pop-in'
-              }`}
-            >
-              <PlayingCard
-                card={card}
-                size={cardSize}
-                isWild={isSlotWild}
-                isNew={Boolean(newMeldCardIds && newMeldCardIds.includes(card.id))}
-                representedRank={slot.representedRank}
-                representedSuit={slot.representedSuit}
-                wildcardLabel={wildLabel}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={`${card.id}-${slot.representedRank}-${index}`}
+                style={{
+                  marginLeft: index === 0 ? 0 : `${overlapMargin}px`,
+                  zIndex: index + 1,
+                  animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
+                }}
+                className={`relative transition-transform hover:-translate-y-1.5 hover:!z-30 shrink-0 ${
+                  isRippling ? 'animate-card-ripple' : 'animate-sequence-pop-in'
+                }`}
+              >
+                <PlayingCard
+                  card={card}
+                  size={cardSize}
+                  isWild={isSlotWild}
+                  isNew={Boolean(newMeldCardIds && newMeldCardIds.includes(card.id))}
+                  representedRank={slot.representedRank}
+                  representedSuit={slot.representedSuit}
+                  wildcardLabel={wildLabel}
+                />
+              </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );

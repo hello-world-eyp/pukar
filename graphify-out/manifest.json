@@ -300,15 +300,15 @@
     "semantic_hash": ""
   },
   "src/ui/components/SequencesPage.tsx": {
-    "mtime": 1792324452.919873,
-    "seen": 1792324690.7368698,
-    "ast_hash": "d584ffe82bd991847089af3a9b1f2a3b",
+    "mtime": 1792325047.0355542,
+    "seen": 1792325139.378908,
+    "ast_hash": "a244e5208c33883ead2fa9e622aced8e",
     "semantic_hash": ""
   },
   "src/ui/components/TableMeldBoard.tsx": {
-    "mtime": 1792324394.9071152,
-    "seen": 1792324690.736871,
-    "ast_hash": "28d98f9091e385b83daf3fa26c619eb7",
+    "mtime": 1792325030.9100118,
+    "seen": 1792325139.3789089,
+    "ast_hash": "0467bef3c2c7ba751b1ce479ed69d7cd",
     "semantic_hash": ""
   },
   "src/ui/components/TableSeating.tsx": {
@@ -960,9 +960,9 @@
     "semantic_hash": ""
   },
   "tests/ui/sequence-scroll-no-trap.test.tsx": {
-    "mtime": 1792259068.431882,
-    "seen": 1792259120.758782,
-    "ast_hash": "a713d7d51a5070e577a4619a92f1af73",
+    "mtime": 1792325092.146575,
+    "seen": 1792325139.3790212,
+    "ast_hash": "4de881692227fed38a98fb42302d0fa7",
     "semantic_hash": ""
   },
   "tests/ui/your-turn-notification.test.tsx": {
@@ -1017,6 +1017,12 @@
     "mtime": 1792324612.5953414,
     "seen": 1792324690.736955,
     "ast_hash": "ac6fa64a1bedd93eb178e3741302695f",
+    "semantic_hash": ""
+  },
+  "tests/ui/sequence-card-spacing.test.tsx": {
+    "mtime": 1792325112.8267627,
+    "seen": 1792325139.379019,
+    "ast_hash": "dca706b5c883a9bc3097c63bc80e2da8",
     "semantic_hash": ""
   }
 }
