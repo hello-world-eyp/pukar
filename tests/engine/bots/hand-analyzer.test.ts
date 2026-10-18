@@ -6,6 +6,7 @@ import {
   findPotentialAdditionsToMelds,
   findBestMeldPlan,
   evaluateDeadwoodAndDiscard,
+  countTwosInMeld,
 } from '../../../src/engine/bots/hand-analyzer';
 
 describe('Bot Hand Analyzer', () => {
@@ -166,6 +167,160 @@ describe('Bot Hand Analyzer', () => {
         disallowedCardId: 'c1',
       });
       expect(evaluation.recommendedDiscard?.id).toBe('c2');
+    });
+  });
+
+  describe('Refrain from putting 2 2s in the same sequence', () => {
+    it('countTwosInMeld correctly counts cards of rank 2 across cards and slots', () => {
+      const meldWithNatural2: Meld = {
+        id: 'm1',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          makeCard('hA', 'HEARTS', 14),
+          makeCard('h2', 'HEARTS', 2),
+          makeCard('h3', 'HEARTS', 3),
+        ],
+        slots: [
+          { card: makeCard('hA', 'HEARTS', 14), representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h2', 'HEARTS', 2), representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h3', 'HEARTS', 3), representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        team: 'A',
+        points: 20,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      expect(countTwosInMeld(meldWithNatural2)).toBe(1);
+
+      const meldWithout2: Meld = {
+        id: 'm2',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [
+          makeCard('s4', 'SPADES', 4),
+          makeCard('s5', 'SPADES', 5),
+          makeCard('s6', 'SPADES', 6),
+        ],
+        slots: [],
+        team: 'A',
+        points: 15,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      expect(countTwosInMeld(meldWithout2)).toBe(0);
+    });
+
+    it('findPotentialAdditionsToMelds does not add a 2 to a sequence that already contains a 2', () => {
+      // Sequence has natural 2 (Hearts A-2-3-4-5-6-7, 7 cards, missing 8)
+      const existingMeld: Meld = {
+        id: 'm-hearts',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          makeCard('hA', 'HEARTS', 14),
+          makeCard('h2_natural', 'HEARTS', 2),
+          makeCard('h3', 'HEARTS', 3),
+          makeCard('h4', 'HEARTS', 4),
+          makeCard('h5', 'HEARTS', 5),
+          makeCard('h6', 'HEARTS', 6),
+          makeCard('h7', 'HEARTS', 7),
+        ],
+        slots: [
+          { card: makeCard('hA', 'HEARTS', 14), representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h2_natural', 'HEARTS', 2), representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h3', 'HEARTS', 3), representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h4', 'HEARTS', 4), representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h5', 'HEARTS', 5), representedRank: 5, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h6', 'HEARTS', 6), representedRank: 6, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h7', 'HEARTS', 7), representedRank: 7, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        team: 'B',
+        points: 200,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      // Hand has a second 2♥ and a natural 8♥
+      const hand: Card[] = [
+        makeCard('h2_second', 'HEARTS', 2),
+        makeCard('h8', 'HEARTS', 8),
+      ];
+
+      const additions = findPotentialAdditionsToMelds(hand, [existingMeld]);
+
+      // Natural 8♥ should be proposed as an addition
+      const add8 = additions.find((a) => a.cardIds.includes('h8'));
+      expect(add8).toBeDefined();
+
+      // The second 2♥ should NEVER be proposed as an addition to the same sequence!
+      const add2 = additions.find((a) => a.cardIds.includes('h2_second'));
+      expect(add2).toBeUndefined();
+    });
+
+    it('findCandidateRunsInSuit does not form candidate runs with more than one 2', () => {
+      // Hand has A♥, 2♥_1, 3♥, 4♥, missing 5♥, and another 2♥_2 as wildcard
+      const suitedCards: Card[] = [
+        makeCard('hA', 'HEARTS', 14),
+        makeCard('h2_1', 'HEARTS', 2),
+        makeCard('h3', 'HEARTS', 3),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h6', 'HEARTS', 6),
+      ];
+      const wildcards: Card[] = [
+        makeCard('h2_2', 'HEARTS', 2),
+      ];
+
+      const runs = findCandidateRunsInSuit(suitedCards, 'HEARTS', wildcards);
+
+      // Verify none of the candidate runs contain both 2s
+      for (const run of runs) {
+        const twosCount = run.cards.filter((c) => c.rank === 2).length;
+        expect(twosCount).toBeLessThanOrEqual(1);
+      }
+    });
+
+    it('findBestMeldPlan refrains from putting 2 2s in the same sequence during turn planning', () => {
+      // Existing meld with 2♥
+      const teamMeld: Meld = {
+        id: 'm-hearts-1',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          makeCard('hA', 'HEARTS', 14),
+          makeCard('h2_nat', 'HEARTS', 2),
+          makeCard('h3', 'HEARTS', 3),
+          makeCard('h4', 'HEARTS', 4),
+        ],
+        slots: [
+          { card: makeCard('hA', 'HEARTS', 14), representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h2_nat', 'HEARTS', 2), representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h3', 'HEARTS', 3), representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h4', 'HEARTS', 4), representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        team: 'A',
+        points: 20,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      const hand: Card[] = [
+        makeCard('h2_wild', 'SPADES', 2), // cross-suit 2
+        makeCard('c9', 'CLUBS', 9),
+        makeCard('d10', 'DIAMONDS', 10),
+      ];
+
+      const plan = findBestMeldPlan(hand, [teamMeld]);
+
+      // Should not add the second 2 to the Hearts sequence
+      const addAction = plan.additionsToPlay.find((a) => a.cardIds.includes('h2_wild'));
+      expect(addAction).toBeUndefined();
     });
   });
 });

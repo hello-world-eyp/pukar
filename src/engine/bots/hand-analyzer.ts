@@ -47,6 +47,31 @@ export interface HandEvaluation {
 }
 
 /**
+ * Counts the number of rank 2 cards present in a meld (checking unique card IDs across cards and slots).
+ */
+export function countTwosInMeld(meld: Meld): number {
+  const cardSet = new Set<string>();
+  let count = 0;
+  if (meld.cards) {
+    for (const c of meld.cards) {
+      if (c && !cardSet.has(c.id)) {
+        cardSet.add(c.id);
+        if (c.rank === 2) count++;
+      }
+    }
+  }
+  if (meld.slots) {
+    for (const s of meld.slots) {
+      if (s?.card && !cardSet.has(s.card.id)) {
+        cardSet.add(s.card.id);
+        if (s.card.rank === 2) count++;
+      }
+    }
+  }
+  return count;
+}
+
+/**
  * Searches for all valid 3+ card runs in a specific suit given suited cards and available wildcards.
  */
 export function findCandidateRunsInSuit(
@@ -172,6 +197,11 @@ export function findCandidateRunsInSuit(
 
           if (possible && missingRank !== null) {
             const testCards = [...dirtyMatched, wildcard];
+            // Rule: All bots should refrain from putting 2 2s in the same sequence.
+            // That just leads to a permanent hundred and a waste of jokers.
+            if (testCards.filter((c) => c.rank === 2).length > 1) {
+              continue;
+            }
             const validation = validateNewMeld(testCards, missingRank === 1 ? 1 : missingRank);
             if (validation.valid) {
               const key = testCards
@@ -266,12 +296,20 @@ export function findPotentialNewMelds(
     candidateMelds.push(...sets);
   }
 
+  let melds = candidateMelds;
   // Filter if requirePure is requested
   if (options?.requirePure) {
-    return candidateMelds.filter((m) => m.isPure);
+    melds = melds.filter((m) => m.isPure);
   }
 
-  return candidateMelds;
+  // Rule: All bots should refrain from putting 2 2s in the same sequence.
+  // That just leads to a permanent hundred and a waste of jokers.
+  return melds.filter((m) => {
+    if (m.type === 'RUN') {
+      return m.cards.filter((c) => c.rank === 2).length <= 1;
+    }
+    return true;
+  });
 }
 
 /**
@@ -419,6 +457,12 @@ export function findPotentialAdditionsToMelds(
 
     // 1. Check single card additions
     for (const card of hand) {
+      // Rule: All bots should refrain from putting 2 2s in the same sequence.
+      // That just leads to a permanent hundred and a waste of jokers.
+      if (meld.type === 'RUN' && card.rank === 2 && countTwosInMeld(meld) >= 1) {
+        continue;
+      }
+
       // Disallow using cross-suit 2 in a run unless:
       // 1. Very close to Pukar (<= 3 cards) or Pukar guaranteed
       // 2. The run is NOT clean (never taint clean sequences and forfeit Clean 7 / Pure 13)
@@ -508,6 +552,16 @@ export function findPotentialAdditionsToMelds(
       for (let i = 0; i < hand.length; i++) {
         for (let j = i + 1; j < hand.length; j++) {
           const pair = [hand[i], hand[j]];
+          // Rule: All bots should refrain from putting 2 2s in the same sequence.
+          // That just leads to a permanent hundred and a waste of jokers.
+          if (meld.type === 'RUN') {
+            const existing2s = countTwosInMeld(meld);
+            const added2s = pair.filter((c) => c.rank === 2).length;
+            if (existing2s + added2s > 1) {
+              continue;
+            }
+          }
+
           if (
             meld.type === 'RUN' &&
             meld.suit &&
@@ -887,6 +941,16 @@ function internalFindBestMeldPlan(
       const targetMeldIndex = virtualMelds.findIndex((m) => m.id === add.meldId);
       if (targetMeldIndex >= 0) {
         const targetMeld = virtualMelds[targetMeldIndex];
+        // Rule: All bots should refrain from putting 2 2s in the same sequence.
+        // That just leads to a permanent hundred and a waste of jokers.
+        if (targetMeld.type === 'RUN') {
+          const existing2s = countTwosInMeld(targetMeld);
+          const added2s = add.cards.filter((c) => c.rank === 2).length;
+          if (existing2s + added2s > 1) {
+            continue;
+          }
+        }
+
         const validation = canAddCardsToMeld(targetMeld, add.cards);
         if (validation.valid && validation.updatedSlots) {
           const scoreBefore = evaluateMeldScore(targetMeld).points;
@@ -1049,7 +1113,13 @@ export function evaluateDeadwoodAndDiscard(
     const isDirectTeamAdd =
       !isExplicitPartnerPass &&
       (options?.protectedCardIds?.has(card.id) ||
-        (options?.teamMelds && options.teamMelds.some((m) => canAddCardsToMeld(m, [card]).valid)));
+        (options?.teamMelds &&
+          options.teamMelds.some((m) => {
+            if (m.type === 'RUN' && card.rank === 2 && countTwosInMeld(m) >= 1) {
+              return false;
+            }
+            return canAddCardsToMeld(m, [card]).valid;
+          })));
     if (isDirectTeamAdd) {
       score += 300;
       reason = 'Can be added to team sequence (protected from discard)';

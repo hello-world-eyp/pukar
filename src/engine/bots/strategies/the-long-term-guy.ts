@@ -17,6 +17,7 @@ import {
   evaluateDiscardPilePickup,
   shouldHoldNewRunToExtendExistingSequence,
   CandidateMeld,
+  countTwosInMeld,
 } from '../hand-analyzer';
 import { canAddCardsToMeld, evaluateMeldScore } from '../../meld-validator';
 
@@ -144,6 +145,15 @@ export function decideTheLongTermGuyTurn(
           const targetMeldIndex = virtualMelds.findIndex((m) => m.id === addition.meldId);
           if (targetMeldIndex >= 0) {
             const targetMeld = virtualMelds[targetMeldIndex];
+            // Rule: All bots should refrain from putting 2 2s in the same sequence.
+            // That just leads to a permanent hundred and a waste of jokers.
+            if (
+              targetMeld.type === 'RUN' &&
+              countTwosInMeld(targetMeld) + addition.cards.filter((c) => c.rank === 2).length > 1
+            ) {
+              continue;
+            }
+
             const validation = canAddCardsToMeld(targetMeld, addition.cards);
             if (validation.valid && validation.updatedSlots) {
               // Safety guard: ensure no sequence's points are reduced unless canGuaranteePukar is true
