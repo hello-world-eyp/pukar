@@ -564,22 +564,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   return (
     <div
       data-testid="player-hand"
-      className={`w-full wood-hand-tray rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5 text-stone-900 ${className}`}
+      className={`w-full wood-hand-tray rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-2xl flex flex-col gap-1.5 text-stone-900 ${className}`}
     >
       {/* HAND TOOLBAR & STATUS */}
-      <div className="relative flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5 sm:gap-2.5 border-b border-[#a47b4e]/40 pb-2 w-full overflow-x-hidden overflow-y-hidden">
+      <div className="relative flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5 sm:gap-2 border-b border-[#a47b4e]/40 pb-1.5 w-full overflow-x-hidden overflow-y-hidden">
         {/* PLAYER IDENTITY & CARD COUNTS */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="w-10 h-10 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-base shrink-0 shadow-md">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-md">
               {playerName ? playerName.charAt(0).toUpperCase() : 'P'}
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-black text-stone-950 text-base sm:text-lg tracking-tight">{playerName}</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="font-black text-stone-950 text-sm sm:text-base tracking-tight">{playerName}</span>
                 {playerTeam && (
                   <span
-                    className={`text-xs font-black px-2 py-0.5 rounded-md uppercase tracking-wider shadow-sm ${
+                    className={`text-[10px] sm:text-xs font-black px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider shadow-sm ${
                       playerTeam === 'A'
                         ? 'bg-blue-600 text-white'
                         : 'bg-amber-600 text-white'
@@ -589,22 +589,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   </span>
                 )}
                 {isCurrentPlayer && (
-                  <span className="text-xs font-black text-emerald-950 bg-emerald-300 border border-emerald-500 px-2 py-0.5 rounded-md shadow-sm">
+                  <span className="text-[10px] sm:text-xs font-black text-emerald-950 bg-emerald-300 border border-emerald-500 px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm">
                     Active Turn
                   </span>
                 )}
                 {isHovering && (
                   <span
                     data-testid="badge-hovering-dock"
-                    className="text-xs font-black text-amber-950 bg-amber-300 border border-amber-500 px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1"
+                    className="text-[10px] sm:text-xs font-black text-amber-950 bg-amber-300 border border-amber-500 px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1"
                     title="Hand is hovering docked at the bottom because sequences have expanded to a second row. Scroll the board up/down to see all sequences."
                   >
-                    <Pin className="w-3.5 h-3.5 text-amber-900" />
+                    <Pin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-900" />
                     <span>Docked at Bottom</span>
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 text-sm text-stone-700 font-bold leading-none">
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-stone-700 font-bold leading-none">
                 <span
                   data-testid="card-count"
                   className={`font-extrabold ${isChoosingPukar ? 'text-amber-800 animate-pulse' : 'text-stone-900'}`}
@@ -639,22 +639,22 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {/* CONTEXTUAL ACTION CONTROLS SLOT (NO SCROLLBARS) */}
         {!isChoosingPukar && actionsSlot && (
-          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-auto h-10 overflow-hidden">
+          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-auto h-9 overflow-hidden">
             {actionsSlot}
           </div>
         )}
 
         {/* RIGHT ACTIONS: CLEAR SELECTION + FRUSTRATION BUTTON + HIDE HAND */}
-        <div className="shrink-0 flex items-center justify-end gap-1.5 sm:gap-2 h-10 z-10">
+        <div className="shrink-0 flex items-center justify-end gap-1.5 sm:gap-2 h-9 z-10">
           {!isChoosingPukar && selectedCardIds.length > 0 && (
             <button
               type="button"
               aria-label="Clear Selection"
               data-testid="btn-clear-selection"
               onClick={onClearSelection}
-              className="h-9 sm:h-10 px-2 sm:px-2.5 text-xs sm:text-sm font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1 transition-colors cursor-pointer shadow-sm animate-in fade-in duration-100 shrink-0"
+              className="h-8 sm:h-8.5 px-2 sm:px-2.5 text-xs font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1 transition-colors cursor-pointer shadow-sm animate-in fade-in duration-100 shrink-0"
             >
-              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <X className="w-3.5 h-3.5 shrink-0" />
               <span>Clear</span>
             </button>
           )}
@@ -671,7 +671,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   ? `Frustration is on cooldown (${frustrationRemainingSecs}s remaining)`
                   : 'Express your frustration!'
               }
-              className={`h-9 sm:h-10 px-2.5 sm:px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
+              className={`h-8 sm:h-8.5 px-2 sm:px-2.5 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
                 isFrustratedOnCooldown || isChoosingPukar
                   ? 'bg-stone-300/80 text-stone-500 border border-stone-400 cursor-not-allowed opacity-75'
                   : 'bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border border-rose-700 active:scale-95 shadow-orange-500/20 cursor-pointer'
@@ -694,7 +694,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 ? 'Show your hand cards'
                 : 'Hide your hand cards to view the table'
             }
-            className={`h-9 sm:h-10 px-2.5 sm:px-3.5 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 ${
+            className={`h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 ${
               isCollapsed
                 ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 border-2 border-amber-300 font-black shadow-amber-500/30 ring-2 ring-amber-400/60'
                 : 'bg-stone-900 hover:bg-stone-800 text-amber-300 hover:text-amber-200 border-2 border-amber-400/80 shadow-stone-950/40'
@@ -722,7 +722,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           data-testid="collapsed-hand-bar"
           aria-label={`Hand Hidden • Click to show ${cards.length} cards`}
           onClick={handleToggleCollapse}
-          className="w-full py-2.5 px-4 rounded-xl wood-hand-slot border border-amber-500/40 hover:border-amber-400/80 bg-amber-950/40 hover:bg-amber-950/60 flex items-center justify-between text-stone-200 transition-all cursor-pointer shadow-inner group"
+          className="w-full py-2 px-3 sm:px-4 rounded-xl wood-hand-slot border border-amber-500/40 hover:border-amber-400/80 bg-amber-950/40 hover:bg-amber-950/60 flex items-center justify-between text-stone-200 transition-all cursor-pointer shadow-inner group"
         >
           <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-amber-200">
             <Eye className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
@@ -735,21 +735,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       ) : (
         <div
           ref={trayRef}
-          className="relative w-full h-[164px] sm:h-[192px] min-h-[164px] sm:min-h-[192px] max-h-[164px] sm:max-h-[192px] wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto overflow-y-hidden pb-3 pt-5 sm:pt-6 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner group"
+          className="relative w-full h-[148px] sm:h-[172px] min-h-[148px] sm:min-h-[172px] max-h-[148px] sm:max-h-[172px] wood-hand-slot rounded-xl sm:rounded-2xl p-2 sm:p-2.5 overflow-x-auto overflow-y-hidden pb-2 pt-2 sm:pt-2.5 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner group"
           tabIndex={0}
           aria-label="Hand Cards"
         >
-          {/* Tray Quick-Collapse Tab */}
-          <button
-            type="button"
-            data-testid="btn-tray-quick-collapse"
-            onClick={handleToggleCollapse}
-            title="Hide your hand cards to view the table"
-            className="absolute top-1.5 right-2 z-20 px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold bg-amber-950/70 hover:bg-amber-900 text-amber-200 border border-amber-500/40 flex items-center gap-1 shadow-md opacity-85 hover:opacity-100 transition-opacity cursor-pointer"
-          >
-            <EyeOff className="w-3 h-3 text-amber-300" />
-            <span>Hide</span>
-          </button>
         {isChoosingPukar ? (
           <div
             data-testid="pukar-selection-pending-tray"

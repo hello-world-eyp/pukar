@@ -21,9 +21,9 @@ describe('PlayerHand Collapsible / Hideable Hand Cards', () => {
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('Hide Cards');
 
-    // Cards tray should be visible, collapsed bar should not
+    // Cards tray should be visible, collapsed bar should not, and no random tray hide button
     expect(html).toContain('aria-label="Hand Cards"');
-    expect(html).toContain('data-testid="btn-tray-quick-collapse"');
+    expect(html).not.toContain('data-testid="btn-tray-quick-collapse"');
     expect(html).not.toContain('data-testid="collapsed-hand-bar"');
   });
 
@@ -58,9 +58,9 @@ describe('PlayerHand Collapsible / Hideable Hand Cards', () => {
     expect(html).toContain('data-testid="collapsed-hand-bar"');
   });
 
-  it('renders quick-collapse button directly on the tray for one-click access', () => {
+  it('does not render random quick-collapse button on the tray to save vertical space', () => {
     const html = renderToString(<PlayerHand cards={mockCards} isCollapsed={false} />);
-    expect(html).toContain('data-testid="btn-tray-quick-collapse"');
+    expect(html).not.toContain('data-testid="btn-tray-quick-collapse"');
   });
 
   describe('TopNavBar Hand Visibility Toggle', () => {
@@ -116,7 +116,7 @@ describe('PlayerHand Collapsible / Hideable Hand Cards', () => {
       expect(html).toContain('data-testid="btn-top-nav-toggle-hand"');
       expect(html).toContain('data-testid="player-hand"');
       expect(html).toContain('data-testid="btn-toggle-hand-collapse"');
-      expect(html).toContain('data-testid="btn-tray-quick-collapse"');
+      expect(html).not.toContain('data-testid="btn-tray-quick-collapse"');
 
       // Verify no horizontal scrollbars on header
       expect(html).toContain('overflow-x-hidden');
@@ -132,7 +132,7 @@ describe('PlayerHand Collapsible / Hideable Hand Cards', () => {
       expect(html).toContain('data-testid="btn-top-nav-toggle-hand"');
       expect(html).toContain('data-testid="player-hand"');
       expect(html).toContain('data-testid="btn-toggle-hand-collapse"');
-      expect(html).toContain('data-testid="btn-tray-quick-collapse"');
+      expect(html).not.toContain('data-testid="btn-tray-quick-collapse"');
 
       // Verify no horizontal scrollbars on header
       expect(html).toContain('overflow-x-hidden');
@@ -194,7 +194,7 @@ describe('PlayerHand Collapsible / Hideable Hand Cards', () => {
       expect(html).toContain('data-testid="btn-top-nav-toggle-hand"');
       expect(html).toContain('data-testid="player-hand"');
       expect(html).toContain('data-testid="btn-toggle-hand-collapse"');
-      expect(html).toContain('data-testid="btn-tray-quick-collapse"');
+      expect(html).not.toContain('data-testid="btn-tray-quick-collapse"');
 
       // Verify no horizontal scrollbars on header
       expect(html).toContain('overflow-x-hidden');
