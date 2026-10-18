@@ -453,5 +453,20 @@
   box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.6);
 }
 
+/* 10. Your Turn 3-Second Modal Countdown Progress Bar */
+@keyframes turn-timer-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+.animate-turn-timer {
+  animation: turn-timer-progress 3s linear forwards;
+}
+
+
 
 

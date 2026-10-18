@@ -20,6 +20,7 @@ import { PukarSlamOverlay } from './ui/components/PukarSlamOverlay';
 import { PureSequenceCelebrationModal } from './ui/components/PureSequenceCelebrationModal';
 import { UnclePukarChoiceModal } from './ui/components/UnclePukarChoiceModal';
 import { FrustrationOverlay } from './ui/components/FrustrationOverlay';
+import { YourTurnModal } from './ui/components/YourTurnModal';
 import { GameSetupModal } from './ui/components/GameSetupModal';
 import { BotSetupModal } from './ui/components/BotSetupModal';
 import { ModeSelectorModal } from './ui/components/ModeSelectorModal';
@@ -50,7 +51,6 @@ import {
   Info,
   Bot,
   Zap,
-  Bell,
   AlertTriangle,
 } from 'lucide-react';
 
@@ -716,46 +716,6 @@ export function App({
               onClick={() => setDisconnectToast(null)}
               className="p-1 rounded-lg hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Dismiss Disconnect Notification"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Your Turn Popup Notification Banner (3-second auto-dismiss) */}
-        {yourTurnBanner && (
-          <div
-            data-testid="your-turn-banner"
-            role="status"
-            aria-live="polite"
-            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-950/95 via-amber-950/95 to-emerald-950/95 border-2 border-amber-400 text-amber-100 shadow-2xl shadow-amber-950/80 animate-in fade-in zoom-in-95 duration-200 cursor-pointer"
-            onClick={() => setYourTurnBanner(false)}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-md shrink-0 animate-bounce">
-                <Bell className="w-4 h-4 text-slate-950" />
-              </div>
-              <div>
-                <div className="font-black text-sm sm:text-base text-amber-100 flex items-center gap-2">
-                  <span>Your Turn!</span>
-                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 shadow-sm">
-                    Action Required
-                  </span>
-                </div>
-                <div className="text-xs sm:text-sm font-semibold text-amber-200/90 mt-0.5">
-                  It&apos;s your turn — draw from the Stock Deck or Discard Pile to begin.
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              data-testid="btn-dismiss-your-turn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setYourTurnBanner(false);
-              }}
-              className="p-1 rounded-xl hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors cursor-pointer"
-              aria-label="Dismiss Your Turn Notification"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1531,6 +1491,16 @@ export function App({
           playerName={pureSequenceCelebration.playerName}
           suit={pureSequenceCelebration.suit}
           onClose={() => setPureSequenceCelebration(null)}
+        />
+      )}
+
+      {/* 3-Second Unmissable Your Turn Modal Overlay */}
+      {yourTurnBanner && (
+        <YourTurnModal
+          isOpen={yourTurnBanner}
+          playerName={viewingPlayer?.name ?? 'Player'}
+          team={viewingPlayer?.team ?? 'A'}
+          onDismiss={() => setYourTurnBanner(false)}
         />
       )}
     </div>
