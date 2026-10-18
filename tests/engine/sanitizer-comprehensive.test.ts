@@ -159,4 +159,36 @@ describe('GameState Sanitizer - Comprehensive Audit & Edge Cases', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('reveals hands for all players when the round has concluded (ROUND_OVER or GAME_OVER)', () => {
+    const state = dealInitialState(4);
+    const viewerId = state.players[0].id;
+    const opponentId = state.players[1].id;
+
+    // During active play: opponent hand is hidden
+    state.roundStatus = 'PLAYING';
+    state.isRoundOver = false;
+    const sanitizedPlaying = sanitizeStateForPlayer(state, viewerId);
+    expect(sanitizedPlaying.players.find((p) => p.id === viewerId)?.hand).toBeDefined();
+    expect(sanitizedPlaying.players.find((p) => p.id === opponentId)?.hand).toBeUndefined();
+
+    // When ROUND_OVER: all players hands are revealed
+    state.roundStatus = 'ROUND_OVER';
+    state.isRoundOver = true;
+    const sanitizedOver = sanitizeStateForPlayer(state, viewerId);
+    sanitizedOver.players.forEach((p) => {
+      expect(p.hand).toBeDefined();
+      expect(Array.isArray(p.hand)).toBe(true);
+      expect(p.hand?.length).toBe(p.cardCount);
+    });
+
+    // When GAME_OVER: all players hands are revealed
+    state.roundStatus = 'GAME_OVER';
+    state.isRoundOver = true;
+    const sanitizedGameOver = sanitizeStateForPlayer(state, viewerId);
+    sanitizedGameOver.players.forEach((p) => {
+      expect(p.hand).toBeDefined();
+      expect(Array.isArray(p.hand)).toBe(true);
+    });
+  });
 });

@@ -81,23 +81,32 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
   });
 
   describe('Pukar Pool Replenishment on Deck Exhaustion', () => {
-    it('replenishes stock deck from Pukar pool when stock becomes empty and Pukars remain in pool', () => {
+    it('replenishes stock deck from Pukar pool when stock becomes empty and player finishes their turn', () => {
       const state = dealInitialState(4);
       // Place only 1 card in stock deck
       state.stockDeck = [makeCard('HEARTS', 9, 'last-stock-card')];
       expect(state.pukarPool).toHaveLength(2);
 
+      // Step 1: Draw last card - Pukar does NOT move yet
       const result = pukarReducer(state, { type: 'DRAW_CARD', source: 'DECK' });
       expect(result.error).toBeUndefined();
 
       const next = result.state;
-      // Active player drew the 1 card
       expect(next.players[0].hand.find((c) => c.id === 'last-stock-card')).toBeDefined();
-      // Pukar 1 (13 cards) became the new stock deck (shuffled)
-      expect(next.stockDeck).toHaveLength(13);
-      // Pukar pool reduced from 2 to 1
-      expect(next.pukarPool).toHaveLength(1);
+      expect(next.stockDeck).toHaveLength(0);
+      expect(next.pukarPool).toHaveLength(2);
       expect(next.roundStatus).toBe('PLAYING');
+
+      // Step 2: Player discards to finish turn - now Pukar 1 replenishes stock deck
+      const discardCard = next.players[0].hand[0];
+      const step2 = pukarReducer(next, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
+      });
+      expect(step2.error).toBeUndefined();
+      expect(step2.state.stockDeck).toHaveLength(13);
+      expect(step2.state.pukarPool).toHaveLength(1);
+      expect(step2.state.currentPlayerIndex).toBe(1);
     });
 
     it('triggers final turn when stock deck exhausts and 0 Pukars remain in pool', () => {
@@ -109,7 +118,6 @@ describe('Comprehensive Turn Lifecycle & Reducer State Machine (src/engine/reduc
       const step1 = pukarReducer(state, { type: 'DRAW_CARD', source: 'DECK' });
       expect(step1.error).toBeUndefined();
       expect(step1.state.stockDeck).toHaveLength(0);
-      expect(step1.state.lastTurnTriggeredByDeckExhaust).toBe(true);
 
       // Step 2: Discard to advance turn and enter FINAL_TURN
       const discardCard = step1.state.players[0].hand[0];

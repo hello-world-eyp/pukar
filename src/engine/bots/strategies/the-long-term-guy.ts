@@ -15,14 +15,15 @@ import {
   findPotentialAdditionsToMelds,
   evaluateDeadwoodAndDiscard,
   evaluateDiscardPilePickup,
+  shouldHoldNewRunToExtendExistingSequence,
   CandidateMeld,
 } from '../hand-analyzer';
-import { canAddCardsToMeld } from '../../meld-validator';
+import { canAddCardsToMeld, evaluateMeldScore } from '../../meld-validator';
 
 export function decideTheLongTermGuyTurn(
   state: GameState,
   botIndex: number,
-  _memory: BotMemory
+  memory: BotMemory
 ): BotTurnPlan {
   const player = state.players[botIndex];
   const hand = player.hand || [];
@@ -80,128 +81,196 @@ export function decideTheLongTermGuyTurn(
   const isCloseToPukar = hand.length <= 3;
   const isFinalTurn =
     state.roundStatus === 'FINAL_TURN' || Boolean(state.lastTurnTriggeredByDeckExhaust);
-  const usedCardIds = new Set<string>();
-  const meldActions: GameAction[] = [];
+
+  const partnerIndex = state.players.findIndex(
+    (p, idx) => idx !== botIndex && p.team === team
+  );
+  const partner = partnerIndex >= 0 ? state.players[partnerIndex] : undefined;
+  const partnerCardCount = partner
+    ? ((partner as any).cardCount ?? partner.hand?.length ?? 0)
+    : undefined;
+  const partnerPickups = partnerIndex >= 0 && memory ? (memory.bottomPickupsByPlayer[partnerIndex] || []) : [];
+  const partnerDiscards = partnerIndex >= 0 && memory ? (memory.discardsByPlayer[partnerIndex] || []) : [];
+  const partnerDiscardIds = new Set(partnerDiscards.map((c) => c.id));
+  const partnerKnownCards = partnerPickups.filter((c) => !partnerDiscardIds.has(c.id));
+
+  let meldActions: GameAction[] = [];
+  let usedCardIds = new Set<string>();
 
   if (!isDiscardPhase) {
-    // Step 2a: Additions to existing team sequences (iterative multi-pass with virtualMelds)
-    // Feeds and expands existing team sequences towards Clean 7 and Pure 13 first!
-    const virtualMelds: Meld[] = myTeamMelds.map((m) => ({
-      ...m,
-      cards: [...m.cards],
-      slots: [...m.slots],
-    }));
+    const computeMeldActions = (canGuaranteePukar: boolean) => {
+      const planUsedCardIds = new Set<string>();
+      const planMeldActions: GameAction[] = [];
 
-    for (let iter = 0; iter < 10; iter++) {
-      const remainingCards = hand.filter((c) => !usedCardIds.has(c.id));
-      if (remainingCards.length <= 1) break;
+      // Step 2a: Additions to existing team sequences (iterative multi-pass with virtualMelds)
+      // Feeds and expands existing team sequences towards Clean 7 and Pure 13 first!
+      const virtualMelds: Meld[] = myTeamMelds.map((m) => ({
+        ...m,
+        cards: [...m.cards],
+        slots: [...m.slots],
+      }));
 
-      const potentialAdditions = findPotentialAdditionsToMelds(
-        remainingCards,
-        virtualMelds,
-        { isCloseToPukar, isFinalTurn }
-      );
-      if (potentialAdditions.length === 0) break;
+      for (let iter = 0; iter < 10; iter++) {
+        const remainingCards = hand.filter((c) => !planUsedCardIds.has(c.id));
+        if (remainingCards.length <= 1) break;
 
-      let addedInIter = false;
-      for (const addition of potentialAdditions) {
-        const hasOverlap = addition.cards.some((c) => usedCardIds.has(c.id));
-        if (hasOverlap) continue;
+        const potentialAdditions = findPotentialAdditionsToMelds(
+          remainingCards,
+          virtualMelds,
+          { isCloseToPukar, isFinalTurn, canGuaranteePukar }
+        );
+        if (potentialAdditions.length === 0) break;
 
-        const potentialUsed = new Set([...usedCardIds, ...addition.cards.map((c) => c.id)]);
-        const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
+        let addedInIter = false;
+        for (const addition of potentialAdditions) {
+          const hasOverlap = addition.cards.some((c) => planUsedCardIds.has(c.id));
+          if (hasOverlap) continue;
 
-        // Rule: Must keep at least 1 card in hand to discard
-        if (remainingHand.length === 0) continue;
+          const potentialUsed = new Set([...planUsedCardIds, ...addition.cards.map((c) => c.id)]);
+          const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
 
-        if (disallowedCardId) {
-          const remainingNonDisallowed = remainingHand.filter(
-            (c) => c.id !== disallowedCardId
-          );
-          if (remainingNonDisallowed.length === 0 && hand.length > 1) {
-            continue;
+          // Rule: Must keep at least 1 card in hand to discard
+          if (remainingHand.length === 0) continue;
+
+          if (disallowedCardId) {
+            const remainingNonDisallowed = remainingHand.filter(
+              (c) => c.id !== disallowedCardId
+            );
+            if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+              continue;
+            }
+          }
+
+          const targetMeldIndex = virtualMelds.findIndex((m) => m.id === addition.meldId);
+          if (targetMeldIndex >= 0) {
+            const targetMeld = virtualMelds[targetMeldIndex];
+            const validation = canAddCardsToMeld(targetMeld, addition.cards);
+            if (validation.valid && validation.updatedSlots) {
+              // Safety guard: ensure no sequence's points are reduced unless canGuaranteePukar is true
+              const scoreBefore = evaluateMeldScore(targetMeld).points;
+              const nextVirtualMeld: Meld = {
+                ...targetMeld,
+                cards: [...targetMeld.cards, ...addition.cards],
+                slots: validation.updatedSlots,
+              };
+              const scoreAfter = evaluateMeldScore(nextVirtualMeld).points;
+              if (scoreAfter < scoreBefore && !canGuaranteePukar) {
+                continue;
+              }
+
+              virtualMelds[targetMeldIndex] = nextVirtualMeld;
+              addition.cards.forEach((c) => planUsedCardIds.add(c.id));
+              planMeldActions.push({
+                type: 'ADD_TO_MELD',
+                meldId: addition.meldId,
+                cardIds: addition.cardIds,
+              });
+              addedInIter = true;
+              break;
+            }
           }
         }
 
-        const targetMeldIndex = virtualMelds.findIndex((m) => m.id === addition.meldId);
-        if (targetMeldIndex >= 0) {
-          const targetMeld = virtualMelds[targetMeldIndex];
-          const validation = canAddCardsToMeld(targetMeld, addition.cards);
-          if (validation.valid && validation.updatedSlots) {
-            virtualMelds[targetMeldIndex] = {
-              ...targetMeld,
-              cards: [...targetMeld.cards, ...addition.cards],
-              slots: validation.updatedSlots,
-            };
-            addition.cards.forEach((c) => usedCardIds.add(c.id));
-            meldActions.push({
-              type: 'ADD_TO_MELD',
-              meldId: addition.meldId,
-              cardIds: addition.cardIds,
-            });
-            addedInIter = true;
-            break;
-          }
-        }
+        if (!addedInIter) break;
       }
 
-      if (!addedInIter) break;
-    }
+      // Step 2b: New melds from remaining uncommitted cards
+      const tryAddMelds = (melds: CandidateMeld[]) => {
+        for (const meld of melds) {
+          const hasOverlap = meld.cards.some((c) => planUsedCardIds.has(c.id));
+          if (hasOverlap) continue;
 
-    // Step 2b: New melds from remaining uncommitted cards
-    const tryAddMelds = (melds: CandidateMeld[]) => {
-      for (const meld of melds) {
-        const hasOverlap = meld.cards.some((c) => usedCardIds.has(c.id));
-        if (hasOverlap) continue;
+          const potentialUsed = new Set([...planUsedCardIds, ...meld.cards.map((c) => c.id)]);
+          const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
 
-        const potentialUsed = new Set([...usedCardIds, ...meld.cards.map((c) => c.id)]);
-        const remainingCards = hand.filter((c) => !potentialUsed.has(c.id));
+          // Rule: Must keep at least 1 card in hand to discard
+          if (remainingCards.length === 0) continue;
 
-        // Rule: Must keep at least 1 card in hand to discard
-        if (remainingCards.length === 0) continue;
+          if (disallowedCardId) {
+            const remainingNonDisallowed = remainingCards.filter(
+              (c) => c.id !== disallowedCardId
+            );
+            if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+              continue;
+            }
+          }
 
-        if (disallowedCardId) {
-          const remainingNonDisallowed = remainingCards.filter(
-            (c) => c.id !== disallowedCardId
-          );
-          if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+          // Do not open a separate fragmented sequence if the team already has a table run in the same suit
+          // that these cards can extend, unless final turn, guaranteed Pukar, or partner is close to Pukar with connecting card.
+          if (
+            shouldHoldNewRunToExtendExistingSequence(meld, virtualMelds, {
+              isFinalTurn,
+              canGuaranteePukar,
+              partnerCardCount,
+              partnerKnownCards,
+            })
+          ) {
             continue;
           }
+
+          meld.cards.forEach((c) => planUsedCardIds.add(c.id));
+          planMeldActions.push({
+            type: 'PLAY_NEW_MELD',
+            cardIds: meld.cards.map((c) => c.id),
+          });
         }
+      };
 
-        meld.cards.forEach((c) => usedCardIds.add(c.id));
-        meldActions.push({
-          type: 'PLAY_NEW_MELD',
-          cardIds: meld.cards.map((c) => c.id),
-        });
-      }
-    };
-
-    const remainingHand = hand.filter((c) => !usedCardIds.has(c.id));
-    const requirePure = !isTeamOpen && meldActions.length === 0;
-    const candidateMelds = findPotentialNewMelds(remainingHand, {
-      requirePure,
-      isCloseToPukar,
-      isFinalTurn,
-    });
-    candidateMelds.sort((a, b) => {
-      if (a.isPure && !b.isPure) return -1;
-      if (!a.isPure && b.isPure) return 1;
-      return b.score - a.score;
-    });
-    tryAddMelds(candidateMelds);
-
-    // If opening turn (requirePure was true) and a pure meld was staged, evaluate dirty melds
-    // from remaining uncommitted cards in the same turn.
-    if (requirePure && meldActions.length > 0) {
-      const remainingHandAfterPure = hand.filter((c) => !usedCardIds.has(c.id));
-      const dirtyMelds = findPotentialNewMelds(remainingHandAfterPure, {
-        requirePure: false,
+      const remainingHand = hand.filter((c) => !planUsedCardIds.has(c.id));
+      const requirePure = !isTeamOpen && planMeldActions.length === 0;
+      const candidateMelds = findPotentialNewMelds(remainingHand, {
+        requirePure,
         isCloseToPukar,
         isFinalTurn,
       });
-      dirtyMelds.sort((a, b) => b.score - a.score);
-      tryAddMelds(dirtyMelds);
+      candidateMelds.sort((a, b) => {
+        if (a.isPure && !b.isPure) return -1;
+        if (!a.isPure && b.isPure) return 1;
+        return b.score - a.score;
+      });
+      tryAddMelds(candidateMelds);
+
+      // If opening turn (requirePure was true) and a pure meld was staged, evaluate dirty melds
+      // from remaining uncommitted cards in the same turn.
+      if (requirePure && planMeldActions.length > 0) {
+        const remainingHandAfterPure = hand.filter((c) => !planUsedCardIds.has(c.id));
+        const dirtyMelds = findPotentialNewMelds(remainingHandAfterPure, {
+          requirePure: false,
+          isCloseToPukar,
+          isFinalTurn,
+        });
+        dirtyMelds.sort((a, b) => b.score - a.score);
+        tryAddMelds(dirtyMelds);
+      }
+
+      return { meldActions: planMeldActions, usedCardIds: planUsedCardIds };
+    };
+
+    // 1. Safe plan: never reduce any meld's points (e.g. 200 -> 100 or 500 -> 100)
+    const safePlan = computeMeldActions(false);
+    const remainingSafe = hand.filter((c) => !safePlan.usedCardIds.has(c.id));
+    const isSafePukar =
+      remainingSafe.length === 1 &&
+      (!disallowedCardId || remainingSafe[0].id !== disallowedCardId);
+
+    if (isSafePukar) {
+      meldActions = safePlan.meldActions;
+      usedCardIds = safePlan.usedCardIds;
+    } else {
+      // 2. Speculative Pukar plan: check if allowing point-reducing additions guarantees Pukar this turn
+      const pukarPlan = computeMeldActions(true);
+      const remainingPukar = hand.filter((c) => !pukarPlan.usedCardIds.has(c.id));
+      const isPukarGuaranteed =
+        remainingPukar.length === 1 &&
+        (!disallowedCardId || remainingPukar[0].id !== disallowedCardId);
+
+      if (isPukarGuaranteed) {
+        meldActions = pukarPlan.meldActions;
+        usedCardIds = pukarPlan.usedCardIds;
+      } else {
+        meldActions = safePlan.meldActions;
+        usedCardIds = safePlan.usedCardIds;
+      }
     }
   }
 

@@ -137,6 +137,8 @@ export class RoomManager {
         sessions: new Map([[hostId, hostSession]]),
         tokenToPlayerId: new Map([[sessionToken, hostId]]),
         gameState: null,
+        voiceLocks: new Set<string>(),
+        voiceStates: new Map(),
       };
 
       this.rooms.set(roomCode, room);

@@ -35,6 +35,8 @@ export interface Room {
   sessions: Map<string, PlayerSession>; // playerId -> PlayerSession
   tokenToPlayerId: Map<string, string>; // sessionToken -> playerId
   gameState: GameState | null;
+  voiceLocks?: Set<string>; // playerId -> hard-muted by host
+  voiceStates?: Map<string, { isMuted: boolean; isHardMuted: boolean; isSpeaking?: boolean }>;
 }
 
 // Client -> Server
@@ -46,8 +48,12 @@ export type ClientMessage =
   | { type: 'GAME_ACTION'; action: GameAction }
   | { type: 'KICK_PLAYER'; seatIndex: number }
   | { type: 'LEAVE_ROOM' }
+  | { type: 'END_GAME' }
   | { type: 'PING' }
-  | { type: 'CLAIM_HOST' };
+  | { type: 'CLAIM_HOST' }
+  | { type: 'VOICE_SIGNAL'; targetPlayerId: string; signal: any }
+  | { type: 'VOICE_STATE_UPDATE'; isMuted: boolean; isSpeaking?: boolean }
+  | { type: 'ADMIN_MUTE_PLAYER'; targetPlayerId: string; muteType: 'TEMP' | 'HARD' | 'UNMUTE' };
 
 // Server -> Client
 export type ServerMessage =
@@ -95,6 +101,27 @@ export type ServerMessage =
   | {
       type: 'PONG';
       timestamp?: number;
+    }
+  | {
+      type: 'VOICE_SIGNAL';
+      fromPlayerId: string;
+      signal: any;
+    }
+  | {
+      type: 'VOICE_STATE_CHANGED';
+      playerId: string;
+      isMuted: boolean;
+      isHardMuted: boolean;
+      isSpeaking?: boolean;
+    }
+  | {
+      type: 'VOICE_FORCE_MUTED';
+      muteType: 'TEMP' | 'HARD';
+      message?: string;
+    }
+  | {
+      type: 'VOICE_FORCE_UNMUTED';
+      message?: string;
     };
 
 export type ClientMessageType = ClientMessage['type'];

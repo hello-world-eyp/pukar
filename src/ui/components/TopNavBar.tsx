@@ -1,5 +1,20 @@
 import React from 'react';
-import { RotateCcw, Volume2, VolumeX, Home, Download } from 'lucide-react';
+import {
+  RotateCcw,
+  Volume2,
+  VolumeX,
+  Home,
+  Download,
+  Eye,
+  EyeOff,
+  Mic,
+  MicOff,
+  ChevronDown,
+  Shield,
+  Lock,
+  Unlock,
+  X,
+} from 'lucide-react';
 
 export interface PlayerInfo {
   id: string;
@@ -9,6 +24,17 @@ export interface PlayerInfo {
   isConnected?: boolean;
 }
 
+export interface VoiceChatControlProps {
+  isVoiceSupported: boolean;
+  isVoiceActive: boolean;
+  isMuted: boolean;
+  isHardMuted: boolean;
+  onToggleMic: () => void;
+  isAdmin: boolean;
+  myPlayerId?: string | null;
+  onAdminMutePlayer?: (targetPlayerId: string, muteType: 'TEMP' | 'HARD' | 'UNMUTE') => void;
+  playerVoiceStates?: Record<string, { isMuted: boolean; isHardMuted: boolean; isSpeaking?: boolean }>;
+}
 
 export interface TopNavBarProps {
   activeTab: 'table' | 'sequences' | 'scoreboard';
@@ -24,6 +50,9 @@ export interface TopNavBarProps {
   gameTitle?: string;
   roomCode?: string | null;
   consolidatePlayers?: boolean;
+  isHandCollapsed?: boolean;
+  onToggleHandCollapse?: () => void;
+  voiceChat?: VoiceChatControlProps;
 }
 
 // Distinctive team avatar shades:
@@ -48,12 +77,31 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   gameTitle,
   roomCode,
   consolidatePlayers,
+  isHandCollapsed = false,
+  onToggleHandCollapse,
+  voiceChat,
 }) => {
   const displayTitle = roomCode ? `Room ${roomCode}` : gameTitle;
 
   const headerRef = React.useRef<HTMLElement | null>(null);
+  const adminMenuRef = React.useRef<HTMLDivElement | null>(null);
   const uncollapsedWidthRef = React.useRef<number | null>(null);
   const [isAutoConsolidated, setIsAutoConsolidated] = React.useState(false);
+  const [isAdminVoiceOpen, setIsAdminVoiceOpen] = React.useState(false);
+
+  // Close admin voice dropdown if clicked outside
+  React.useEffect(() => {
+    if (!isAdminVoiceOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
+        setIsAdminVoiceOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isAdminVoiceOpen]);
 
   // When consolidatePlayers is explicitly passed, it overrides auto-detection
   const isConsolidated =
@@ -126,7 +174,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       ref={headerRef}
       data-testid="top-nav-bar"
       data-consolidated={isConsolidated ? 'true' : 'false'}
-      className={`w-full min-h-[64px] sm:min-h-[72px] bg-[#0e121d] border-b border-slate-800/80 px-4 sm:px-8 py-3 text-slate-100 flex items-center justify-between gap-4 shadow-xl z-30 selection:bg-amber-500/30 ${
+      className={`w-full min-h-[64px] sm:min-h-[72px] bg-[#0e121d] border-b border-slate-800/80 px-4 sm:px-8 py-3 text-slate-100 flex items-center justify-between gap-4 shadow-xl z-30 selection:bg-amber-500/30 overflow-y-hidden ${
         isConsolidated ? 'overflow-x-hidden' : 'overflow-x-auto'
       }`}
     >
@@ -279,11 +327,208 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     title="Player Disconnected"
                   />
                 )}
+
+                {/* Voice Status Indicator Dot / Badge */}
+                {voiceChat?.playerVoiceStates?.[player.id] && (
+                  (() => {
+                    const vs = voiceChat.playerVoiceStates[player.id];
+                    if (vs.isHardMuted) {
+                      return (
+                        <span
+                          data-testid={`voice-locked-${originalIndex}`}
+                          className="w-4 h-4 rounded-full bg-red-950 border border-red-500 text-red-400 flex items-center justify-center shrink-0 ml-0.5"
+                          title="Microphone locked by host"
+                        >
+                          <Lock className="w-2.5 h-2.5" />
+                        </span>
+                      );
+                    }
+                    if (vs.isMuted) {
+                      return (
+                        <span
+                          data-testid={`voice-muted-${originalIndex}`}
+                          className="w-4 h-4 rounded-full bg-stone-800 border border-stone-600 text-stone-400 flex items-center justify-center shrink-0 ml-0.5"
+                          title="Microphone muted"
+                        >
+                          <MicOff className="w-2.5 h-2.5" />
+                        </span>
+                      );
+                    }
+                    return (
+                      <span
+                        data-testid={`voice-active-${originalIndex}`}
+                        className="w-4 h-4 rounded-full bg-emerald-950 border border-emerald-500 text-emerald-400 flex items-center justify-center shrink-0 ml-0.5 animate-pulse"
+                        title="Speaking"
+                      >
+                        <Mic className="w-2.5 h-2.5" />
+                      </span>
+                    );
+                  })()
+                )}
               </div>
             );
           })}
         </div>
 
+
+        {/* Voice Chat Controls (Mic Toggle & Admin Moderation Dropdown) */}
+        {voiceChat && (
+          <div className="relative flex items-center shrink-0" ref={adminMenuRef}>
+            {/* Main Mic Toggle Button */}
+            {voiceChat.isHardMuted ? (
+              <button
+                type="button"
+                data-testid="btn-mic-locked"
+                disabled
+                title="Microphone locked by room host"
+                className="h-10 sm:h-11 px-3 rounded-xl bg-red-950/70 border border-red-800 text-red-400 cursor-not-allowed flex items-center gap-1.5 font-bold text-xs shadow-sm shrink-0"
+              >
+                <Lock className="w-4 h-4 text-red-400 shrink-0" />
+                <span className="hidden lg:inline">Mic Locked</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                data-testid="btn-mic-toggle"
+                onClick={voiceChat.onToggleMic}
+                title={
+                  !voiceChat.isVoiceActive
+                    ? 'Turn on microphone'
+                    : voiceChat.isMuted
+                    ? 'Unmute microphone'
+                    : 'Mute microphone'
+                }
+                className={`h-10 sm:h-11 px-3 ${
+                  voiceChat.isAdmin && voiceChat.onAdminMutePlayer ? 'rounded-l-xl' : 'rounded-xl'
+                } border transition-all flex items-center gap-1.5 cursor-pointer shrink-0 font-bold text-xs sm:text-sm shadow-sm ${
+                  !voiceChat.isVoiceActive || voiceChat.isMuted
+                    ? 'bg-slate-900 border-slate-700 text-stone-300 hover:text-white hover:bg-slate-800'
+                    : 'bg-emerald-950 border-emerald-500 text-emerald-300 ring-2 ring-emerald-400/40 shadow-emerald-500/20'
+                }`}
+              >
+                {!voiceChat.isVoiceActive || voiceChat.isMuted ? (
+                  <MicOff className="w-4 h-4 text-stone-400 shrink-0" />
+                ) : (
+                  <Mic className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
+                )}
+                <span className="hidden md:inline">
+                  {!voiceChat.isVoiceActive
+                    ? 'Join Voice'
+                    : voiceChat.isMuted
+                    ? 'Mic Muted'
+                    : 'Mic Active'}
+                </span>
+              </button>
+            )}
+
+            {/* Admin Moderation Dropdown Caret Button (Host Only) */}
+            {voiceChat.isAdmin && voiceChat.onAdminMutePlayer && (
+              <button
+                type="button"
+                data-testid="btn-admin-voice-dropdown"
+                onClick={() => setIsAdminVoiceOpen((prev) => !prev)}
+                title="Admin Voice Moderation"
+                className={`h-10 sm:h-11 px-2.5 rounded-r-xl border-y border-r transition-colors flex items-center justify-center cursor-pointer shrink-0 ${
+                  isAdminVoiceOpen
+                    ? 'bg-amber-400 text-stone-950 border-amber-300 font-black'
+                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-amber-400'
+                }`}
+              >
+                <ChevronDown
+                  className={`w-4 h-4 transition-transform duration-150 ${
+                    isAdminVoiceOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            )}
+
+            {/* Admin Voice Moderation Panel Popover */}
+            {isAdminVoiceOpen && voiceChat.isAdmin && voiceChat.onAdminMutePlayer && (
+              <div
+                data-testid="admin-voice-panel"
+                className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-amber-500/50 shadow-2xl p-3 z-50 flex flex-col gap-2.5 text-slate-100 animate-in fade-in zoom-in-95 duration-150"
+              >
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-800">
+                  <div className="flex items-center gap-1.5 text-amber-400 text-xs font-black uppercase tracking-wider">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Host Voice Controls</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAdminVoiceOpen(false)}
+                    className="p-1 rounded-md text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
+                  {players
+                    .filter((p) => p.id && (!voiceChat.myPlayerId || p.id !== voiceChat.myPlayerId))
+                    .map((p) => {
+                      const vs = voiceChat.playerVoiceStates?.[p.id];
+                      const isLocked = Boolean(vs?.isHardMuted);
+                      return (
+                        <div
+                          key={`admin-mod-${p.id}`}
+                          className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-800/80 border border-slate-700/60"
+                        >
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-xs font-bold text-white truncate max-w-[110px]">
+                              {p.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400">Team {p.team}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              data-testid={`btn-mute-temp-${p.id}`}
+                              onClick={() => {
+                                voiceChat.onAdminMutePlayer?.(p.id, 'TEMP');
+                              }}
+                              title="Temporarily mute this player (player can unmute)"
+                              className="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-700 hover:bg-slate-600 text-slate-200 transition-colors cursor-pointer"
+                            >
+                              Mute Temp
+                            </button>
+
+                            {isLocked ? (
+                              <button
+                                type="button"
+                                data-testid={`btn-unlock-${p.id}`}
+                                onClick={() => {
+                                  voiceChat.onAdminMutePlayer?.(p.id, 'UNMUTE');
+                                }}
+                                title="Unlock player's microphone"
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <Unlock className="w-2.5 h-2.5" />
+                                <span>Unlock</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                data-testid={`btn-lock-${p.id}`}
+                                onClick={() => {
+                                  voiceChat.onAdminMutePlayer?.(p.id, 'HARD');
+                                }}
+                                title="Permanently lock player's mic until you unlock it"
+                                className="px-2 py-1 rounded-lg text-[10px] font-bold bg-red-600 hover:bg-red-500 text-white transition-colors flex items-center gap-1 cursor-pointer"
+                              >
+                                <Lock className="w-2.5 h-2.5" />
+                                <span>Lock</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Sound Toggle */}
         {onToggleMute && (
@@ -314,6 +559,34 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             aria-label="Download Debug Log"
           >
             <Download className="w-4 h-4 sm:w-5 sm:h-5 text-lime-400" />
+          </button>
+        )}
+
+        {/* Quick Toggle Hand Visibility */}
+        {onToggleHandCollapse && (
+          <button
+            type="button"
+            data-testid="btn-top-nav-toggle-hand"
+            onClick={onToggleHandCollapse}
+            className={`h-10 sm:h-11 px-3 sm:px-3.5 rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer shrink-0 font-bold text-xs sm:text-sm shadow-sm ${
+              isHandCollapsed
+                ? 'bg-amber-400 text-stone-950 border-amber-300 ring-2 ring-amber-400/50 shadow-amber-500/30'
+                : 'bg-slate-900 border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+            title={isHandCollapsed ? 'Show your hand cards' : 'Hide your hand cards to view the table'}
+            aria-label={isHandCollapsed ? 'Show Cards' : 'Hide Cards'}
+          >
+            {isHandCollapsed ? (
+              <>
+                <Eye className="w-4 h-4 text-stone-950 shrink-0" />
+                <span className="hidden sm:inline">Show Cards</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-4 h-4 text-slate-300 shrink-0" />
+                <span className="hidden sm:inline">Hide Cards</span>
+              </>
+            )}
           </button>
         )}
 

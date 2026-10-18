@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import http from 'http';
 import { WebSocket } from 'ws';
-import { startServer, broadcastToRoom, broadcastLobby, broadcastGameState } from '../../server/server';
+import { startServer, broadcastToRoom, broadcastLobby, broadcastGameState, ServerInstance } from '../../server/server';
 import { ServerMessage, Room } from '../../server/types';
 
 interface TestClient {
@@ -90,7 +89,7 @@ function connectClient(port: number): Promise<TestClient> {
 }
 
 describe('Multiplayer WebSocket E2E Lifecycle & Server Integration', () => {
-  let serverInstance: { server: http.Server; port: number; close: () => Promise<void> };
+  let serverInstance: ServerInstance;
 
   beforeAll(async () => {
     // Dynamic port 0 lets OS allocate an available port
@@ -950,6 +949,38 @@ describe('Multiplayer WebSocket E2E Lifecycle & Server Integration', () => {
       await p1Reconnected.close();
       await p3.close();
       await p4.close();
+    });
+
+    it('allows the host to leave and end the game, destroying the room and notifying players', async () => {
+      const port = serverInstance.port;
+      const host = await connectClient(port);
+      host.ws.send(JSON.stringify({ type: 'CREATE_ROOM', playerName: 'HostPlayer', playerCount: 4 }));
+      const hostJoinMsg = await host.waitForMessage((m) => m.type === 'ROOM_JOINED');
+      const roomCode = (hostJoinMsg as any).roomCode;
+
+      const player2 = await connectClient(port);
+      player2.ws.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, playerName: 'GuestPlayer' }));
+      await player2.waitForMessage((m) => m.type === 'ROOM_JOINED');
+
+      // Guest attempts to end the game - should be rejected
+      player2.ws.send(JSON.stringify({ type: 'END_GAME' }));
+      const rejectedMsg = await player2.waitForMessage((m) => m.type === 'ACTION_REJECTED');
+      expect((rejectedMsg as any).error).toContain('Only the host can end the game');
+
+      // Host ends the game
+      host.ws.send(JSON.stringify({ type: 'END_GAME' }));
+
+      // Guest player receives ROOM_CLOSED error notification
+      const closedMsg = await player2.waitForMessage(
+        (m) => m.type === 'ERROR' && (m as any).code === 'ROOM_CLOSED'
+      );
+      expect((closedMsg as any).message).toContain('The host has ended the game');
+
+      // Room is destroyed from manager
+      expect(serverInstance.roomManager.getRoom(roomCode)).toBeUndefined();
+
+      await host.close();
+      await player2.close();
     });
   });
 });

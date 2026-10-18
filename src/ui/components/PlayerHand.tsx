@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
-import { X, Pin } from 'lucide-react';
+import { X, Pin, Eye, EyeOff } from 'lucide-react';
 
 export type SortMode = 'suit' | 'rank' | 'none';
 export type SortDirection = 'desc' | 'asc';
@@ -161,6 +161,8 @@ export interface PlayerHandProps {
   containerWidth?: number;
   minVisibleCardWidth?: number;
   isChoosingPukar?: boolean;
+  isCollapsed?: boolean;
+  onToggleCollapse?: (collapsed: boolean) => void;
 }
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -193,9 +195,19 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   containerWidth,
   minVisibleCardWidth,
   isChoosingPukar = false,
+  isCollapsed: controlledIsCollapsed,
+  onToggleCollapse,
 }) => {
   const [internalSortMode, setInternalSortMode] = useState<SortMode>(initialSort);
   const [internalSortDirection] = useState<SortDirection>(initialSortDirection);
+  const [internalIsCollapsed, setInternalIsCollapsed] = useState(false);
+
+  const isCollapsed = controlledIsCollapsed !== undefined ? controlledIsCollapsed : internalIsCollapsed;
+  const handleToggleCollapse = () => {
+    const next = !isCollapsed;
+    setInternalIsCollapsed(next);
+    onToggleCollapse?.(next);
+  };
 
   // Live timer for frustration cooldown countdown
   const [now, setNow] = useState(() => Date.now());
@@ -555,10 +567,10 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       className={`w-full wood-hand-tray rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col gap-2.5 text-stone-900 ${className}`}
     >
       {/* HAND TOOLBAR & STATUS */}
-      <div className="flex items-center justify-between gap-2 sm:gap-3 border-b border-[#a47b4e]/40 pb-2 h-[52px] min-h-[52px] max-h-[52px] overflow-x-auto flex-nowrap">
+      <div className="relative flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5 sm:gap-2.5 border-b border-[#a47b4e]/40 pb-2 w-full overflow-x-hidden overflow-y-hidden">
         {/* PLAYER IDENTITY & CARD COUNTS */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <div className="w-10 h-10 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-base shrink-0 shadow-md">
               {playerName ? playerName.charAt(0).toUpperCase() : 'P'}
             </div>
@@ -614,8 +626,8 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 )}
                 {!isChoosingPukar && (
                   <>
-                    <span className="text-stone-400 hidden sm:inline">•</span>
-                    <span className="text-xs font-semibold text-stone-600 hidden sm:inline" title="Drag cards to rearrange them in any custom order">
+                    <span className="text-stone-400 hidden 2xl:inline">•</span>
+                    <span className="text-xs font-semibold text-stone-600 hidden 2xl:inline" title="Drag cards to rearrange them in any custom order">
                       Drag cards to reorder
                     </span>
                   </>
@@ -625,24 +637,24 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </div>
         </div>
 
-        {/* CONTEXTUAL ACTION CONTROLS SLOT */}
+        {/* CONTEXTUAL ACTION CONTROLS SLOT (NO SCROLLBARS) */}
         {!isChoosingPukar && actionsSlot && (
-          <div className="flex items-center justify-center my-0 flex-1 max-w-xl mx-auto h-9">
+          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-auto h-10 overflow-hidden">
             {actionsSlot}
           </div>
         )}
 
-        {/* RIGHT ACTIONS: CLEAR SELECTION + FRUSTRATION BUTTON */}
-        <div className="shrink-0 flex justify-end items-center gap-2 h-9">
+        {/* RIGHT ACTIONS: CLEAR SELECTION + FRUSTRATION BUTTON + HIDE HAND */}
+        <div className="shrink-0 flex items-center justify-end gap-1.5 sm:gap-2 h-10 z-10">
           {!isChoosingPukar && selectedCardIds.length > 0 && (
             <button
               type="button"
               aria-label="Clear Selection"
               data-testid="btn-clear-selection"
               onClick={onClearSelection}
-              className="h-9 px-3 text-sm font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm animate-in fade-in duration-100"
+              className="h-9 sm:h-10 px-2 sm:px-2.5 text-xs sm:text-sm font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1 transition-colors cursor-pointer shadow-sm animate-in fade-in duration-100 shrink-0"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
               <span>Clear</span>
             </button>
           )}
@@ -659,26 +671,85 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   ? `Frustration is on cooldown (${frustrationRemainingSecs}s remaining)`
                   : 'Express your frustration!'
               }
-              className={`h-9 px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm ${
+              className={`h-9 sm:h-10 px-2.5 sm:px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
                 isFrustratedOnCooldown || isChoosingPukar
                   ? 'bg-stone-300/80 text-stone-500 border border-stone-400 cursor-not-allowed opacity-75'
                   : 'bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border border-rose-700 active:scale-95 shadow-orange-500/20 cursor-pointer'
               }`}
             >
-              <span className="text-sm leading-none" role="img" aria-label="fire">🔥</span>
+              <span className="text-sm leading-none shrink-0" role="img" aria-label="fire">🔥</span>
               <span>{isFrustratedOnCooldown ? `Frustration (${frustrationRemainingSecs}s)` : 'Frustration'}</span>
             </button>
           )}
+
+          {/* HIDE / SHOW CARDS TOGGLE BUTTON */}
+          <button
+            type="button"
+            aria-label={isCollapsed ? 'Show Cards' : 'Hide Cards'}
+            aria-expanded={!isCollapsed}
+            data-testid="btn-toggle-hand-collapse"
+            onClick={handleToggleCollapse}
+            title={
+              isCollapsed
+                ? 'Show your hand cards'
+                : 'Hide your hand cards to view the table'
+            }
+            className={`h-9 sm:h-10 px-2.5 sm:px-3.5 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 ${
+              isCollapsed
+                ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 border-2 border-amber-300 font-black shadow-amber-500/30 ring-2 ring-amber-400/60'
+                : 'bg-stone-900 hover:bg-stone-800 text-amber-300 hover:text-amber-200 border-2 border-amber-400/80 shadow-stone-950/40'
+            }`}
+          >
+            {isCollapsed ? (
+              <>
+                <Eye className="w-4 h-4 text-stone-950 shrink-0" />
+                <span>Show Cards</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>Hide Cards</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* CARDS DISPLAY CONTAINER (RECESSED WOODEN TRAY SLOT) */}
-      <div
-        ref={trayRef}
-        className="w-full h-[164px] sm:h-[192px] min-h-[164px] sm:min-h-[192px] max-h-[164px] sm:max-h-[192px] wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto overflow-y-hidden pb-3 pt-5 sm:pt-6 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner"
-        tabIndex={0}
-        aria-label="Hand Cards"
-      >
+      {/* CARDS DISPLAY CONTAINER (RECESSED WOODEN TRAY SLOT OR COLLAPSED BAR) */}
+      {isCollapsed ? (
+        <button
+          type="button"
+          data-testid="collapsed-hand-bar"
+          aria-label={`Hand Hidden • Click to show ${cards.length} cards`}
+          onClick={handleToggleCollapse}
+          className="w-full py-2.5 px-4 rounded-xl wood-hand-slot border border-amber-500/40 hover:border-amber-400/80 bg-amber-950/40 hover:bg-amber-950/60 flex items-center justify-between text-stone-200 transition-all cursor-pointer shadow-inner group"
+        >
+          <div className="flex items-center gap-2 font-bold text-xs sm:text-sm text-amber-200">
+            <Eye className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span>{`Hand Hidden • Click to show ${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}</span>
+          </div>
+          <span className="text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-lg bg-amber-400 text-stone-950 group-hover:bg-amber-300 shadow-sm transition-colors">
+            Show Hand ▲
+          </span>
+        </button>
+      ) : (
+        <div
+          ref={trayRef}
+          className="relative w-full h-[164px] sm:h-[192px] min-h-[164px] sm:min-h-[192px] max-h-[164px] sm:max-h-[192px] wood-hand-slot rounded-2xl p-2.5 sm:p-3 overflow-x-auto overflow-y-hidden pb-3 pt-5 sm:pt-6 scrollbar-thin scrollbar-thumb-stone-600 scrollbar-track-transparent shadow-inner group"
+          tabIndex={0}
+          aria-label="Hand Cards"
+        >
+          {/* Tray Quick-Collapse Tab */}
+          <button
+            type="button"
+            data-testid="btn-tray-quick-collapse"
+            onClick={handleToggleCollapse}
+            title="Hide your hand cards to view the table"
+            className="absolute top-1.5 right-2 z-20 px-2 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold bg-amber-950/70 hover:bg-amber-900 text-amber-200 border border-amber-500/40 flex items-center gap-1 shadow-md opacity-85 hover:opacity-100 transition-opacity cursor-pointer"
+          >
+            <EyeOff className="w-3 h-3 text-amber-300" />
+            <span>Hide</span>
+          </button>
         {isChoosingPukar ? (
           <div
             data-testid="pukar-selection-pending-tray"
@@ -805,6 +876,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };

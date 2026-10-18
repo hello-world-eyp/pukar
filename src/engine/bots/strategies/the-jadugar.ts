@@ -19,7 +19,7 @@ import {
 export function decideTheJadugarTurn(
   state: GameState,
   botIndex: number,
-  _memory: BotMemory
+  memory?: BotMemory
 ): BotTurnPlan {
   const player = state.players[botIndex];
   const hand = player.hand || [];
@@ -72,6 +72,18 @@ export function decideTheJadugarTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
+  const partnerIndex = state.players.findIndex(
+    (p, idx) => idx !== botIndex && p.team === team
+  );
+  const partner = partnerIndex >= 0 ? state.players[partnerIndex] : undefined;
+  const partnerCardCount = partner
+    ? ((partner as any).cardCount ?? partner.hand?.length ?? 0)
+    : undefined;
+  const partnerPickups = partnerIndex >= 0 && memory ? (memory.bottomPickupsByPlayer[partnerIndex] || []) : [];
+  const partnerDiscards = partnerIndex >= 0 && memory ? (memory.discardsByPlayer[partnerIndex] || []) : [];
+  const partnerDiscardIds = new Set(partnerDiscards.map((c) => c.id));
+  const partnerKnownCards = partnerPickups.filter((c) => !partnerDiscardIds.has(c.id));
+
   const isCloseToPukar = hand.length <= 3;
   const isFinalTurn =
     state.roundStatus === 'FINAL_TURN' || Boolean(state.lastTurnTriggeredByDeckExhaust);
@@ -82,6 +94,8 @@ export function decideTheJadugarTurn(
     isFinalTurn,
     allTableMelds,
     requirePure: !isTeamOpen,
+    partnerKnownCards,
+    partnerCardCount,
   });
   const meldActions: GameAction[] = [];
 

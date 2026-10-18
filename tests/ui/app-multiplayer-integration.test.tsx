@@ -111,6 +111,7 @@ function createMockMultiplayerHook(
     dispatchAction: vi.fn(),
     kickPlayer: vi.fn(),
     leaveRoom: vi.fn(),
+    endGame: vi.fn(),
     clearError: vi.fn(),
     ...overrides,
   };
@@ -229,6 +230,23 @@ describe('App Multiplayer Integration & Mode Switching', () => {
       expect(leaveBtn).toBeDefined();
       leaveBtn.props.onClick();
       expect(onLeave).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders "Leave & End Game" button for the host who created the game', () => {
+      const html = renderToString(
+        <MultiplayerStatusBar
+          roomCode="HOST"
+          connectionStatus="CONNECTED"
+          seatIndex={0}
+          isHost={true}
+          onLeave={vi.fn()}
+          onEndGame={vi.fn()}
+        />
+      );
+
+      expect(html).toContain('data-testid="btn-leave-and-end-game"');
+      expect(html).toContain('Leave &amp; End Game');
+      expect(html).not.toContain('data-testid="btn-leave-room"');
     });
   });
 
@@ -486,6 +504,31 @@ describe('App Multiplayer Integration & Mode Switching', () => {
 
       statusBar.props.onLeave();
       expect(leaveRoom).toHaveBeenCalledTimes(1);
+    });
+
+    it('triggers endGame when host confirms Leave & End Game from status bar', () => {
+      const gameState = createMockSanitizedGameState();
+      const endGame = vi.fn();
+      const mockHook = createMockMultiplayerHook({
+        isInGame: true,
+        roomCode: 'HOST',
+        mySeatIndex: 0,
+        isHost: true,
+        gameState,
+        endGame,
+      });
+
+      const tree = App({
+        initialMode: 'MULTIPLAYER',
+        multiplayerGameHook: mockHook,
+      });
+
+      const statusBar = findElement(tree, (el) => el.type === MultiplayerStatusBar);
+      expect(statusBar).toBeDefined();
+      expect(statusBar.props.isHost).toBe(true);
+
+      statusBar.props.onEndGame();
+      expect(endGame).toHaveBeenCalledTimes(1);
     });
   });
 

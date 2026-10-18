@@ -3,3 +3,11 @@ dist/
 .superpowers/
 .DS_Store
 coverage/
+public/decks/
+decks/
+scripts/pips/
+.agents/
+.claude/
+.gemini/
+graphify-out/cache/
+graphify-out/2026-*/

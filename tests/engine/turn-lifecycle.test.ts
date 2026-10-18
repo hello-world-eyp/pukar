@@ -395,21 +395,78 @@ describe('Turn Lifecycle & Game Reducer', () => {
   });
 
   describe('Stock Deck Exhaustion', () => {
-    it('stock deck exhaust when Pukars remain converts 1 Pukar to new Stock deck', () => {
+    it('stock deck exhaust when Pukars remain keeps Pukar in pool during player turn, and converts to stock deck after player finishes turn', () => {
       const state = dealInitialState(4);
       const lastStockCard = createCard('last-stock', 'SPADES', 10);
       state.stockDeck = [lastStockCard];
       const pukarDeck = state.pukarPool[0];
       const initialPukarCount = state.pukarPool.length;
 
+      // 1. Draw last card: Pukar deck does NOT move to normal deck during player's turn
       const { state: nextState, error } = pukarReducer(state, { type: 'DRAW_FROM_STOCK' });
 
       expect(error).toBeUndefined();
       expect(nextState.phase).toBe('MELD');
       expect(nextState.players[0].hand.some((c) => c.id === 'last-stock')).toBe(true);
-      expect(nextState.pukarPool.length).toBe(initialPukarCount - 1);
-      expect(nextState.stockDeck.length).toBe(13);
-      expect([...nextState.stockDeck.map((c) => c.id)].sort()).toEqual([...pukarDeck.map((c) => c.id)].sort());
+      expect(nextState.stockDeck.length).toBe(0);
+      expect(nextState.pukarPool.length).toBe(initialPukarCount);
+
+      // 2. Player discards to finish turn: now Pukar moves to stock deck for next player
+      const discardCard = nextState.players[0].hand[0];
+      const step2 = pukarReducer(nextState, {
+        type: 'DISCARD_CARD',
+        cardId: discardCard.id,
+      });
+
+      expect(step2.error).toBeUndefined();
+      expect(step2.state.currentPlayerIndex).toBe(1);
+      expect(step2.state.pukarPool.length).toBe(initialPukarCount - 1);
+      expect(step2.state.stockDeck.length).toBe(13);
+      expect([...step2.state.stockDeck.map((c) => c.id)].sort()).toEqual([...pukarDeck.map((c) => c.id)].sort());
+    });
+
+    it('when player draws last card and empties hand on that turn, they can show and claim the Pukar deck instead of it moving to stock', () => {
+      const state = dealInitialState(4);
+      const lastStockCard = createCard('last-stock', 'HEARTS', 7);
+      state.stockDeck = [lastStockCard];
+      // Team has already opened so player can meld
+      state.hasOpened = { A: true, B: true };
+      state.players[0].hand = [
+        createCard('m1', 'HEARTS', 4),
+        createCard('m2', 'HEARTS', 5),
+        createCard('m3', 'HEARTS', 6),
+        createCard('disc', 'DIAMONDS', 2),
+      ];
+      state.pukarPool = [Array.from({ length: 13 }, (_, i) => createCard(`pukar-${i}`, 'DIAMONDS', (i + 2) as any))];
+
+      // Step 1: Draw last card - stock becomes 0, Pukar stays in pool
+      const step1 = pukarReducer(state, { type: 'DRAW_FROM_STOCK' });
+      expect(step1.state.stockDeck.length).toBe(0);
+      expect(step1.state.pukarPool.length).toBe(1);
+      expect(step1.state.players[0].hand.length).toBe(5);
+
+      // Step 2: Player melds the 4 Hearts cards (4, 5, 6, 7)
+      const step2 = pukarReducer(step1.state, {
+        type: 'PLAY_NEW_MELD',
+        cardIds: ['m1', 'm2', 'm3', 'last-stock'],
+      });
+      expect(step2.error).toBeUndefined();
+      // Exactly 1 card remaining in hand: 'disc'
+      expect(step2.state.players[0].hand.length).toBe(1);
+
+      // Step 3: Player discards their final card, emptying hand!
+      const step3 = pukarReducer(step2.state, {
+        type: 'DISCARD_CARD',
+        cardId: 'disc',
+      });
+
+      // Player successfully claimed the Pukar deck!
+      expect(step3.error).toBeUndefined();
+      expect(step3.state.scores.A).toBe(50);
+      expect(step3.state.players[0].hand.length).toBe(13);
+      expect(step3.state.pukarPool.length).toBe(0);
+      expect(step3.state.currentPlayerIndex).toBe(0);
+      expect(step3.state.phase).toBe('MELD');
     });
 
     it('stock deck exhaust with 0 Pukars triggers final turn for next player, then concludes round', () => {
@@ -423,7 +480,6 @@ describe('Turn Lifecycle & Game Reducer', () => {
       const step1 = pukarReducer(state, { type: 'DRAW_FROM_STOCK' });
       expect(step1.error).toBeUndefined();
       expect(step1.state.stockDeck.length).toBe(0);
-      expect(step1.state.lastTurnTriggeredByDeckExhaust).toBe(true);
       expect(step1.state.phase).toBe('MELD');
 
       // 2. Player 0 completes their turn by discarding

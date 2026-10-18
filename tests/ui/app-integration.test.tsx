@@ -314,23 +314,33 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
    * 4. Stock Deck Exhaustion & Final Turn Handling
    * ======================================================================== */
   describe('Stock Deck Exhaustion', () => {
-    it('replenishes stock deck from Pukar pool when stock becomes empty during draw', () => {
+    it('replenishes stock deck from Pukar pool when stock becomes empty and player finishes turn', () => {
       let state = dealInitialState(4);
       // Force stock deck to have exactly 1 card remaining, and 2 Pukars in pool
       const lastStockCard = makeCard('last-stock', 'HEARTS', 10);
       state.stockDeck = [lastStockCard];
       expect(state.pukarPool).toHaveLength(2);
 
+      // Step 1: Draw last card - Pukar does NOT move during player turn
       const drawResult = pukarReducer(state, { type: 'DRAW_FROM_STOCK' });
       expect(drawResult.error).toBeUndefined();
       state = drawResult.state;
 
-      // Player received the last card
       expect(state.players[0].hand.some((c) => c.id === 'last-stock')).toBe(true);
-      // 1 Pukar was popped to become new Stock deck (13 cards)
+      expect(state.stockDeck).toHaveLength(0);
+      expect(state.pukarPool).toHaveLength(2);
+
+      // Step 2: Player discards to finish turn - now 1 Pukar replenishes Stock deck (13 cards)
+      const discCard = state.players[0].hand[0];
+      const discardResult = pukarReducer(state, {
+        type: 'DISCARD_CARD',
+        cardId: discCard.id,
+      });
+      state = discardResult.state;
+
       expect(state.stockDeck).toHaveLength(13);
       expect(state.pukarPool).toHaveLength(1);
-      expect(state.lastTurnTriggeredByDeckExhaust).toBeFalsy();
+      expect(state.currentPlayerIndex).toBe(1);
     });
 
     it('triggers final turn when stock deck exhausts with 0 Pukars in pool', () => {
@@ -345,7 +355,6 @@ describe('Pukar Card Game - End-to-End Application Integration', () => {
 
       expect(state.stockDeck).toHaveLength(0);
       expect(state.pukarPool).toHaveLength(0);
-      expect(state.lastTurnTriggeredByDeckExhaust).toBe(true);
 
       // Player discards to end turn
       const discCard = state.players[0].hand[0];

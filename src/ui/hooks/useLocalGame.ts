@@ -237,7 +237,7 @@ export function useLocalGame({
           triggerSound('pukar');
         }
         // Detect Stock Deck replenishment from Pukar pool
-        else if (prevStockCount === 1 && prevPukarPoolCount > (next.pukarPool?.length ?? 0)) {
+        else if (prevPukarPoolCount > (next.pukarPool?.length ?? 0) && next.stockDeck.length > prevStockCount) {
           setExhaustNotification(
             'Stock deck was empty! 1 Pukar deck (13 cards) was placed into the Stock deck.'
           );

@@ -843,6 +843,7 @@ describe('Multiplayer UI Components', () => {
       dispatchAction: vi.fn(),
       kickPlayer: vi.fn(),
       leaveRoom: vi.fn(),
+      endGame: vi.fn(),
       clearError: vi.fn(),
       claimHost: vi.fn(),
       ...overrides,

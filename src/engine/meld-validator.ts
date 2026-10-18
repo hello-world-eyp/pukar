@@ -620,7 +620,8 @@ export function evaluateMeldScore(meld: Meld): {
       const allSameSuit = cards.every((c) => c.suit !== null && c.suit === meld.suit);
       const sortedRanks = [...cards].map((c) => c.rank).sort((a, b) => a - b);
       const isExact2to14 = sortedRanks.every((r, idx) => r === idx + 2);
-      const hasNoSubstitutingWildcard = meld.slots.length === 0 || meld.slots.every((s) => !s.isWildcard);
+      const hasNoSubstitutingWildcard =
+        !meld.slots || meld.slots.length === 0 || meld.slots.every((s) => !s.isWildcard);
 
       if (!hasAnyJoker && allSameSuit && isExact2to14 && hasNoSubstitutingWildcard) {
         return {
@@ -936,19 +937,22 @@ export function canAddCardsToMeld(
     }
 
     // Sort/select best candidate honoring Movable 2 priority (Table permanence - 2 is NOT picked up)
+    if (existingSub2Slot && existingSub2Slot.card.suit === runSuit) {
+      const twoCardId = existingSub2Slot.card.id;
+      // 1. Downward slide / Pure sequence upgrade:
+      // If wildcard is a suited 2 and rank 2 is open, 2 takes natural rank 2 (Clean/Pure sequence = 200 pts).
+      // This applies whether the previous rank was replaced (e.g. 10 added) or lower cards were added (e.g. 3 added).
+      const downwardCandidate = eligibleCandidates.find((cand) => {
+        const slot = cand.find((s) => s.card.id === twoCardId);
+        return slot && slot.representedRank === 2 && !slot.isWildcard;
+      });
+      if (downwardCandidate) {
+        return { valid: true, updatedSlots: downwardCandidate };
+      }
+    }
+
     if (isReplacingSub2 && existingSub2Slot) {
       const twoCardId = existingSub2Slot.card.id;
-      // 1. Downward slide: if wildcard is a suited 2 and rank 2 is open, 2 takes natural rank 2
-      if (existingSub2Slot.card.suit === runSuit) {
-        const downwardCandidate = eligibleCandidates.find((cand) => {
-          const slot = cand.find((s) => s.card.id === twoCardId);
-          return slot && slot.representedRank === 2 && !slot.isWildcard;
-        });
-        if (downwardCandidate) {
-          return { valid: true, updatedSlots: downwardCandidate };
-        }
-      }
-
       // 2. Upward shift: 2 shifts higher than previous substituted rank
       const upwardCandidate = eligibleCandidates.find((cand) => {
         const slot = cand.find((s) => s.card.id === twoCardId);
@@ -959,7 +963,7 @@ export function canAddCardsToMeld(
       }
     }
 
-    // If 2 was not replaced, prefer keeping 2's represented rank unchanged if possible
+    // If 2 was not replaced and cannot take natural rank 2, prefer keeping 2's represented rank unchanged if possible
     if (existingSub2Slot) {
       const twoCardId = existingSub2Slot.card.id;
       const sameRankCandidate = eligibleCandidates.find((cand) => {
@@ -1187,11 +1191,16 @@ function matchCardsToTargetRanks(
 function selectBestCandidate(cards: Card[], candidates: MeldSlot[][], runSuit: Suit): MeldSlot[] {
   if (candidates.length === 1) return candidates[0];
 
-  // If candidates exist that place suited 2 at natural rank 2, filter to those candidates
+  // 1. Strictly prioritize pure candidates (0 wildcards) over impure ones (Clean Run 200 pts vs Dirty Run 100 pts)
+  const pureCandidates = candidates.filter((cand) => !cand.some((s) => s.isWildcard));
+  let eligibleCandidates = pureCandidates.length > 0 ? pureCandidates : candidates;
+
+  if (eligibleCandidates.length === 1) return eligibleCandidates[0];
+
+  // 2. If candidates exist that place suited 2 at natural rank 2, filter to those candidates
   const suited2 = cards.find((c) => c.suit === runSuit && c.rank === 2);
-  let eligibleCandidates = candidates;
   if (suited2) {
-    const natural2Candidates = candidates.filter((cand) => {
+    const natural2Candidates = eligibleCandidates.filter((cand) => {
       const slot = cand.find((s) => s.card.id === suited2.id);
       return slot && slot.representedRank === 2 && !slot.isWildcard;
     });
@@ -1202,13 +1211,13 @@ function selectBestCandidate(cards: Card[], candidates: MeldSlot[][], runSuit: S
 
   if (eligibleCandidates.length === 1) return eligibleCandidates[0];
 
-  // Check card order: if a wildcard was first in cards array, prefer lower startRank
+  // 3. Check card order: if a wildcard was first in cards array, prefer lower startRank
   const firstCard = cards[0];
   const firstCardSlot = eligibleCandidates[0].find((s) => s.card.id === firstCard.id);
   if (firstCardSlot?.isWildcard) {
     return eligibleCandidates[0];
   }
 
-  // Default to higher startRank (appending to end, e.g. 2-3-4 rather than A-2-3 for [2, 3, Joker])
+  // 4. Default to higher startRank (appending to end, e.g. 2-3-4 rather than A-2-3 for [2, 3, Joker])
   return eligibleCandidates[eligibleCandidates.length - 1];
 }

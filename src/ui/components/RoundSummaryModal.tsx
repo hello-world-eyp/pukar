@@ -2,6 +2,7 @@ import React from 'react';
 import { Meld, Team, MatchStats, Player, SanitizedPlayer } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
 import { MatchAnalyticsView } from './MatchAnalyticsView';
+import { PlayingCard } from './PlayingCard';
 import { Trophy, Crown, ArrowRight, Shield, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export interface RoundSummaryModalProps {
@@ -23,6 +24,7 @@ export interface RoundSummaryModalProps {
   winningReason?: string;
   matchStats?: MatchStats;
   players?: Array<Player | SanitizedPlayer>;
+  initialTab?: 'ROUND' | 'AWARDS' | 'HANDS';
   onStartNextRound: () => void;
   onClose?: () => void;
   className?: string;
@@ -41,12 +43,13 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
   winningReason,
   matchStats,
   players = [],
+  initialTab,
   onStartNextRound,
   onClose,
   className = '',
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'ROUND' | 'AWARDS'>(() =>
-    isGameOver ? 'AWARDS' : 'ROUND'
+  const [activeTab, setActiveTab] = React.useState<'ROUND' | 'AWARDS' | 'HANDS'>(() =>
+    initialTab ?? (isGameOver ? 'AWARDS' : 'ROUND')
   );
 
   // Modal open condition
@@ -159,10 +162,208 @@ export const RoundSummaryModal: React.FC<RoundSummaryModalProps> = ({
           >
             🏆 Match Awards & Analytics
           </button>
+          <button
+            type="button"
+            data-testid="tab-remaining-hands"
+            onClick={() => setActiveTab('HANDS')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              activeTab === 'HANDS'
+                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-950/50'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800'
+            }`}
+          >
+            🃏 Remaining Hands
+          </button>
         </div>
 
-        {/* BODY (ROUND BREAKDOWN OR MATCH AWARDS) */}
-        {activeTab === 'AWARDS' ? (
+        {/* BODY (ROUND BREAKDOWN, MATCH AWARDS, OR REMAINING HANDS) */}
+        {activeTab === 'HANDS' ? (
+          <div
+            data-testid="remaining-hands-view"
+            className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 flex flex-col gap-5 scrollbar-thin"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-400 border-b border-slate-800/80 pb-2.5 gap-1">
+              <span className="font-bold text-slate-200">
+                {`Cards held by players when Round ${round} concluded`}
+              </span>
+              <span className="text-slate-400 italic">
+                Revealed for all players at round end
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* TEAM A REMAINING HANDS */}
+              <div
+                data-testid="team-a-remaining-hands"
+                className="rounded-2xl p-4 sm:p-5 border bg-blue-950/20 border-blue-500/30 flex flex-col gap-4"
+              >
+                <div className="flex items-center justify-between border-b border-blue-500/20 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs">
+                      <Shield className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-extrabold text-blue-300 text-base">Team A Players</span>
+                  </div>
+                  <span className="text-xs font-bold text-blue-400/80">
+                    {`${players.filter((p) => p.team === 'A').length} Players`}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-3.5">
+                  {players
+                    .filter((p) => p.team === 'A')
+                    .map((player, pIdx) => {
+                      const hand = player.hand || [];
+                      const deadwoodPts = hand.reduce((sum, c) => {
+                        if (c.isNaturalJoker || c.rank === 0 || c.rank === 2) return sum + 20;
+                        if (c.rank === 14) return sum + 15;
+                        if (c.rank >= 10) return sum + 10;
+                        return sum + c.rank;
+                      }, 0);
+
+                      return (
+                        <div
+                          key={player.id || `team-a-player-${pIdx}`}
+                          data-testid={`player-hand-${player.id}`}
+                          className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4 flex flex-col gap-2.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-slate-100 text-sm">
+                                {player.name}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                                {`Seat ${players.indexOf(player) + 1}`}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {hand.length === 0 ? (
+                                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-600/40 px-2.5 py-0.5 rounded-full">
+                                  ✨ Hand Cleared (0 cards)
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="text-xs font-bold text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                                    {`${hand.length} card${hand.length === 1 ? '' : 's'}`}
+                                  </span>
+                                  <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-600/30">
+                                    {`${deadwoodPts} pts`}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {hand.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 min-h-[76px] items-center">
+                              {hand.map((card, cIdx) => (
+                                <PlayingCard
+                                  key={card.id || `card-${player.id}-${cIdx}`}
+                                  card={card}
+                                  size="sm"
+                                  disabled
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500 italic py-2 px-1">
+                              Went out / claimed Pukar — no cards remaining in hand.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* TEAM B REMAINING HANDS */}
+              <div
+                data-testid="team-b-remaining-hands"
+                className="rounded-2xl p-4 sm:p-5 border bg-amber-950/20 border-amber-500/30 flex flex-col gap-4"
+              >
+                <div className="flex items-center justify-between border-b border-amber-500/20 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold text-xs">
+                      <Shield className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="font-extrabold text-amber-300 text-base">Team B Players</span>
+                  </div>
+                  <span className="text-xs font-bold text-amber-400/80">
+                    {`${players.filter((p) => p.team === 'B').length} Players`}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-3.5">
+                  {players
+                    .filter((p) => p.team === 'B')
+                    .map((player, pIdx) => {
+                      const hand = player.hand || [];
+                      const deadwoodPts = hand.reduce((sum, c) => {
+                        if (c.isNaturalJoker || c.rank === 0 || c.rank === 2) return sum + 20;
+                        if (c.rank === 14) return sum + 15;
+                        if (c.rank >= 10) return sum + 10;
+                        return sum + c.rank;
+                      }, 0);
+
+                      return (
+                        <div
+                          key={player.id || `team-b-player-${pIdx}`}
+                          data-testid={`player-hand-${player.id}`}
+                          className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4 flex flex-col gap-2.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-extrabold text-slate-100 text-sm">
+                                {player.name}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                                {`Seat ${players.indexOf(player) + 1}`}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {hand.length === 0 ? (
+                                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-600/40 px-2.5 py-0.5 rounded-full">
+                                  ✨ Hand Cleared (0 cards)
+                                </span>
+                              ) : (
+                                <>
+                                  <span className="text-xs font-bold text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
+                                    {`${hand.length} card${hand.length === 1 ? '' : 's'}`}
+                                  </span>
+                                  <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-600/30">
+                                    {`${deadwoodPts} pts`}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {hand.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2 p-2 rounded-lg bg-slate-950/60 border border-slate-800/80 min-h-[76px] items-center">
+                              {hand.map((card, cIdx) => (
+                                <PlayingCard
+                                  key={card.id || `card-${player.id}-${cIdx}`}
+                                  card={card}
+                                  size="sm"
+                                  disabled
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500 italic py-2 px-1">
+                              Went out / claimed Pukar — no cards remaining in hand.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'AWARDS' ? (
           <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 scrollbar-thin">
             <MatchAnalyticsView
               matchStats={matchStats}

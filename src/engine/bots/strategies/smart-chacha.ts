@@ -198,6 +198,18 @@ export function decideSmartChachaTurn(
       ? state.discardPile[0]?.id
       : undefined);
 
+  const partnerIndex = state.players.findIndex(
+    (p, idx) => idx !== botIndex && p.team === team
+  );
+  const partner = partnerIndex >= 0 ? state.players[partnerIndex] : undefined;
+  const partnerCardCount = partner
+    ? ((partner as any).cardCount ?? partner.hand?.length ?? 0)
+    : undefined;
+  const partnerPickups = partnerIndex >= 0 ? (memory.bottomPickupsByPlayer[partnerIndex] || []) : [];
+  const partnerDiscards = partnerIndex >= 0 ? (memory.discardsByPlayer[partnerIndex] || []) : [];
+  const partnerDiscardIds = new Set(partnerDiscards.map((c) => c.id));
+  const partnerKnownCards = partnerPickups.filter((c) => !partnerDiscardIds.has(c.id));
+
   const isDiscardPhase = state.phase === 'DISCARD' || state.turnPhase === 'DISCARD';
   const isCloseToPukar = hand.length <= 3;
   const isFinalTurn =
@@ -211,6 +223,8 @@ export function decideSmartChachaTurn(
         isFinalTurn,
         allTableMelds,
         requirePure: !isTeamOpen,
+        partnerKnownCards,
+        partnerCardCount,
       });
   const meldActions: GameAction[] = [];
 
@@ -240,30 +254,10 @@ export function decideSmartChachaTurn(
   const opponentNeedsLockdown =
     (nextOpponentCardCount !== undefined && nextOpponentCardCount <= 2) || anyOpponentOnTwoOrFewer;
 
-  const partnerIdx = state.players.findIndex((p, idx) => idx !== botIndex && p.team === team);
-  const partner = partnerIdx >= 0 ? state.players[partnerIdx] : null;
-
-  // Smart Chacha Passing & Protection Intelligence:
-  // 1. Partner needs are predicted from partner's bottom pickups, discards, and table melds.
-  // 2. Discard Pile Cleanliness:
-  //    For partner to receive a card, partner must pick up the entire discard pile ("the bottom").
-  //    If the discard pile already contains >= 2 cards from opponents, passing a card forces partner
-  //    to pick up unwanted opponent junk, which is not beneficial for them!
-  // 3. Opponent Interception:
-  //    The intermediate player (or opponents generally) sit between Smart Chacha and partner.
-  //    If opponent can intercept or benefit from a card (opponent table melds or predicted wants),
-  //    Smart Chacha MUST NOT give it away; Smart Chacha protects it in hand!
-  // 4. Partner hand size (< 3 cards vs >= 3 cards):
-  //    - If partner is on < 3 cards: ONLY pass a card if it directly connects to a team table sequence
-  //      so partner can scoop and go out cleanly! Never pass a hand card that bloats their hand.
-  //    - If partner is on >= 3 cards: Do NOT pass table sequence cards (opponents would pick them up).
-  //      Instead, pass hand building cards that partner needs when pile is clean and safe!
   const currentDiscardPileLen = state.discardPile.length;
   const isDiscardPileCleanForPartner = currentDiscardPileLen <= 1;
-  const partnerCardCount = partner
-    ? ((partner as any).cardCount ?? partner.hand?.length ?? 0)
-    : 0;
-  const isPartnerOnLessThan3Cards = partnerCardCount > 0 && partnerCardCount < 3;
+  const partnerHandCount = partnerCardCount ?? 0;
+  const isPartnerOnLessThan3Cards = partnerHandCount > 0 && partnerHandCount < 3;
 
   const { partnerNeeds } = predictPartnerNeeds(memory, state, team, botIndex);
 

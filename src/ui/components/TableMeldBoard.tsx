@@ -877,11 +877,11 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
         )}
       </div>
 
-      {/* Sequential Cards Layout (Overlapping for compact fit) */}
+      {/* Sequential Cards Layout (Overlapping for compact fit without scroll trapping) */}
       <div
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center overflow-x-auto overflow-y-hidden overscroll-y-contain pt-4 pb-2.5 px-2 scrollbar-thin"
+        className="flex items-center pt-4 pb-2.5 px-2"
       >
         {sortedSlots.map((slot, index) => {
           const card = slot.card;
@@ -897,11 +897,19 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
             wildLabel = undefined;
           }
 
+          const baseMargin = cardSize === 'md' ? -44 : -26;
+          const overlapMargin =
+            sortedSlots.length > 7
+              ? cardSize === 'md'
+                ? Math.max(-68, baseMargin - (sortedSlots.length - 7) * 4)
+                : Math.max(-42, baseMargin - (sortedSlots.length - 7) * 3)
+              : baseMargin;
+
           return (
             <div
               key={`${card.id}-${slot.representedRank}-${index}`}
               style={{
-                marginLeft: index === 0 ? 0 : cardSize === 'md' ? '-44px' : '-26px',
+                marginLeft: index === 0 ? 0 : `${overlapMargin}px`,
                 zIndex: index + 1,
                 animationDelay: isRippling ? `${(index % 12) * 45}ms` : undefined,
               }}

@@ -746,6 +746,44 @@ export function startServer(
                 break;
               }
 
+              case 'END_GAME': {
+                const room = manager.getRoomBySocket(socketId);
+                const session = manager.getSessionBySocket(socketId);
+                if (!room || !session) {
+                  safeSend(ws, {
+                    type: 'ERROR',
+                    message: 'Not in a room',
+                    code: 'NOT_IN_ROOM',
+                  });
+                  return;
+                }
+
+                if (room.hostPlayerId !== session.playerId) {
+                  safeSend(ws, {
+                    type: 'ACTION_REJECTED',
+                    error: 'Only the host can end the game',
+                  });
+                  return;
+                }
+
+                const roomCode = room.roomCode;
+                serverLogger.info('Host ended game and closed room', {
+                  roomCode,
+                  hostPlayerId: session.playerId,
+                });
+
+                // Notify all connected sessions in the room that the game has ended
+                broadcastToRoom(room, sockets, () => ({
+                  type: 'ERROR',
+                  message: 'The host has ended the game',
+                  code: 'ROOM_CLOSED',
+                }));
+
+                // Destroy room and remove from active rooms
+                manager.destroyRoom(roomCode);
+                break;
+              }
+
               case 'PING': {
                 ws.isAlive = true;
                 const room = manager.getRoomBySocket(socketId);
@@ -779,6 +817,163 @@ export function startServer(
                     type: 'ACTION_REJECTED',
                     error: claimRes.error || 'Cannot claim host',
                   });
+                }
+                break;
+              }
+
+              case 'VOICE_SIGNAL': {
+                const room = manager.getRoomBySocket(socketId);
+                const session = manager.getSessionBySocket(socketId);
+                if (!room || !session) {
+                  return;
+                }
+                if (!msg.targetPlayerId || !msg.signal) {
+                  return;
+                }
+                const targetSession = room.sessions.get(msg.targetPlayerId);
+                if (targetSession && targetSession.isConnected) {
+                  const targetWs = sockets.get(targetSession.socketId);
+                  if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                    safeSend(targetWs, {
+                      type: 'VOICE_SIGNAL',
+                      fromPlayerId: session.playerId,
+                      signal: msg.signal,
+                    });
+                  }
+                }
+                break;
+              }
+
+              case 'VOICE_STATE_UPDATE': {
+                const room = manager.getRoomBySocket(socketId);
+                const session = manager.getSessionBySocket(socketId);
+                if (!room || !session) {
+                  return;
+                }
+                if (!room.voiceLocks) room.voiceLocks = new Set();
+                if (!room.voiceStates) room.voiceStates = new Map();
+
+                const isLocked = room.voiceLocks.has(session.playerId);
+                const effectiveMuted = isLocked ? true : Boolean(msg.isMuted);
+
+                room.voiceStates.set(session.playerId, {
+                  isMuted: effectiveMuted,
+                  isHardMuted: isLocked,
+                  isSpeaking: effectiveMuted ? false : Boolean(msg.isSpeaking),
+                });
+
+                broadcastToRoom(room, sockets, () => ({
+                  type: 'VOICE_STATE_CHANGED',
+                  playerId: session.playerId,
+                  isMuted: effectiveMuted,
+                  isHardMuted: isLocked,
+                  isSpeaking: effectiveMuted ? false : Boolean(msg.isSpeaking),
+                }));
+                break;
+              }
+
+              case 'ADMIN_MUTE_PLAYER': {
+                const room = manager.getRoomBySocket(socketId);
+                const session = manager.getSessionBySocket(socketId);
+                if (!room || !session) {
+                  safeSend(ws, {
+                    type: 'ERROR',
+                    message: 'Not in a room',
+                    code: 'NOT_IN_ROOM',
+                  });
+                  return;
+                }
+
+                if (room.hostPlayerId !== session.playerId) {
+                  safeSend(ws, {
+                    type: 'ACTION_REJECTED',
+                    error: 'Only the room host can moderate voice chat',
+                  });
+                  return;
+                }
+
+                if (!msg.targetPlayerId) {
+                  safeSend(ws, {
+                    type: 'ERROR',
+                    message: 'Missing targetPlayerId',
+                    code: 'INVALID_PAYLOAD',
+                  });
+                  return;
+                }
+
+                const targetSession = room.sessions.get(msg.targetPlayerId);
+                if (!targetSession) {
+                  safeSend(ws, {
+                    type: 'ERROR',
+                    message: 'Target player not found in room',
+                    code: 'PLAYER_NOT_FOUND',
+                  });
+                  return;
+                }
+
+                const voiceLocks = room.voiceLocks || (room.voiceLocks = new Set<string>());
+                const voiceStates = room.voiceStates || (room.voiceStates = new Map());
+
+                const targetWs = sockets.get(targetSession.socketId);
+
+                if (msg.muteType === 'TEMP') {
+                  if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                    safeSend(targetWs, {
+                      type: 'VOICE_FORCE_MUTED',
+                      muteType: 'TEMP',
+                    });
+                  }
+                  voiceStates.set(msg.targetPlayerId, {
+                    isMuted: true,
+                    isHardMuted: voiceLocks.has(msg.targetPlayerId),
+                    isSpeaking: false,
+                  });
+                  broadcastToRoom(room, sockets, () => ({
+                    type: 'VOICE_STATE_CHANGED',
+                    playerId: msg.targetPlayerId,
+                    isMuted: true,
+                    isHardMuted: voiceLocks.has(msg.targetPlayerId),
+                    isSpeaking: false,
+                  }));
+                } else if (msg.muteType === 'HARD') {
+                  voiceLocks.add(msg.targetPlayerId);
+                  if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                    safeSend(targetWs, {
+                      type: 'VOICE_FORCE_MUTED',
+                      muteType: 'HARD',
+                    });
+                  }
+                  voiceStates.set(msg.targetPlayerId, {
+                    isMuted: true,
+                    isHardMuted: true,
+                    isSpeaking: false,
+                  });
+                  broadcastToRoom(room, sockets, () => ({
+                    type: 'VOICE_STATE_CHANGED',
+                    playerId: msg.targetPlayerId,
+                    isMuted: true,
+                    isHardMuted: true,
+                    isSpeaking: false,
+                  }));
+                } else if (msg.muteType === 'UNMUTE') {
+                  voiceLocks.delete(msg.targetPlayerId);
+                  if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                    safeSend(targetWs, {
+                      type: 'VOICE_FORCE_UNMUTED',
+                    });
+                  }
+                  voiceStates.set(msg.targetPlayerId, {
+                    isMuted: false,
+                    isHardMuted: false,
+                    isSpeaking: false,
+                  });
+                  broadcastToRoom(room, sockets, () => ({
+                    type: 'VOICE_STATE_CHANGED',
+                    playerId: msg.targetPlayerId,
+                    isMuted: false,
+                    isHardMuted: false,
+                    isSpeaking: false,
+                  }));
                 }
                 break;
               }

@@ -1,4 +1,4 @@
-import { LobbySeat } from '../../server/types';
+import { LobbySeat, ClientMessage, ServerMessage } from '../../server/types';
 import { GameAction, SanitizedGameState } from '../engine/types';
 
 export type { LobbySeat, ServerMessage, ClientMessage } from '../../server/types';
@@ -32,7 +32,10 @@ export interface UseMultiplayerGameReturn {
   dispatchAction: (action: GameAction) => void;
   kickPlayer: (seatIndex: number) => void;
   leaveRoom: () => void;
+  endGame: () => void;
   clearError: () => void;
   claimHost?: () => void;
+  sendClientMessage?: (msg: ClientMessage) => void;
+  subscribeServerMessage?: (cb: (msg: ServerMessage) => void) => () => void;
 }
 

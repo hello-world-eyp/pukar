@@ -3396,6 +3396,532 @@ describe('Bot Personality Strategies', () => {
       expect(plan.drawAction.type).toBe('TAKE_DISCARD');
     });
   });
+
+  describe('No Sequence Point Reduction Without Guaranteed Pukar', () => {
+    function create10CardDiamondsCleanMeld(): Meld {
+      // 3♦ to 12♦ (10 cards clean run = 200 points)
+      const diamondCards: Card[] = [
+        makeCard('d3', 'DIAMONDS', 3),
+        makeCard('d4', 'DIAMONDS', 4),
+        makeCard('d5', 'DIAMONDS', 5),
+        makeCard('d6', 'DIAMONDS', 6),
+        makeCard('d7', 'DIAMONDS', 7),
+        makeCard('d8', 'DIAMONDS', 8),
+        makeCard('d9', 'DIAMONDS', 9),
+        makeCard('d10', 'DIAMONDS', 10),
+        makeCard('dj', 'DIAMONDS', 11),
+        makeCard('dq', 'DIAMONDS', 12),
+      ];
+      return {
+        id: 'meld-clean-diamonds-10',
+        team: 'B',
+        type: 'RUN',
+        suit: 'DIAMONDS',
+        cards: diamondCards,
+        slots: diamondCards.map((c) => ({
+          card: c,
+          representedRank: c.rank,
+          representedSuit: 'DIAMONDS' as Suit,
+          isWildcard: false,
+        })),
+        isClean: true,
+        points: 200,
+      };
+    }
+
+    it('The Long-Term Guy (Harsh bot) does not reduce a 200-pt sequence to 100 pts when holding 3 cards (Pukar impossible this turn)', () => {
+      const state = createTestState();
+      state.turnPhase = 'MELD';
+      state.melds.B = [create10CardDiamondsCleanMeld()];
+      state.players[1].hand = [
+        makeCard('c6', 'CLUBS', 6),
+        makeCard('s12', 'SPADES', 12),
+        makeCard('joker1', null, 0, true), // Natural Joker
+      ];
+
+      const plan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      // Bot must NOT add the Joker to the 10-card clean Diamonds run because that drops it from 200 to 100 points
+      const addedJoker = plan.meldActions.some(
+        (a) => a.type === 'ADD_TO_MELD' && a.cardIds.includes('joker1')
+      );
+      expect(addedJoker).toBe(false);
+    });
+
+    it('Smart Chacha (Sid bot) does not reduce a 200-pt sequence to 100 pts when holding 3 cards (Pukar impossible this turn)', () => {
+      const state = createTestState();
+      state.turnPhase = 'MELD';
+      state.melds.B = [create10CardDiamondsCleanMeld()];
+      state.players[1].hand = [
+        makeCard('c6', 'CLUBS', 6),
+        makeCard('s12', 'SPADES', 12),
+        makeCard('joker1', null, 0, true), // Natural Joker
+      ];
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      const addedJoker = plan.meldActions.some(
+        (a) => a.type === 'ADD_TO_MELD' && a.cardIds.includes('joker1')
+      );
+      expect(addedJoker).toBe(false);
+    });
+
+    it('The Long-Term Guy and Smart Chacha DO add a Joker to a 200-pt sequence when Pukar IS guaranteed this turn (2 cards in hand)', () => {
+      const cleanMeld = create10CardDiamondsCleanMeld();
+
+      // Test The Long-Term Guy with 2 cards (Joker + legal discard 12♠)
+      const stateHarsh = createTestState();
+      stateHarsh.turnPhase = 'MELD';
+      stateHarsh.melds.B = [cleanMeld];
+      stateHarsh.players[1].hand = [
+        makeCard('s12', 'SPADES', 12),
+        makeCard('joker1', null, 0, true),
+      ];
+
+      const planHarsh = decideTheLongTermGuyTurn(stateHarsh, 1, createEmptyMemory());
+      const harshAddedJoker = planHarsh.meldActions.some(
+        (a) => a.type === 'ADD_TO_MELD' && a.cardIds.includes('joker1')
+      );
+      expect(harshAddedJoker).toBe(true);
+      expect(planHarsh.discardAction.cardId).toBe('s12');
+
+      // Test Smart Chacha with 2 cards (Joker + legal discard 12♠)
+      const stateSid = createTestState();
+      stateSid.turnPhase = 'MELD';
+      stateSid.melds.B = [cleanMeld];
+      stateSid.players[1].hand = [
+        makeCard('s12', 'SPADES', 12),
+        makeCard('joker1', null, 0, true),
+      ];
+
+      const planSid = decideSmartChachaTurn(stateSid, 1, createEmptyMemory());
+      const sidAddedJoker = planSid.meldActions.some(
+        (a) => a.type === 'ADD_TO_MELD' && a.cardIds.includes('joker1')
+      );
+      expect(sidAddedJoker).toBe(true);
+      expect(planSid.discardAction.cardId).toBe('s12');
+    });
+
+    it('findBestMeldPlan refuses to reduce 200-pt sequence to 100 pts unless canGuaranteePukar is true', () => {
+      const cleanMeld = create10CardDiamondsCleanMeld();
+      const hand3Cards = [
+        makeCard('c6', 'CLUBS', 6),
+        makeCard('s12', 'SPADES', 12),
+        makeCard('joker1', null, 0, true),
+      ];
+
+      // With 3 cards, Pukar cannot be guaranteed on this turn (would leave 2 cards)
+      const plan3 = findBestMeldPlan(hand3Cards, [cleanMeld]);
+      expect(plan3.additionsToPlay.some((a) => a.cardIds.includes('joker1'))).toBe(false);
+
+      // With 2 cards, melding Joker leaves 1 card to discard -> Pukar is guaranteed!
+      const hand2Cards = [
+        makeCard('s12', 'SPADES', 12),
+        makeCard('joker1', null, 0, true),
+      ];
+      const plan2 = findBestMeldPlan(hand2Cards, [cleanMeld]);
+      expect(plan2.additionsToPlay.some((a) => a.cardIds.includes('joker1'))).toBe(true);
+    });
+  });
+
+  describe('Hold New Run to Extend Largest Existing Sequence', () => {
+    function createSpades5to10TableMeld(): Meld {
+      const spadeCards: Card[] = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('s7', 'SPADES', 7),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+        makeCard('s10', 'SPADES', 10),
+      ];
+      return {
+        id: 'meld-spades-5-10',
+        team: 'B',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: spadeCards,
+        slots: spadeCards.map((c) => ({
+          card: c,
+          representedRank: c.rank,
+          representedSuit: 'SPADES' as Suit,
+          isWildcard: false,
+        })),
+        isClean: true,
+        points: 0,
+      };
+    }
+
+    it('Smart Chacha (Sid bot) holds Q♠-K♠-A♠ in hand instead of playing a separate 3-card meld when team already has a 6-card Spades run and partner has > 3 cards', () => {
+      const state = createTestState(); // player 1 is Team B
+      state.turnPhase = 'MELD';
+      state.melds.B = [createSpades5to10TableMeld()];
+      state.players[1].hand = [
+        makeCard('sq', 'SPADES', 12),
+        makeCard('sk', 'SPADES', 13),
+        makeCard('sa', 'SPADES', 14),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('d8', 'DIAMONDS', 8),
+        makeCard('h9', 'HEARTS', 9),
+      ];
+      // Partner (player 3, Team B) has 7 cards
+      state.players[3].hand = [
+        makeCard('p1', 'HEARTS', 4),
+        makeCard('p2', 'HEARTS', 5),
+        makeCard('p3', 'HEARTS', 6),
+        makeCard('p4', 'DIAMONDS', 7),
+        makeCard('p5', 'DIAMONDS', 8),
+        makeCard('p6', 'CLUBS', 10),
+        makeCard('p7', 'CLUBS', 11),
+      ];
+      (state.players[3] as any).cardCount = 7;
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      // Bot must NOT play Q♠-K♠-A♠ as a separate new meld; it must hold them in hand waiting for Jack
+      const playedSpadesMeld = plan.meldActions.some(
+        (a) => a.type === 'PLAY_NEW_MELD' && (a as any).cardIds.includes('sq')
+      );
+      expect(playedSpadesMeld).toBe(false);
+    });
+
+    it('Smart Chacha (Sid bot) DOES play Q♠-K♠-A♠ when partner is on <= 3 cards and bot knows partner holds the connecting Jack of Spades', () => {
+      const state = createTestState();
+      state.turnPhase = 'MELD';
+      state.melds.B = [createSpades5to10TableMeld()];
+      state.players[1].hand = [
+        makeCard('sq', 'SPADES', 12),
+        makeCard('sk', 'SPADES', 13),
+        makeCard('sa', 'SPADES', 14),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('d8', 'DIAMONDS', 8),
+        makeCard('h9', 'HEARTS', 9),
+      ];
+      // Partner (player 3, Team B) has 2 cards
+      state.players[3].hand = [
+        makeCard('sj', 'SPADES', 11),
+        makeCard('d2', 'DIAMONDS', 2),
+      ];
+      (state.players[3] as any).cardCount = 2;
+
+      // Memory recorded partner picking up Jack of Spades from the bottom
+      const memory = createEmptyMemory();
+      memory.bottomPickupsByPlayer[3] = [makeCard('sj', 'SPADES', 11)];
+
+      const plan = decideSmartChachaTurn(state, 1, memory);
+      // Because partner is close to Pukar and has the connecting J♠, bot opens Q♠-K♠-A♠ so partner can connect and go out
+      const playedSpadesMeld = plan.meldActions.some(
+        (a) => a.type === 'PLAY_NEW_MELD' && (a as any).cardIds.includes('sq')
+      );
+      expect(playedSpadesMeld).toBe(true);
+    });
+
+    it('The Long-Term Guy (Harsh bot) holds Q♠-K♠-A♠ in hand instead of fragmenting when team already has Spades sequence', () => {
+      const state = createTestState();
+      state.turnPhase = 'MELD';
+      state.melds.B = [createSpades5to10TableMeld()];
+      state.players[1].hand = [
+        makeCard('sq', 'SPADES', 12),
+        makeCard('sk', 'SPADES', 13),
+        makeCard('sa', 'SPADES', 14),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('d8', 'DIAMONDS', 8),
+      ];
+      (state.players[3] as any).cardCount = 6;
+
+      const plan = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      const playedSpadesMeld = plan.meldActions.some(
+        (a) => a.type === 'PLAY_NEW_MELD' && (a as any).cardIds.includes('sq')
+      );
+      expect(playedSpadesMeld).toBe(false);
+    });
+
+    it('Smart Chacha DOES play Q♠-K♠-A♠ during FINAL_TURN to shed deadwood', () => {
+      const state = createTestState();
+      state.roundStatus = 'FINAL_TURN';
+      state.turnPhase = 'MELD';
+      state.melds.B = [createSpades5to10TableMeld()];
+      state.players[1].hand = [
+        makeCard('sq', 'SPADES', 12),
+        makeCard('sk', 'SPADES', 13),
+        makeCard('sa', 'SPADES', 14),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('d8', 'DIAMONDS', 8),
+      ];
+      (state.players[3] as any).cardCount = 6;
+
+      const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      const playedSpadesMeld = plan.meldActions.some(
+        (a) => a.type === 'PLAY_NEW_MELD' && (a as any).cardIds.includes('sq')
+      );
+      expect(playedSpadesMeld).toBe(true);
+    });
+  });
+
+  describe('Prioritized Discard Pile Pickup (Rules 1-5)', () => {
+    // Rule 1:
+    // If very close to a pukar and not letting a potential 500 point or a 200 point card go,
+    // they should prioritize the deck card as it can help with a pukar.
+    it('Rule 1: Bot close to Pukar prioritizes stock deck over discard pile unless denying 500 or 200 milestone', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+      // Harsh bot (Team B, player 1) is close to Pukar: 4 cards with 7♠-8♠-9♠ melded and 1 deadwood card K♦
+      state.players[1].hand = [
+        makeCard('s7', 'SPADES', 7),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('s9', 'SPADES', 9),
+        makeCard('dk', 'DIAMONDS', 13),
+      ];
+      // Discard pile has 3 unhelpful/loose cards: 3♣, 4♥, 6♦ (not a 500 or 200 milestone card, no Joker)
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'HEARTS', 4),
+        makeCard('dp3', 'DIAMONDS', 6),
+      ];
+
+      // Harsh bot draws from stock deck to hunt for Pukar rather than bloating hand with 3 bottom cards!
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // Smart Chacha also draws from stock deck when close to Pukar
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // BUT if top of discard pile denies an opponent 500-pt Pure 13, bot MUST pick it up!
+      const heartsRunCards: Card[] = [];
+      const heartSlots = [];
+      for (let r = 2; r <= 13; r++) {
+        const c = makeCard(`h${r}`, 'HEARTS', r as any);
+        heartsRunCards.push(c);
+        heartSlots.push({ card: c, representedRank: r, representedSuit: 'HEARTS' as const, isWildcard: false });
+      }
+      state.melds.A = [
+        {
+          id: 'opp-pure-13-run',
+          team: 'A',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: heartsRunCards,
+          slots: heartSlots,
+          isPure: true,
+          points: 200,
+        },
+      ];
+      // Discard top card is A♥ (rank 14, completing opponent 500 Pure 13)
+      state.discardPile = [makeCard('ha', 'HEARTS', 14)];
+      const planDenial = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planDenial.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Similarly for 200-pt Clean 7 denial:
+      const diaRunCards: Card[] = [];
+      const diaSlots = [];
+      for (let r = 3; r <= 8; r++) {
+        const c = makeCard(`d${r}`, 'DIAMONDS', r as any);
+        diaRunCards.push(c);
+        diaSlots.push({ card: c, representedRank: r, representedSuit: 'DIAMONDS' as const, isWildcard: false });
+      }
+      state.melds.A = [
+        {
+          id: 'opp-clean-7-run',
+          team: 'A',
+          type: 'RUN',
+          suit: 'DIAMONDS',
+          cards: diaRunCards,
+          slots: diaSlots,
+          isPure: true,
+          points: 50,
+        },
+      ];
+      // Discard top card is 9♦ (completing opponent Clean 7 for 200 pts)
+      state.discardPile = [makeCard('d9', 'DIAMONDS', 9)];
+      const planClean7Denial = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planClean7Denial.drawAction.type).toBe('TAKE_DISCARD');
+    });
+
+    // Rule 2:
+    // If the card helps connect cards (1 to 2 ranks close), pick up ONLY IF bot has a safe discard
+    // that will not hinder its sequences or give opponents a lot of points.
+    it('Rule 2: Picks up 1-2 card connector only if a safe discard exists that preserves sequences and does not feed opponents', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+
+      // Subtest 2A: Safe discard exists (K♦ and 4♣ are isolated deadwood in a 4-card hand)
+      state.players[1].hand = [
+        makeCard('s7', 'SPADES', 7),
+        makeCard('dk', 'DIAMONDS', 13),
+        makeCard('c4', 'CLUBS', 4),
+        makeCard('h10', 'HEARTS', 10),
+      ];
+      state.discardPile = [
+        makeCard('s8', 'SPADES', 8), // 1-rank connector to 7♠
+      ];
+      const planSafe = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planSafe.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Subtest 2B: No safe discard because discarding the alternative hands opponent 500 Pure 13
+      const heartsRunCards: Card[] = [];
+      const heartSlots = [];
+      for (let r = 2; r <= 13; r++) {
+        const c = makeCard(`h${r}`, 'HEARTS', r as any);
+        heartsRunCards.push(c);
+        heartSlots.push({ card: c, representedRank: r, representedSuit: 'HEARTS' as const, isWildcard: false });
+      }
+      state.melds.A = [
+        {
+          id: 'opp-pure-13-run',
+          team: 'A',
+          type: 'RUN',
+          suit: 'HEARTS',
+          cards: heartsRunCards,
+          slots: heartSlots,
+          isPure: true,
+          points: 200,
+        },
+      ];
+      // Hand has 7♠ and A♥ (the exact 500-pt completion card for opponent)
+      state.players[1].hand = [
+        makeCard('s7', 'SPADES', 7),
+        makeCard('ha', 'HEARTS', 14),
+      ];
+      state.discardPile = [
+        makeCard('s8', 'SPADES', 8),
+      ];
+      // Picking up 8♠ would force bot to discard A♥, giving opponent 500 pts!
+      // Therefore bot MUST refuse pickup!
+      const planNoSafeOpponent = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planNoSafeOpponent.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // Subtest 2C: No safe discard because every other card is part of an existing sequence
+      state.melds.A = []; // Clear opponent melds
+      state.players[1].hand = [
+        makeCard('s7', 'SPADES', 7),
+        makeCard('h10', 'HEARTS', 10),
+        makeCard('hj', 'HEARTS', 11), // 10♥-J♥ is an active sequence connector
+      ];
+      state.discardPile = [
+        makeCard('s8', 'SPADES', 8),
+      ];
+      // Taking 8♠ forms 7♠-8♠, but forces discarding 10♥ or J♥, breaking the heart sequence!
+      // Bot refuses pickup to preserve its sequence!
+      const planHinderSeq = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planHinderSeq.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    // Rule 3:
+    // If there are 3+ cards, tendency should be pick unless moving close to a Pukar (< 7 cards & connected).
+    it('Rule 3: Tendency is to pick up 3+ card piles in mid-game, but leaves them when moving close to Pukar', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+
+      // Case 3A: Mid-game hand (8 cards with some connections). Pile has 3 cards with connector
+      state.players[1].hand = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('h4', 'HEARTS', 4),
+        makeCard('h9', 'HEARTS', 9),
+        makeCard('c10', 'CLUBS', 10),
+        makeCard('d6', 'DIAMONDS', 6),
+        makeCard('d12', 'DIAMONDS', 12),
+        makeCard('c3', 'CLUBS', 3),
+        makeCard('s11', 'SPADES', 11),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 8),
+        makeCard('dp2', 'DIAMONDS', 4),
+        makeCard('dp3', 'SPADES', 6), // 6♠ connects to 5♠
+      ];
+      const planMid = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planMid.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Case 3B: Hand moving close to Pukar (4 cards with 3-card pure run formed)
+      state.players[1].hand = [
+        makeCard('s5', 'SPADES', 5),
+        makeCard('s6', 'SPADES', 6),
+        makeCard('s7', 'SPADES', 7),
+        makeCard('c10', 'CLUBS', 10),
+      ];
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 8),
+        makeCard('dp2', 'DIAMONDS', 4),
+        makeCard('dp3', 'HEARTS', 9),
+      ];
+      const planClose = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planClose.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    // Rule 4:
+    // If bot doesn't have good cards to discard and there are 2+ cards at bottom, pick (except Fast Chachi).
+    it('Rule 4: When holding no safe discard, bots pick up 2+ card piles to search for exits, except Fast Chachi', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+
+      // Hand where all cards are part of adjacent sequences: 4♠-5♠ and 8♥-9♥
+      // Bot has NO safe deadwood discard in hand!
+      state.players[1].hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s5', 'SPADES', 5),
+        makeCard('h8', 'HEARTS', 8),
+        makeCard('h9', 'HEARTS', 9),
+      ];
+      // Discard pile has 2 cards of trash
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 3),
+        makeCard('dp2', 'DIAMONDS', 12),
+      ];
+
+      // Harsh bot (The Long-Term Guy) picks up the 2-card pile to find a safe exit!
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('TAKE_DISCARD');
+
+      // Smart Chacha also picks up to find safe deadwood
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('TAKE_DISCARD');
+
+      // EXCEPTION: Fast Chachi does NOT pick up trash cards to search for discards
+      const planChachi = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(planChachi.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+
+    // Rule 5:
+    // What a bot should NEVER do is there is only 1 card in discard which doesn't help them at all
+    // and it picks that up to throw a card which might be either trash or important.
+    it('Rule 5: No bot ever picks up a 1-card discard pile that does not help them at all', () => {
+      const state = createTestState();
+      state.phase = 'DRAW';
+      state.turnPhase = 'DRAW';
+
+      // Hand holds cards in Spades and Hearts
+      state.players[1].hand = [
+        makeCard('s4', 'SPADES', 4),
+        makeCard('s8', 'SPADES', 8),
+        makeCard('h6', 'HEARTS', 6),
+        makeCard('h11', 'HEARTS', 11),
+      ];
+      // Discard has exactly 1 unhelpful card: 1♣ (different suit, non-connecting rank)
+      state.discardPile = [
+        makeCard('dp1', 'CLUBS', 13),
+      ];
+
+      // Harsh bot never takes 1-card junk
+      const planLT = decideTheLongTermGuyTurn(state, 1, createEmptyMemory());
+      expect(planLT.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // Smart Chacha never takes 1-card junk
+      const planChacha = decideSmartChachaTurn(state, 1, createEmptyMemory());
+      expect(planChacha.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // Fast Chachi never takes 1-card junk
+      const planChachi = decideFastChachiTurn(state, 1, createEmptyMemory());
+      expect(planChachi.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // The Jadugar never takes 1-card junk
+      const planJadugar = decideTheJadugarTurn(state, 1, createEmptyMemory());
+      expect(planJadugar.drawAction.type).toBe('DRAW_FROM_STOCK');
+
+      // Cheetah never takes 1-card junk
+      const planCheetah = decideCheetahTurn(state, 1, createEmptyMemory());
+      expect(planCheetah.drawAction.type).toBe('DRAW_FROM_STOCK');
+    });
+  });
 });
 
 

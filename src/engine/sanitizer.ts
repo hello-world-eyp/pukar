@@ -11,14 +11,21 @@ export function sanitizeStateForPlayer(
   playerId: string
 ): SanitizedGameState {
   try {
+    const isRoundOver = Boolean(
+      state?.isRoundOver ||
+      state?.roundStatus === 'ROUND_OVER' ||
+      state?.roundStatus === 'GAME_OVER'
+    );
+
     const sanitizedPlayers: SanitizedPlayer[] = (state?.players ?? []).map((p) => {
       const isViewer = p.id === playerId;
+      const revealHand = isViewer || isRoundOver;
       return {
         id: p.id,
         name: p.name,
         team: p.team,
         cardCount: p.hand ? p.hand.length : 0,
-        hand: isViewer && p.hand ? p.hand.map((c) => ({ ...c })) : undefined,
+        hand: revealHand && p.hand ? p.hand.map((c) => ({ ...c })) : undefined,
       };
     });
 

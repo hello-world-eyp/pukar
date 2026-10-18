@@ -27,6 +27,7 @@ export interface UseGameNotificationsProps {
   initialJokerPickupBanner?: JokerPickupData | null;
   initialExhaustNotification?: string | null;
   initialPureSequenceCelebration?: PureSequenceCelebrationData | null;
+  initialYourTurnBanner?: boolean;
   appMode: 'LOCAL' | 'MULTIPLAYER' | 'BOTS';
   multiplayerHook: UseMultiplayerGameReturn;
   triggerSound: (effect: SoundEffect) => void;
@@ -38,6 +39,7 @@ export function useGameNotifications({
   initialJokerPickupBanner,
   initialExhaustNotification,
   initialPureSequenceCelebration,
+  initialYourTurnBanner,
   appMode,
   multiplayerHook,
   triggerSound,
@@ -58,6 +60,16 @@ export function useGameNotifications({
   const [pureSequenceCelebration, setPureSequenceCelebration] = useState<PureSequenceCelebrationData | null>(
     initialPureSequenceCelebration ?? null
   );
+  const [yourTurnBanner, setYourTurnBanner] = useState<boolean>(initialYourTurnBanner ?? false);
+
+  // Auto-dismiss "Your turn" toast after 3 seconds
+  useEffect(() => {
+    if (!yourTurnBanner) return;
+    const timer = setTimeout(() => {
+      setYourTurnBanner(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [yourTurnBanner]);
 
   // Auto-dismiss error message after 4.5 seconds
   useEffect(() => {
@@ -208,6 +220,10 @@ export function useGameNotifications({
     setPureSequenceCelebration(data);
   }, []);
 
+  const triggerYourTurnNotification = useCallback(() => {
+    setYourTurnBanner(true);
+  }, []);
+
   const clearAllNotifications = useCallback(() => {
     setPukarBanner(null);
     setPukarSlamEvent(null);
@@ -215,6 +231,7 @@ export function useGameNotifications({
     setExhaustNotification(null);
     setJokerPickupBanner(null);
     setPureSequenceCelebration(null);
+    setYourTurnBanner(false);
   }, []);
 
   return {
@@ -234,6 +251,9 @@ export function useGameNotifications({
     setJokerPickupBanner,
     pureSequenceCelebration,
     setPureSequenceCelebration,
+    yourTurnBanner,
+    setYourTurnBanner,
+    triggerYourTurnNotification,
     triggerPukarCelebration,
     triggerPureSequenceCelebration,
     clearAllNotifications,

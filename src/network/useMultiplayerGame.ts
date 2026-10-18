@@ -15,6 +15,7 @@ export interface UseMultiplayerGameOptions {
   client?: SocketClient;
   url?: string;
   autoConnect?: boolean;
+  onServerMessage?: (msg: ServerMessage) => void;
 }
 
 /**
@@ -96,6 +97,7 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
   const [myPlayerId, setMyPlayerId] = useState<string | null>(initialSession?.playerId ?? null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isInGame, setIsInGame] = useState(false);
+  const serverMessageSubscribersRef = useRef<Set<(msg: ServerMessage) => void>>(new Set());
 
   useEffect(() => {
     const isExternalClient = !!options?.client;
@@ -129,6 +131,14 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
 
     const unsubMessage = client.onMessage((msg: ServerMessage) => {
       try {
+        options?.onServerMessage?.(msg);
+        serverMessageSubscribersRef.current.forEach((cb) => {
+          try {
+            cb(msg);
+          } catch (err) {
+            console.error('Error in server message subscriber:', err);
+          }
+        });
         switch (msg.type) {
           case 'ROOM_JOINED': {
             setRoomCode(msg.roomCode);
@@ -234,7 +244,8 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
               msg.code === 'JOIN_FAILED' ||
               msg.code === 'ROOM_NOT_FOUND' ||
               msg.code === 'NOT_IN_ROOM' ||
-              msg.code === 'ROOM_FULL'
+              msg.code === 'ROOM_FULL' ||
+              msg.code === 'ROOM_CLOSED'
             ) {
               clearSessionCredentials();
               syncRoomUrl(null);
@@ -360,6 +371,24 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
     setErrorMessage(null);
   }, []);
 
+  const endGame = useCallback(() => {
+    clearSessionCredentials();
+    syncRoomUrl(null);
+    clientRef.current?.clearOutbox();
+    clientRef.current?.send({ type: 'END_GAME' });
+
+    setRoomCode(null);
+    roomCodeRef.current = null;
+    setIsHost(false);
+    setLobbySeats([]);
+    setGameState(null);
+    setIsInGame(false);
+    setMySeatIndex(null);
+    setMyPlayerId(null);
+    myPlayerIdRef.current = null;
+    setErrorMessage(null);
+  }, []);
+
   const clearError = useCallback(() => {
     setErrorMessage(null);
   }, []);
@@ -369,6 +398,17 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
     clientRef.current?.send({
       type: 'CLAIM_HOST',
     });
+  }, []);
+
+  const sendClientMessage = useCallback((msg: any) => {
+    clientRef.current?.send(msg);
+  }, []);
+
+  const subscribeServerMessage = useCallback((cb: (msg: ServerMessage) => void) => {
+    serverMessageSubscribersRef.current.add(cb);
+    return () => {
+      serverMessageSubscribersRef.current.delete(cb);
+    };
   }, []);
 
   const isInLobby = roomCode !== null && !isInGame;
@@ -392,8 +432,11 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
       dispatchAction,
       kickPlayer,
       leaveRoom,
+      endGame,
       clearError,
       claimHost,
+      sendClientMessage,
+      subscribeServerMessage,
     }),
     [
       connectionStatus,
@@ -413,8 +456,11 @@ export function useMultiplayerGame(options?: UseMultiplayerGameOptions): UseMult
       dispatchAction,
       kickPlayer,
       leaveRoom,
+      endGame,
       clearError,
       claimHost,
+      sendClientMessage,
+      subscribeServerMessage,
     ]
   );
 }

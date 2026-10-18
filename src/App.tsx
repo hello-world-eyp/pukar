@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, SanitizedGameState } from './engine/types';
 import { hasTeamOpened } from './engine/meld-validator';
 import { exportDebugLogFile } from './engine/debug-logger';
@@ -28,6 +28,7 @@ import { MultiplayerStatusBar } from './ui/components/multiplayer/MultiplayerSta
 import { useMultiplayerGame, syncRoomUrl } from './network/useMultiplayerGame';
 import { getSessionCredentials, clearSessionCredentials } from './network/session-storage';
 import { UseMultiplayerGameReturn } from './network/types';
+import { useVoiceChat } from './network/useVoiceChat';
 
 import { BotGameConfig } from './engine/bots/types';
 import {
@@ -48,6 +49,8 @@ import {
   Info,
   Bot,
   Zap,
+  Bell,
+  AlertTriangle,
 } from 'lucide-react';
 
 export interface AppProps {
@@ -75,6 +78,7 @@ export interface AppProps {
     playerName: string;
   } | null;
   initialExhaustNotification?: string | null;
+  initialYourTurnBanner?: boolean;
 }
 
 /**
@@ -110,6 +114,7 @@ export function App({
   initialPukarSlamEvent,
   initialJokerPickupBanner,
   initialExhaustNotification,
+  initialYourTurnBanner,
 }: AppProps = {}) {
   // Extract room code if user arrived via shareable invite link (?room=ABCD)
   const detectedUrlRoomCode = useMemo(() => {
@@ -165,10 +170,16 @@ export function App({
 
   // Active in-game navigation tab: 'table' | 'sequences' | 'scoreboard'
   const [activeGameTab, setActiveGameTab] = useState<'table' | 'sequences' | 'scoreboard'>('table');
+  const [isHostEndGameConfirmOpen, setIsHostEndGameConfirmOpen] = useState(false);
+
+  const voiceChatRef = useRef<{ handleServerMessage: (msg: any) => void } | null>(null);
 
   // Multiplayer game lifecycle hook
   const defaultMultiplayerHook = useMultiplayerGame({
     autoConnect: !multiplayerGameHook && appMode === 'MULTIPLAYER',
+    onServerMessage: (msg) => {
+      voiceChatRef.current?.handleServerMessage(msg);
+    },
   });
   const multiplayerHook = multiplayerGameHook ?? defaultMultiplayerHook;
 
@@ -178,6 +189,13 @@ export function App({
       setCurrentScreen('GAME');
     }
   }, [appMode, multiplayerHook.isInGame]);
+
+  // When active multiplayer game is closed by the host or server, transition player back to MENU screen
+  useEffect(() => {
+    if (appMode === 'MULTIPLAYER' && currentScreen === 'GAME' && !multiplayerHook.isInGame && !multiplayerHook.roomCode) {
+      setCurrentScreen('MENU');
+    }
+  }, [appMode, currentScreen, multiplayerHook.isInGame, multiplayerHook.roomCode]);
 
   // Synchronize browser URL query parameters (?room=ABCD) with active multiplayer roomCode
   useEffect(() => {
@@ -229,6 +247,9 @@ export function App({
     setJokerPickupBanner,
     pureSequenceCelebration,
     setPureSequenceCelebration,
+    yourTurnBanner,
+    setYourTurnBanner,
+    triggerYourTurnNotification,
     triggerPukarCelebration,
     triggerPureSequenceCelebration,
     clearAllNotifications,
@@ -237,10 +258,28 @@ export function App({
     initialPukarSlamEvent,
     initialJokerPickupBanner,
     initialExhaustNotification,
+    initialYourTurnBanner,
     appMode,
     multiplayerHook,
     triggerSound,
   });
+
+  // Peer-to-peer WebRTC voice communication with host moderation
+  const voiceChat = useVoiceChat({
+    myPlayerId: multiplayerHook.myPlayerId,
+    isHost: multiplayerHook.isHost,
+    sendClientMessage: multiplayerHook.sendClientMessage,
+    onAdminToast: (msg) => setExhaustNotification(msg),
+  });
+  voiceChatRef.current = voiceChat;
+
+  useEffect(() => {
+    if (multiplayerHook.subscribeServerMessage) {
+      return multiplayerHook.subscribeServerMessage((msg) => {
+        voiceChatRef.current?.handleServerMessage(msg);
+      });
+    }
+  }, [multiplayerHook.subscribeServerMessage]);
 
   // 4. Core local game state machine & action handlers
   const {
@@ -280,6 +319,26 @@ export function App({
     clearAllNotifications,
     setJokerPromptData,
   });
+
+  // Collapsible Hand state across all game modes (Bot, Local, Multiplayer)
+  const [isHandCollapsed, setIsHandCollapsed] = useState(false);
+
+  // Track when a person's turn arrives to pop up a 3-second "Your turn" banner
+  const prevActiveTurnRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (activeGameState.roundStatus === 'ROUND_OVER' || activeGameState.roundStatus === 'GAME_OVER') {
+      prevActiveTurnRef.current = activeTurnIndex;
+      return;
+    }
+
+    const prevTurn = prevActiveTurnRef.current;
+    if (isViewingActivePlayer && prevTurn !== activeTurnIndex) {
+      triggerYourTurnNotification();
+      triggerSound('meld');
+      setIsHandCollapsed(false); // Restore hand cards visibility on your turn
+    }
+    prevActiveTurnRef.current = activeTurnIndex;
+  }, [activeTurnIndex, isViewingActivePlayer, activeGameState.roundStatus, triggerYourTurnNotification, triggerSound]);
 
   // 5. Global table shortcuts (keystroke optimization and debug logger)
   useTableShortcuts({
@@ -383,6 +442,7 @@ export function App({
     try {
       handleAction({ type: 'RESET_GAME', playerCount, playerNames });
       setIsSetupModalOpen(false);
+      setIsHandCollapsed(false);
       setViewedPlayerIndex(null);
       setSelectedCardIds([]);
       setSelectedMeldId(null);
@@ -405,6 +465,7 @@ export function App({
         playerNames: names,
       });
       setIsBotSetupModalOpen(false);
+      setIsHandCollapsed(false);
       setViewedPlayerIndex(null);
       setSelectedCardIds([]);
       setSelectedMeldId(null);
@@ -446,13 +507,15 @@ export function App({
             activeTab={activeGameTab}
             onTabChange={setActiveGameTab}
             onOpenRules={() => setIsRulesModalOpen(true)}
+            isHandCollapsed={isHandCollapsed}
+            onToggleHandCollapse={() => setIsHandCollapsed((prev) => !prev)}
             players={activeGameState.players.map((p, idx) => {
               const seat = isMultiplayerActive
                 ? multiplayerHook.lobbySeats.find((s) => s.seatIndex === idx)
                 : undefined;
               return {
-                id: p.id || `p-${idx}`,
-                name: p.name,
+                id: seat?.playerId || p.id || `p-${idx}`,
+                name: seat?.playerName || p.name,
                 team: p.team,
                 cardCount: (p as any).cardCount ?? (p.hand ? p.hand.length : 0),
                 isConnected: seat ? seat.isConnected : (p as any).isConnected !== false,
@@ -469,6 +532,10 @@ export function App({
                 : undefined
             }
             onExitToMenu={() => {
+              if (isMultiplayerActive && multiplayerHook.isHost) {
+                setIsHostEndGameConfirmOpen(true);
+                return;
+              }
               if (isMultiplayerActive) {
                 multiplayerHook.leaveRoom();
               }
@@ -477,6 +544,21 @@ export function App({
               setCurrentScreen('MENU');
             }}
             roomCode={isMultiplayerActive ? multiplayerHook.roomCode : null}
+            voiceChat={
+              appMode === 'MULTIPLAYER' && (Boolean(multiplayerHook.roomCode) || multiplayerHook.isInGame)
+                ? {
+                    isVoiceSupported: voiceChat.isVoiceSupported,
+                    isVoiceActive: voiceChat.isVoiceActive,
+                    isMuted: voiceChat.isMuted,
+                    isHardMuted: voiceChat.isHardMuted,
+                    onToggleMic: voiceChat.toggleMic,
+                    isAdmin: multiplayerHook.isHost,
+                    myPlayerId: multiplayerHook.myPlayerId,
+                    onAdminMutePlayer: voiceChat.adminMutePlayer,
+                    playerVoiceStates: voiceChat.playerVoiceStates,
+                  }
+                : undefined
+            }
             onExportDebugLog={() => {
               const success = exportDebugLogFile(activeGameState as GameState);
               if (success) {
@@ -493,6 +575,7 @@ export function App({
           roomCode={multiplayerHook.roomCode ?? ''}
           connectionStatus={multiplayerHook.connectionStatus}
           seatIndex={multiplayerHook.mySeatIndex}
+          isHost={multiplayerHook.isHost}
           onLeave={() => {
             multiplayerHook.leaveRoom();
             syncRoomUrl(null);
@@ -506,7 +589,74 @@ export function App({
             setExhaustNotification(null);
             setCurrentScreen('MENU');
           }}
+          onEndGame={() => {
+            multiplayerHook.endGame();
+            syncRoomUrl(null);
+            setSelectedCardIds([]);
+            setSelectedMeldId(null);
+            setDisconnectToast(null);
+            setErrorMessage(null);
+            setPukarBanner(null);
+            setPukarSlamEvent(null);
+            setJokerPickupBanner(null);
+            setExhaustNotification(null);
+            setCurrentScreen('MENU');
+          }}
         />
+      )}
+
+      {/* Host End Game Confirmation Modal from TopNavBar Exit */}
+      {isHostEndGameConfirmOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="nav-end-game-dialog-title"
+          data-testid="nav-end-game-confirm-modal"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in"
+        >
+          <div className="bg-slate-900 border border-red-800/80 rounded-2xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 text-slate-100">
+            <div className="flex items-center gap-3 text-red-400">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 id="nav-end-game-dialog-title" className="text-lg font-black tracking-tight">
+                Leave & End Game?
+              </h3>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              As the game host, returning to the menu will terminate this match and close the room for all players. The game will no longer run.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                data-testid="btn-cancel-nav-end-game"
+                onClick={() => setIsHostEndGameConfirmOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="btn-confirm-nav-end-game"
+                onClick={() => {
+                  setIsHostEndGameConfirmOpen(false);
+                  multiplayerHook.endGame();
+                  syncRoomUrl(null);
+                  setSelectedCardIds([]);
+                  setSelectedMeldId(null);
+                  setDisconnectToast(null);
+                  setErrorMessage(null);
+                  setPukarBanner(null);
+                  setPukarSlamEvent(null);
+                  setJokerPickupBanner(null);
+                  setExhaustNotification(null);
+                  setCurrentScreen('MENU');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white shadow-lg transition-colors cursor-pointer"
+              >
+                Yes, End Game
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
 
@@ -557,6 +707,46 @@ export function App({
               onClick={() => setDisconnectToast(null)}
               className="p-1 rounded-lg hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Dismiss Disconnect Notification"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Your Turn Popup Notification Banner (3-second auto-dismiss) */}
+        {yourTurnBanner && (
+          <div
+            data-testid="your-turn-banner"
+            role="status"
+            aria-live="polite"
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-950/95 via-amber-950/95 to-emerald-950/95 border-2 border-amber-400 text-amber-100 shadow-2xl shadow-amber-950/80 animate-in fade-in zoom-in-95 duration-200 cursor-pointer"
+            onClick={() => setYourTurnBanner(false)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-md shrink-0 animate-bounce">
+                <Bell className="w-4 h-4 text-slate-950" />
+              </div>
+              <div>
+                <div className="font-black text-sm sm:text-base text-amber-100 flex items-center gap-2">
+                  <span>Your Turn!</span>
+                  <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 shadow-sm">
+                    Action Required
+                  </span>
+                </div>
+                <div className="text-xs sm:text-sm font-semibold text-amber-200/90 mt-0.5">
+                  It&apos;s your turn — draw from the Stock Deck or Discard Pile to begin.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              data-testid="btn-dismiss-your-turn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setYourTurnBanner(false);
+              }}
+              className="p-1 rounded-xl hover:bg-amber-900/50 text-amber-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Dismiss Your Turn Notification"
             >
               <X className="w-4 h-4" />
             </button>
@@ -834,6 +1024,8 @@ export function App({
               }
             >
               <PlayerHand
+                isCollapsed={isHandCollapsed}
+                onToggleCollapse={() => setIsHandCollapsed((prev) => !prev)}
                 cards={
                   isPukarSelectionPending && isViewingActivePlayer
                     ? []

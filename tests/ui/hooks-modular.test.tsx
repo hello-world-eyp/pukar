@@ -71,6 +71,7 @@ describe('Modular UI Hooks (Stage 2 Architecture Verification)', () => {
     dispatchAction: vi.fn(),
     kickPlayer: vi.fn(),
     leaveRoom: vi.fn(),
+    endGame: vi.fn(),
     clearError: vi.fn(),
   };
 
@@ -129,6 +130,7 @@ describe('Modular UI Hooks (Stage 2 Architecture Verification)', () => {
       dispatchAction: vi.fn(),
       kickPlayer: vi.fn(),
       leaveRoom: vi.fn(),
+      endGame: vi.fn(),
       clearError: vi.fn(),
     };
 

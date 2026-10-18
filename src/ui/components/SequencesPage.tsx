@@ -424,10 +424,10 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
           </div>
         </div>
 
-        {/* Enlarged Cards Row - Clean background matching normal table */}
+        {/* Enlarged Cards Row - Clean background matching normal table without scroll trapping */}
         <div
           data-testid={`enlarged-cards-row-${meld.id}`}
-          className="flex items-center overflow-x-auto overflow-y-hidden overscroll-y-contain pt-3 pb-2.5 px-1 scrollbar-thin"
+          className="flex items-center pt-3 pb-2.5 px-1"
         >
           {sortedSlots.map((slot, index) => {
             const card = slot.card;
@@ -440,11 +440,17 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
               wildLabel = `Wild (${repRank}${repSuit})`;
             }
 
+            const baseMargin = -58;
+            const overlapMargin =
+              sortedSlots.length > 7
+                ? Math.max(-88, baseMargin - (sortedSlots.length - 7) * 5)
+                : baseMargin;
+
             return (
               <div
                 key={`${card.id}-${slot.representedRank}-${index}`}
                 style={{
-                  marginLeft: index === 0 ? 0 : '-58px',
+                  marginLeft: index === 0 ? 0 : `${overlapMargin}px`,
                   zIndex: index + 1,
                 }}
                 className="relative transition-transform hover:-translate-y-3 hover:!z-30 shrink-0"

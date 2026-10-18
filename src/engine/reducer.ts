@@ -205,17 +205,10 @@ function handleDrawFromStock(state: GameState): {
   let pukarPool = [...state.pukarPool];
   let lastTurnTriggeredByDeckExhaust = state.lastTurnTriggeredByDeckExhaust ?? false;
 
-  // Stock deck exhaustion handling
-  if (remainingStock.length === 0) {
-    if (pukarPool.length >= 1) {
-      // Pop 1 Pukar to become new Stock deck (shuffled per Spec Section 3.5)
-      remainingStock = shuffleDeck(pukarPool[0]);
-      pukarPool = pukarPool.slice(1);
-    } else {
-      // Deck exhausted with 0 Pukars: trigger final turn flag
-      lastTurnTriggeredByDeckExhaust = true;
-    }
-  }
+  // When the last card is picked up from the stock deck, remainingStock becomes empty ([]).
+  // The Pukar deck is NOT moved to the normal deck during this player's turn, so the player
+  // still has the opportunity to show and claim a Pukar.
+  // Replenishment occurs in handleDiscardCard once the player has finished their turn.
 
   const updatedPlayers = state.players.map((p, idx) => {
     if (idx !== state.currentPlayerIndex) return p;
@@ -708,6 +701,8 @@ function handleDiscardCard(
   let nextPlayerIndex = state.currentPlayerIndex;
   let nextPhase: TurnPhase = state.phase;
   let finalTurnPlayerIndex = state.finalTurnPlayerIndex ?? null;
+  let nextStockDeck = state.stockDeck;
+  let lastTurnTriggeredByDeckExhaust = state.lastTurnTriggeredByDeckExhaust ?? false;
 
   if (!isRoundOver) {
     if (claimedPukarMidDiscard) {
@@ -720,7 +715,20 @@ function handleDiscardCard(
       nextPlayerIndex = (state.currentPlayerIndex + 1) % state.playerCount;
       nextPhase = 'DRAW';
 
-      if (state.lastTurnTriggeredByDeckExhaust && roundStatus === 'PLAYING') {
+      // Stock deck replenishment after player finishes turn:
+      // If the stock deck is empty, now that the player has finished their turn,
+      // pop 1 Pukar deck to replenish the stock deck (shuffled).
+      if (nextStockDeck.length === 0) {
+        if (pukarPool.length >= 1) {
+          nextStockDeck = shuffleDeck(pukarPool[0]);
+          pukarPool = pukarPool.slice(1);
+        } else {
+          // Both stock deck and Pukar pool are exhausted: trigger final turn
+          lastTurnTriggeredByDeckExhaust = true;
+        }
+      }
+
+      if ((state.lastTurnTriggeredByDeckExhaust || lastTurnTriggeredByDeckExhaust) && roundStatus === 'PLAYING') {
         roundStatus = 'FINAL_TURN';
         finalTurnPlayerIndex = nextPlayerIndex;
       }
@@ -754,6 +762,7 @@ function handleDiscardCard(
 
   let nextState: GameState = {
     ...state,
+    stockDeck: nextStockDeck,
     players: updatedPlayers,
     discardPile: updatedDiscardPile,
     pukarPool,
@@ -768,6 +777,7 @@ function handleDiscardCard(
     roundStatus,
     isRoundOver,
     finalTurnPlayerIndex,
+    lastTurnTriggeredByDeckExhaust,
     lastPickedUpCard: null,
     newlyPickedUpCardIds,
     cardsPickedUpThisTurn,

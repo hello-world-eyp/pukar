@@ -275,12 +275,136 @@ export function findPotentialNewMelds(
 }
 
 /**
+ * Evaluates whether a candidate new run should be held in hand rather than played as a separate new meld,
+ * because the team already has an existing table sequence in the same suit that these cards can extend.
+ *
+ * Rule: Playing a fragmented new run (e.g. Q♠-K♠-A♠) when the team already has a run in the same suit
+ * (e.g. 5♠-10♠) permanently prevents those cards from joining the larger sequence.
+ * The bot should only open the separate sequence if:
+ * 1. It is the final turn (dumping deadwood), OR
+ * 2. Playing it guarantees Pukar on this turn, OR
+ * 3. The bot knows partner has a guaranteed connecting card (e.g. Jack/10) AND partner is close to Pukar.
+ * Otherwise, the bot keeps the cards in hand and waits for the connecting card to arrive.
+ */
+export function shouldHoldNewRunToExtendExistingSequence(
+  candidateMeld: CandidateMeld,
+  tableMelds: Meld[],
+  options?: {
+    isFinalTurn?: boolean;
+    canGuaranteePukar?: boolean;
+    partnerCardCount?: number;
+    partnerKnownCards?: Card[];
+  }
+): boolean {
+  if (candidateMeld.type !== 'RUN' || !candidateMeld.suit) {
+    return false;
+  }
+  if (options?.isFinalTurn || options?.canGuaranteePukar) {
+    return false;
+  }
+
+  const existingRunsInSuit = tableMelds.filter(
+    (m) => m.type === 'RUN' && m.suit === candidateMeld.suit
+  );
+  if (existingRunsInSuit.length === 0) {
+    return false;
+  }
+
+  // Find the largest existing team run in this suit
+  const largestRun = existingRunsInSuit.reduce((max, curr) =>
+    curr.cards.length > max.cards.length ? curr : max
+  );
+
+  // If the largest run is already maxed out (13 cards), it cannot be extended further
+  if (largestRun.cards.length >= 13 || (largestRun.slots && largestRun.slots.length >= 13)) {
+    return false;
+  }
+
+  const runRanks = largestRun.slots
+    ? largestRun.slots
+        .map((s) => s.representedRank)
+        .filter((r) => r >= 2)
+        .sort((a, b) => a - b)
+    : largestRun.cards
+        .map((c) => c.rank)
+        .filter((r) => r >= 2)
+        .sort((a, b) => a - b);
+
+  if (runRanks.length === 0) return false;
+
+  const minRunRank = runRanks[0];
+  const maxRunRank = runRanks[runRanks.length - 1];
+
+  // Get candidate meld ranks (either natural or represented via validation)
+  const validation = validateNewMeld(candidateMeld.cards);
+  const candidateRanks = validation.valid && validation.slots
+    ? validation.slots.map((s) => s.representedRank).sort((a, b) => a - b)
+    : candidateMeld.cards
+        .map((c) => c.rank)
+        .filter((r) => r >= 2)
+        .sort((a, b) => a - b);
+
+  if (candidateRanks.length === 0) return false;
+
+  const minCandidateRank = candidateRanks[0];
+  const maxCandidateRank = candidateRanks[candidateRanks.length - 1];
+
+  let gap = Infinity;
+  const missingRanks: number[] = [];
+
+  if (minCandidateRank > maxRunRank) {
+    // Candidate is higher in rank than largestRun (e.g. Q-K-A [12-14] vs 5-10)
+    gap = minCandidateRank - maxRunRank - 1;
+    for (let r = maxRunRank + 1; r < minCandidateRank; r++) {
+      missingRanks.push(r);
+    }
+  } else if (maxCandidateRank < minRunRank) {
+    // Candidate is lower in rank than largestRun (e.g. 3-5 vs 7-10)
+    gap = minRunRank - maxCandidateRank - 1;
+    for (let r = maxCandidateRank + 1; r < minRunRank; r++) {
+      missingRanks.push(r);
+    }
+  } else {
+    // Overlapping ranks: duplicate cards in the same suit
+    return false;
+  }
+
+  // If gap is 0, cards directly connect to the existing sequence!
+  // They should be added via ADD_TO_MELD in additions phase, never as a separate new meld.
+  if (gap === 0) {
+    return true;
+  }
+
+  // If gap is within connecting distance (gap <= 2, or gap <= 3 if existing run is substantial >= 6 cards):
+  const maxAllowedGap = largestRun.cards.length >= 6 ? 3 : 2;
+  if (gap <= maxAllowedGap) {
+    const isPartnerCloseToPukar =
+      options?.partnerCardCount !== undefined && options.partnerCardCount <= 3;
+    const partnerHasConnectingCard = (options?.partnerKnownCards || []).some(
+      (c) =>
+        (c.suit === candidateMeld.suit && missingRanks.includes(c.rank)) ||
+        isWildcard(c)
+    );
+
+    // Only open if partner has guaranteed connecting card AND is close to Pukar
+    if (isPartnerCloseToPukar && partnerHasConnectingCard) {
+      return false; // Allowed to open
+    }
+
+    // Otherwise, hold cards in hand and wait for connecting card
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Finds cards in hand that can legally be added to existing team melds on table.
  */
 export function findPotentialAdditionsToMelds(
   hand: Card[],
   tableMelds: Meld[],
-  options?: { isCloseToPukar?: boolean; isFinalTurn?: boolean }
+  options?: { isCloseToPukar?: boolean; isFinalTurn?: boolean; canGuaranteePukar?: boolean }
 ): CandidateAddition[] {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
   const isFinalTurn = options?.isFinalTurn ?? false;
@@ -296,7 +420,7 @@ export function findPotentialAdditionsToMelds(
     // 1. Check single card additions
     for (const card of hand) {
       // Disallow using cross-suit 2 in a run unless:
-      // 1. Very close to Pukar (<= 3 cards)
+      // 1. Very close to Pukar (<= 3 cards) or Pukar guaranteed
       // 2. The run is NOT clean (never taint clean sequences and forfeit Clean 7 / Pure 13)
       // 3. No Natural Joker is available in hand (prefer Natural Joker whenever 2 suit doesn't match)
       if (
@@ -305,18 +429,19 @@ export function findPotentialAdditionsToMelds(
         card.rank === 2 &&
         card.suit !== meld.suit
       ) {
-        if ((!isCloseToPukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
+        if ((!isCloseToPukar && !options?.canGuaranteePukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
           continue;
         }
       }
 
-      // Guard: Do not add wildcards (Natural Jokers or 2s) to 5- or 6-card clean runs unless close to Pukar or in final turn.
+      // Guard: Do not add wildcards (Natural Jokers or 2s) to clean runs unless close to Pukar or Pukar is guaranteed this turn or in final turn.
       // Preserves 200-pt Clean 7 and 500-pt Pure 13 opportunities.
       if (
         meld.type === 'RUN' &&
         isCleanRun &&
         meld.cards.length >= 5 &&
         !isCloseToPukar &&
+        !options?.canGuaranteePukar &&
         !isFinalTurn &&
         isNaturalJoker(card)
       ) {
@@ -324,18 +449,33 @@ export function findPotentialAdditionsToMelds(
       }
 
       const validation = canAddCardsToMeld(meld, [card]);
-      if (validation.valid) {
-        // If adding this card would make a 5- or 6-card clean run dirty, disallow it unless close to Pukar or in final turn
+      if (validation.valid && validation.updatedSlots) {
+        // Evaluate score impact
+        const scoreBefore = evaluateMeldScore(meld).points;
+        const updatedMeld: Meld = {
+          ...meld,
+          cards: [...meld.cards, card],
+          slots: validation.updatedSlots,
+        };
+        const scoreAfter = evaluateMeldScore(updatedMeld).points;
+
+        // Rule: Never reduce a sequence's points (e.g. from 200 to 100 or 500 to 100)
+        // unless Pukar / completion is guaranteed this turn.
+        if (scoreAfter < scoreBefore && !options?.canGuaranteePukar) {
+          continue;
+        }
+
+        // If adding this card would make a 5- or 6-card clean run dirty, disallow it
+        // unless close to Pukar or Pukar is guaranteed this turn or in final turn
         if (
           meld.type === 'RUN' &&
           isCleanRun &&
           meld.cards.length >= 5 &&
           !isCloseToPukar &&
+          !options?.canGuaranteePukar &&
           !isFinalTurn
         ) {
-          const wouldMakeDirty = validation.updatedSlots
-            ? validation.updatedSlots.some((s) => s.isWildcard)
-            : isWildcard(card);
+          const wouldMakeDirty = validation.updatedSlots.some((s) => s.isWildcard);
           if (wouldMakeDirty) {
             continue;
           }
@@ -373,7 +513,7 @@ export function findPotentialAdditionsToMelds(
             meld.suit &&
             pair.some((c) => c.rank === 2 && c.suit !== meld.suit)
           ) {
-            if ((!isCloseToPukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
+            if ((!isCloseToPukar && !options?.canGuaranteePukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
               continue;
             }
           }
@@ -383,6 +523,7 @@ export function findPotentialAdditionsToMelds(
             isCleanRun &&
             meld.cards.length >= 5 &&
             !isCloseToPukar &&
+            !options?.canGuaranteePukar &&
             !isFinalTurn &&
             pair.some((c) => isNaturalJoker(c))
           ) {
@@ -390,17 +531,31 @@ export function findPotentialAdditionsToMelds(
           }
 
           const validation = canAddCardsToMeld(meld, pair);
-          if (validation.valid) {
+          if (validation.valid && validation.updatedSlots) {
+            // Evaluate score impact
+            const scoreBefore = evaluateMeldScore(meld).points;
+            const updatedMeld: Meld = {
+              ...meld,
+              cards: [...meld.cards, ...pair],
+              slots: validation.updatedSlots,
+            };
+            const scoreAfter = evaluateMeldScore(updatedMeld).points;
+
+            // Rule: Never reduce a sequence's points (e.g. from 200 to 100 or 500 to 100)
+            // unless Pukar / completion is guaranteed this turn.
+            if (scoreAfter < scoreBefore && !options?.canGuaranteePukar) {
+              continue;
+            }
+
             if (
               meld.type === 'RUN' &&
               isCleanRun &&
               meld.cards.length >= 5 &&
               !isCloseToPukar &&
+              !options?.canGuaranteePukar &&
               !isFinalTurn
             ) {
-              const wouldMakeDirty = validation.updatedSlots
-                ? validation.updatedSlots.some((s) => s.isWildcard)
-                : pair.some((c) => isWildcard(c));
+              const wouldMakeDirty = validation.updatedSlots.some((s) => s.isWildcard);
               if (wouldMakeDirty) {
                 continue;
               }
@@ -449,6 +604,7 @@ function findCompletionSequence(
     preserveDiscardCard?: boolean;
     isCloseToPukar?: boolean;
     isFinalTurn?: boolean;
+    canGuaranteePukar?: boolean;
   },
   depth = 0
 ): CandidateAddition[] | null {
@@ -467,6 +623,7 @@ function findCompletionSequence(
   const adds = findPotentialAdditionsToMelds(remainingAvailable, [simMeld], {
     isCloseToPukar: options?.isCloseToPukar,
     isFinalTurn: options?.isFinalTurn,
+    canGuaranteePukar: options?.canGuaranteePukar,
   });
   if (adds.length === 0) {
     return null;
@@ -520,9 +677,9 @@ function findCompletionSequence(
 }
 
 /**
- * Greedily resolves non-overlapping meld and addition plan for the turn.
+ * Internal implementation of meld and addition plan resolution.
  */
-export function findBestMeldPlan(
+function internalFindBestMeldPlan(
   hand: Card[],
   teamMelds: Meld[],
   options?: {
@@ -532,6 +689,9 @@ export function findBestMeldPlan(
     isFinalTurn?: boolean;
     allTableMelds?: Meld[];
     requirePure?: boolean;
+    canGuaranteePukar?: boolean;
+    partnerKnownCards?: Card[];
+    partnerCardCount?: number;
   }
 ): {
   meldsToPlay: CandidateMeld[];
@@ -565,7 +725,7 @@ export function findBestMeldPlan(
     } else if (currentMeld.type === 'RUN') {
       if (initialCount < 7) {
         targetCount = 7;
-      } else if (initialCount < 13) {
+      } else if (initialCount < 13 && currentMeld.isClean) {
         targetCount = 13;
       }
     }
@@ -633,6 +793,19 @@ export function findBestMeldPlan(
           }
         }
 
+        // Do not open a separate fragmented sequence if the team already has a table run in the same suit
+        // that these cards can extend, unless final turn, guaranteed Pukar, or partner is close to Pukar with connecting card.
+        if (
+          shouldHoldNewRunToExtendExistingSequence(meld, virtualMelds, {
+            isFinalTurn,
+            canGuaranteePukar: options?.canGuaranteePukar,
+            partnerCardCount: options?.partnerCardCount,
+            partnerKnownCards: options?.partnerKnownCards,
+          })
+        ) {
+          continue;
+        }
+
         meldsToPlay.push(meld);
         meld.cards.forEach((c) => usedCardIds.add(c.id));
       }
@@ -679,7 +852,7 @@ export function findBestMeldPlan(
     const potentialAdditions = findPotentialAdditionsToMelds(
       remainingCards,
       virtualMelds,
-      { isCloseToPukar, isFinalTurn }
+      { isCloseToPukar, isFinalTurn, canGuaranteePukar: options?.canGuaranteePukar }
     );
     if (potentialAdditions.length === 0) {
       break;
@@ -711,22 +884,28 @@ export function findBestMeldPlan(
         }
       }
 
-      additionsToPlay.push(add);
-      add.cards.forEach((c) => usedCardIds.add(c.id));
-
       const targetMeldIndex = virtualMelds.findIndex((m) => m.id === add.meldId);
       if (targetMeldIndex >= 0) {
         const targetMeld = virtualMelds[targetMeldIndex];
         const validation = canAddCardsToMeld(targetMeld, add.cards);
         if (validation.valid && validation.updatedSlots) {
+          const scoreBefore = evaluateMeldScore(targetMeld).points;
           const meldCardsWithoutPickedUp = validation.pickedUpCard
             ? targetMeld.cards.filter((c) => c.id !== validation.pickedUpCard!.id)
             : targetMeld.cards;
-          virtualMelds[targetMeldIndex] = {
+          const nextVirtualMeld: Meld = {
             ...targetMeld,
             cards: [...meldCardsWithoutPickedUp, ...add.cards],
             slots: validation.updatedSlots,
           };
+          const scoreAfter = evaluateMeldScore(nextVirtualMeld).points;
+          if (scoreAfter < scoreBefore && !options?.canGuaranteePukar) {
+            continue;
+          }
+
+          virtualMelds[targetMeldIndex] = nextVirtualMeld;
+          additionsToPlay.push(add);
+          add.cards.forEach((c) => usedCardIds.add(c.id));
         }
       }
 
@@ -744,6 +923,67 @@ export function findBestMeldPlan(
     additionsToPlay,
     usedCardIds,
   };
+}
+
+/**
+ * Greedily resolves non-overlapping meld and addition plan for the turn.
+ * Guarantees that no sequence will have its points reduced (e.g. from 200 to 100)
+ * unless a Pukar / completion is guaranteed on this turn.
+ */
+export function findBestMeldPlan(
+  hand: Card[],
+  teamMelds: Meld[],
+  options?: {
+    disallowedCardId?: string;
+    preserveDiscardCard?: boolean;
+    isCloseToPukar?: boolean;
+    isFinalTurn?: boolean;
+    allTableMelds?: Meld[];
+    requirePure?: boolean;
+    canGuaranteePukar?: boolean;
+    partnerKnownCards?: Card[];
+    partnerCardCount?: number;
+  }
+): {
+  meldsToPlay: CandidateMeld[];
+  additionsToPlay: CandidateAddition[];
+  usedCardIds: Set<string>;
+} {
+  if (options?.canGuaranteePukar !== undefined) {
+    return internalFindBestMeldPlan(hand, teamMelds, options);
+  }
+
+  // 1. Safe plan: never reduce points of any sequence (e.g. 200 -> 100 or 500 -> 100)
+  const safePlan = internalFindBestMeldPlan(hand, teamMelds, {
+    ...options,
+    canGuaranteePukar: false,
+  });
+
+  const remainingSafeHand = hand.filter((c) => !safePlan.usedCardIds.has(c.id));
+  const isSafePukar =
+    remainingSafeHand.length === 1 &&
+    (!options?.disallowedCardId || remainingSafeHand[0].id !== options.disallowedCardId);
+
+  if (isSafePukar) {
+    return safePlan;
+  }
+
+  // 2. Speculative Pukar plan: check if allowing point-reducing additions guarantees Pukar this turn
+  const pukarPlan = internalFindBestMeldPlan(hand, teamMelds, {
+    ...options,
+    canGuaranteePukar: true,
+  });
+
+  const remainingPukarHand = hand.filter((c) => !pukarPlan.usedCardIds.has(c.id));
+  const isPukarGuaranteed =
+    remainingPukarHand.length === 1 &&
+    (!options?.disallowedCardId || remainingPukarHand[0].id !== options.disallowedCardId);
+
+  if (isPukarGuaranteed) {
+    return pukarPlan;
+  }
+
+  return safePlan;
 }
 
 /**
@@ -1349,8 +1589,374 @@ export interface DiscardPickupOptions {
 }
 
 /**
- * Centrally evaluates whether a bot should take the discard pile based on its personality,
- * card volume, connecting cards, wildcard presence, and opponent denial.
+ * Checks whether the top discard card (or any card in the discard pile) completes or advances
+ * a high-value milestone run (Pure 13 for 500 pts, Clean 7 for 200 pts) for the bot's team,
+ * or denies an opponent completing a 500-pt Pure 13 or 200-pt Clean 7.
+ */
+export function isPotential500or200Card(
+  topCard: Card,
+  discardPile: Card[],
+  teamMelds: Meld[],
+  opponentMelds: Meld[],
+  opponentWants?: Set<string>
+): boolean {
+  const cardsToCheck = discardPile.length > 0 ? discardPile : [topCard];
+
+  // 1. Team's own 500 milestone (RUN with 10-12 cards)
+  const team13Runs = teamMelds.filter(
+    (m) =>
+      m.type === 'RUN' &&
+      (m.cards?.length ?? m.slots?.length ?? 0) >= 10 &&
+      (m.cards?.length ?? m.slots?.length ?? 0) < 13
+  );
+  if (team13Runs.some((m) => cardsToCheck.some((c) => canAddCardsToMeld(m, [c]).valid))) {
+    return true;
+  }
+
+  // 2. Team's own 200 milestone (Pure RUN with 5-6 cards or SET with 5-6 cards)
+  const team7Melds = teamMelds.filter((m) => {
+    const len = m.cards?.length ?? m.slots?.length ?? 0;
+    if (len < 5 || len >= 7) return false;
+    if (m.type === 'RUN') {
+      const cards = m.cards || m.slots?.map((s) => s.card) || [];
+      return isPureRun(cards, m.slots);
+    }
+    if (m.type === 'SET') {
+      return !m.slots?.some((s) => s.isWildcard);
+    }
+    return false;
+  });
+  if (team7Melds.some((m) => cardsToCheck.some((c) => canAddCardsToMeld(m, [c]).valid))) {
+    return true;
+  }
+
+  // 3. Opponent's 500 milestone denial (Opponent RUN with 10-12 cards)
+  const opp13Runs = opponentMelds.filter(
+    (m) =>
+      m.type === 'RUN' &&
+      (m.cards?.length ?? m.slots?.length ?? 0) >= 10 &&
+      (m.cards?.length ?? m.slots?.length ?? 0) < 13
+  );
+  if (opp13Runs.some((m) => cardsToCheck.some((c) => canAddCardsToMeld(m, [c]).valid))) {
+    return true;
+  }
+
+  // 4. Opponent's 200 milestone denial (Opponent pure RUN with 5-6 cards or SET with 5-6 cards)
+  const opp7Melds = opponentMelds.filter((m) => {
+    const len = m.cards?.length ?? m.slots?.length ?? 0;
+    if (len < 5 || len >= 7) return false;
+    if (m.type === 'RUN') {
+      const cards = m.cards || m.slots?.map((s) => s.card) || [];
+      return isPureRun(cards, m.slots);
+    }
+    if (m.type === 'SET') {
+      return !m.slots?.some((s) => s.isWildcard);
+    }
+    return false;
+  });
+  if (opp7Melds.some((m) => cardsToCheck.some((c) => canAddCardsToMeld(m, [c]).valid))) {
+    return true;
+  }
+
+  // 5. Opponent wants matching milestone ranks
+  if (opponentWants) {
+    for (const m of [...opp13Runs, ...opp7Melds]) {
+      if (m.type === 'RUN' && m.suit) {
+        const ranks = m.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+        if (ranks.length > 0) {
+          const minR = ranks[0];
+          const maxR = ranks[ranks.length - 1];
+          if (
+            (minR > 2 && opponentWants.has(`${m.suit}_${minR - 1}`)) ||
+            (maxR < 14 && opponentWants.has(`${m.suit}_${maxR + 1}`))
+          ) {
+            if (cardsToCheck.some((c) => c.suit === m.suit && (c.rank === minR - 1 || c.rank === maxR + 1))) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Evaluates whether a bot is very close to declaring Pukar or finishing the round:
+ * - Hand length <= 2 (1 or 2 cards left in hand)
+ * - Hand length < 7 with high connectivity (deadwood <= 2, or nearly all cards connect towards Pukar)
+ */
+export function isBotCloseToPukar(
+  hand: Card[],
+  teamMelds: Meld[],
+  requirePure: boolean = false
+): boolean {
+  if (hand.length >= 7) {
+    return false;
+  }
+
+  // 1 or 2 cards left is always close to Pukar / endgame
+  if (hand.length <= 2) {
+    return true;
+  }
+
+  // Check if hand cards already form melds or have table additions:
+  const meldPlan = findBestMeldPlan(hand, teamMelds, { requirePure });
+  const committedCount = meldPlan.usedCardIds.size;
+  const deadwoodCount = hand.length - committedCount;
+
+  // If bot has melds formed and only 1 or 2 deadwood cards remaining,
+  // it is very close to Pukar! (e.g. 4 cards with 3 melded = 1 deadwood;
+  // 5 cards with 3-4 melded = 1-2 deadwood; 6 cards with 4-6 melded = 0-2 deadwood)
+  if (committedCount > 0 && deadwoodCount <= 2) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Checks whether picking up the discard pile allows the bot to declare Pukar THIS TURN
+ * (i.e. hand + discard pile can meld all cards except exactly 1 card to discard).
+ */
+export function canDeclareImmediatePukar(
+  hand: Card[],
+  discardPile: Card[],
+  teamMelds: Meld[],
+  requirePure: boolean = false,
+  options: DiscardPickupOptions
+): boolean {
+  if ((options.pukarPoolCount ?? 2) === 0) return false;
+  const combined = [...hand, ...discardPile];
+  const plan = findBestMeldPlan(combined, teamMelds, {
+    requirePure,
+    canGuaranteePukar: true,
+  });
+  const uncommitted = combined.filter((c) => !plan.usedCardIds.has(c.id));
+  if (uncommitted.length !== 1) return false;
+
+  const discardCard = uncommitted[0];
+  if (discardPile.length === 1 && discardCard.id === discardPile[0].id) {
+    return false;
+  }
+
+  // Defending against opponent 500:
+  // Discarding this card must NOT complete an opponent 500-pt Pure 13 sequence!
+  const opponentMelds = options.allTableMelds
+    ? options.allTableMelds.filter((m) => m.team !== (options.botTeam ?? teamMelds[0]?.team))
+    : [];
+  const completesOpp500 = opponentMelds.some(
+    (m) =>
+      m.type === 'RUN' &&
+      (m.cards?.length ?? m.slots?.length ?? 0) === 12 &&
+      (m.isPure || !m.slots.some((s) => s.isWildcard)) &&
+      canAddCardsToMeld(m, [discardCard]).valid
+  );
+  if (completesOpp500) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Rule 5 Helper: Determines whether a single discard card helps the bot at all:
+ * - Is a wildcard / Joker
+ * - Directly adds to team table meld
+ * - Connects to open ends of team RUN on table
+ * - Forms a new valid meld with hand cards
+ * - Connects to hand cards (same rank, or same suit within 2 ranks)
+ * - Denies an opponent milestone (500/200) or table meld / want
+ */
+export function doesCardHelpBot(
+  card: Card,
+  hand: Card[],
+  teamMelds: Meld[],
+  opponentMelds: Meld[],
+  opponentWants?: Set<string>,
+  requirePure: boolean = false
+): boolean {
+  // Wildcard / Joker always helps
+  if (isWildcard(card) || isNaturalJoker(card) || card.rank === 2) {
+    return true;
+  }
+
+  // 1. Can be added directly to an existing team meld on table
+  if (teamMelds.some((m) => canAddCardsToMeld(m, [card]).valid)) {
+    return true;
+  }
+
+  // 2. Open-end neighbor of team RUN on table (distance <= 2 of open end)
+  for (const meld of teamMelds) {
+    if (meld.type === 'RUN' && card.suit && meld.suit === card.suit) {
+      const ranks = meld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+      if (ranks.length > 0) {
+        const minR = ranks[0];
+        const maxR = ranks[ranks.length - 1];
+        if (Math.abs(card.rank - minR) <= 2 || Math.abs(card.rank - maxR) <= 2) {
+          return true;
+        }
+        if ((card.rank === 14 && minR <= 3) || (card.rank === 3 && minR === 1)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  // 3. Forms a new valid meld with hand cards
+  const testHand = [...hand, card];
+  const newMelds = findPotentialNewMelds(testHand, { requirePure });
+  if (newMelds.some((m) => m.cards.some((c) => c.id === card.id))) {
+    return true;
+  }
+
+  // 4. Connects to hand cards:
+  // - Same rank (pair/set potential)
+  // - Same suit within 2 ranks (run potential)
+  for (const h of hand) {
+    if (isWildcard(h) || isNaturalJoker(h) || h.rank === 2) continue;
+    if (h.rank === card.rank) {
+      return true;
+    }
+    if (h.suit && card.suit && h.suit === card.suit) {
+      if (Math.abs(h.rank - card.rank) <= 2) {
+        return true;
+      }
+      if ((h.rank === 14 && card.rank === 3) || (card.rank === 14 && h.rank === 3)) {
+        return true;
+      }
+    }
+  }
+
+  // 5. Milestone denial or opponent table meld denial
+  if (isPotential500or200Card(card, [card], teamMelds, opponentMelds, opponentWants)) {
+    return true;
+  }
+  if (opponentMelds.some((m) => canAddCardsToMeld(m, [card]).valid)) {
+    return true;
+  }
+  if (opponentWants) {
+    const cardKey = card.suit ? `${card.suit}_${card.rank}` : `RANK_${card.rank}`;
+    if (opponentWants.has(cardKey) || opponentWants.has(card.id) || opponentWants.has(`RANK_${card.rank}`)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks if a specific card can be safely discarded without:
+ * 1. Hindering own sequences (committed melds, team table additions, or adjacent sequence partners in hand)
+ * 2. Giving opponents points (completing 500/200 milestones, feeding opponent table melds, or matching opponent wants)
+ */
+export function isCardSafeDiscard(
+  card: Card,
+  allCards: Card[],
+  teamMelds: Meld[],
+  opponentMelds: Meld[],
+  opponentWants?: Set<string>,
+  committedCardIds?: Set<string>,
+  disallowedCardId?: string
+): boolean {
+  if (disallowedCardId && card.id === disallowedCardId) return false;
+  if (isWildcard(card) || isNaturalJoker(card) || card.rank === 2) return false;
+  if (committedCardIds && committedCardIds.has(card.id)) return false;
+
+  // 1. Must not add to our team's table melds (waste of our points)
+  if (teamMelds.some((m) => canAddCardsToMeld(m, [card]).valid)) {
+    return false;
+  }
+
+  // 2. Must not give opponents a lot of points:
+  // Completes opponent 500-pt Pure 13, 200-pt Clean 7, 7-card run, or adds directly to open opponent melds
+  for (const oppMeld of opponentMelds) {
+    if (canAddCardsToMeld(oppMeld, [card]).valid) {
+      return false;
+    }
+    if (oppMeld.type === 'RUN' && card.suit && oppMeld.suit === card.suit) {
+      const ranks = oppMeld.slots.map((s) => s.representedRank).sort((a, b) => a - b);
+      if (ranks.length > 0) {
+        const minR = ranks[0];
+        const maxR = ranks[ranks.length - 1];
+        if (card.rank === minR - 1 || card.rank === maxR + 1 || (card.rank === 14 && minR === 2)) {
+          return false;
+        }
+      }
+    } else if (oppMeld.type === 'SET') {
+      const setRank =
+        oppMeld.rank ??
+        oppMeld.slots.find((s) => !s.isWildcard)?.representedRank ??
+        oppMeld.cards?.find((c) => !isWildcard(c))?.rank;
+      if (setRank !== undefined && card.rank === setRank) {
+        return false;
+      }
+    }
+  }
+
+  // 3. Must not match opponent wants
+  if (opponentWants) {
+    const cardKey = card.suit ? `${card.suit}_${card.rank}` : `RANK_${card.rank}`;
+    if (
+      opponentWants.has(cardKey) ||
+      opponentWants.has(card.id) ||
+      opponentWants.has(`RANK_${card.rank}`)
+    ) {
+      return false;
+    }
+  }
+
+  // 4. Must not hinder own sequences:
+  // If card is part of a same-suit adjacent pair in hand (e.g. 8♠-9♠),
+  // throwing it breaks that sequence!
+  const hasAdjacentSequencePartner = allCards.some(
+    (other) =>
+      other.id !== card.id &&
+      (!committedCardIds || !committedCardIds.has(other.id)) &&
+      other.suit === card.suit &&
+      Math.abs(other.rank - card.rank) === 1
+  );
+  if (hasAdjacentSequencePartner) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Evaluates whether there is at least one safe card to discard in the given card pool.
+ */
+export function hasSafeDiscard(
+  cards: Card[],
+  teamMelds: Meld[],
+  opponentMelds: Meld[],
+  opponentWants?: Set<string>,
+  requirePure: boolean = false,
+  disallowedCardId?: string
+): boolean {
+  const plan = findBestMeldPlan(cards, teamMelds, { requirePure });
+  return cards.some((card) =>
+    isCardSafeDiscard(
+      card,
+      cards,
+      teamMelds,
+      opponentMelds,
+      opponentWants,
+      plan.usedCardIds,
+      disallowedCardId
+    )
+  );
+}
+
+/**
+ * Centrally evaluates whether a bot should take the discard pile based on the 5 prioritized rules:
+ * 1. If very close to a Pukar and not letting a potential 500-pt or 200-pt card go, prioritize stock deck.
+ * 2. If the card helps connect cards (1 to 2 ranks close), pick up ONLY IF bot has a safe discard
+ *    that will not hinder its sequences or give opponents a lot of points.
+ * 3. If there are 3+ cards, tendency should be pick unless moving close to a Pukar (< 7 cards & connected).
+ * 4. If bot doesn't have good cards to discard and there are 2+ cards at bottom, pick (except Fast Chachi).
+ * 5. If there is only 1 card in discard which doesn't help at all, NEVER pick it up.
  */
 export function evaluateDiscardPilePickup(
   hand: Card[],
@@ -1360,6 +1966,11 @@ export function evaluateDiscardPilePickup(
 ): boolean {
   if (!discardPile || discardPile.length === 0) {
     return false;
+  }
+
+  // Fallback: If stock deck is exhausted and discard pile has cards, must take discard pile
+  if (options.stockDeckCount === 0) {
+    return true;
   }
 
   const pileLength = discardPile.length;
@@ -1379,103 +1990,26 @@ export function evaluateDiscardPilePickup(
     return false;
   }
 
-  // 1. Wildcard / Joker Rule (Issue 3: "If a joker is at the bottom, they should not just leave it unless there is a good reason to")
+  const opponentMelds = options.allTableMelds
+    ? options.allTableMelds.filter((m) => m.team !== (options.botTeam ?? teamMelds[0]?.team))
+    : [];
+
+  // Immediate Winning / Claiming Pukar check:
+  if (canDeclareImmediatePukar(hand, discardPile, teamMelds, requirePure, options)) {
+    return true;
+  }
+
+  // Wildcard / Joker in pile: unconditionally valuable across all bots unless endgame guard triggered above
   const hasJokerInPile = discardPile.some(
     (c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2
   );
-
   if (hasJokerInPile) {
     return true;
   }
 
-  // 2. Fast Chachi specific personality rule:
-  // Discard hoarder with a ceiling at 14 cards.
-  // When <= 14 cards, hoards 3+ card piles unconditionally.
-  // On smaller piles (or when > 14 cards), takes if top card forms an extreme run (A-2-3 or A-K-Q).
-  // If > 14 cards, she stops blind-hoarding and falls through to Section 3 (immediate melds / table additions).
-  if (options.personality === 'FAST_CHACHI') {
-    if (hand.length <= 14 && pileLength >= 3) return true;
-    const testHand = [...hand, topCard];
-    const newMelds = findPotentialNewMelds(testHand, {
-      requirePure,
-    });
-    const hasExtremeMeld = newMelds.some(
-      (m) =>
-        m.type === 'RUN' &&
-        m.cards.some((c) => c.id === topCard.id) &&
-        m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
-    );
-    if (hasExtremeMeld) return true;
-
-    // Check if single card (or small pile) directly connects to one of the sequences
-    const connectsToTableRun = teamMelds.some(
-      (m) => m.type === 'RUN' && canAddCardsToMeld(m, [topCard]).valid
-    );
-    const createsNewRun = newMelds.some(
-      (m) => m.type === 'RUN' && m.cards.some((c) => c.id === topCard.id)
-    );
-    const connectsToHandRun =
-      hand.length <= 14 &&
-      hand.some(
-        (h) =>
-          !isWildcard(h) &&
-          h.suit !== null &&
-          topCard.suit !== null &&
-          h.suit === topCard.suit &&
-          Math.abs(h.rank - topCard.rank) === 1
-      );
-
-    if (connectsToTableRun || createsNewRun || connectsToHandRun) {
-      // Defending against an opponent 500:
-      // If an opponent has a 12-card sequence chasing 500-pt Pure 13:
-      const opponentMelds = options.allTableMelds
-        ? options.allTableMelds.filter((m) => m.team !== (options.botTeam ?? teamMelds[0]?.team))
-        : [];
-      const opp500Run = opponentMelds.find(
-        (m) =>
-          m.type === 'RUN' &&
-          (m.cards?.length ?? m.slots?.length ?? 0) === 12 &&
-          (m.isPure || !m.slots.some((s) => s.isWildcard))
-      );
-
-      if (opp500Run) {
-        // If topCard completes the opponent 500, picking it up is DENIAL!
-        if (canAddCardsToMeld(opp500Run, [topCard]).valid) {
-          return true;
-        }
-
-        // Check if taking topCard would leave bot with no safe discard:
-        let uncommittedHand = hand;
-        if (connectsToTableRun) {
-          uncommittedHand = hand;
-        } else {
-          const newRun = newMelds.find(
-            (m) => m.type === 'RUN' && m.cards.some((c) => c.id === topCard.id)
-          );
-          if (newRun) {
-            const usedInRun = new Set(newRun.cards.map((c) => c.id));
-            uncommittedHand = hand.filter((c) => !usedInRun.has(c.id));
-          }
-        }
-        const safeDiscards = uncommittedHand.filter(
-          (c) => !canAddCardsToMeld(opp500Run, [c]).valid
-        );
-        if (safeDiscards.length === 0) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    if (hand.length <= 14) return false;
-  }
-
   // Milestone Sequence Priority:
   // If the team has an active sequence chasing a 500-pt 13-card milestone (10-12 cards),
-  // fishing from the stock deck is vastly superior to taking small discard piles of deadwood.
-  // Unless the discard pile contains a Joker/wildcard (handled in Section 1), or directly
-  // extends/completes the milestone run, or is a large pile (>= 4 cards), refuse the discard pile and draw from stock!
+  // fishing from the stock deck is vastly superior to taking small discard piles of deadwood (< 4 cards).
   const milestone13Melds = teamMelds.filter(
     (m) =>
       m.type === 'RUN' &&
@@ -1497,7 +2031,180 @@ export function evaluateDiscardPilePickup(
     }
   }
 
-  // 3. Melds / Additions from whole pile
+  // Milestone 500 / 200 card check (completes/advances team or denies opponent 500/200)
+  const isMilestoneCard = isPotential500or200Card(
+    topCard,
+    discardPile,
+    teamMelds,
+    opponentMelds,
+    options.opponentWants
+  );
+
+  // Check if bot is close to Pukar
+  const closeToPukar = isBotCloseToPukar(hand, teamMelds, requirePure);
+
+  // -------------------------------------------------------------------------
+  // PRIORITY RULE 1:
+  // "If very close to a pukar and not letting a potential 500 point or a 200 point card go,
+  // they should prioritize the deck card as it can help with a pukar."
+  // -------------------------------------------------------------------------
+  if (closeToPukar) {
+    if (isMilestoneCard) {
+      // Must not let a potential 500-pt (Pure 13) or 200-pt (Clean 7) card go!
+      return true;
+    }
+    // If top card directly adds to a team table sequence and pile is small (<= 2 cards),
+    // it can be immediately laid down on the table to reduce remaining hand!
+    const isDirectTableRunAdd = teamMelds.some(
+      (m) => m.type === 'RUN' && canAddCardsToMeld(m, [topCard]).valid
+    );
+    if (isDirectTableRunAdd && pileLength <= 2) {
+      const combined = [...hand, ...discardPile];
+      const disallowedId = pileLength === 1 ? topCard.id : undefined;
+      if (hasSafeDiscard(combined, teamMelds, opponentMelds, options.opponentWants, requirePure, disallowedId)) {
+        return true;
+      }
+    }
+    // Otherwise, prioritize drawing from the stock deck!
+    return false;
+  }
+
+  // -------------------------------------------------------------------------
+  // PRIORITY RULE 5:
+  // "What a bot should never do is there is only one card in discard which doesn't help them at all
+  // and it picks that up to throw a card which might be either trash to them or a more important card to them.
+  // That is a wasted oportunity and no bot should be doing that."
+  // -------------------------------------------------------------------------
+  if (pileLength === 1) {
+    const helps = doesCardHelpBot(
+      topCard,
+      hand,
+      teamMelds,
+      opponentMelds,
+      options.opponentWants,
+      requirePure
+    );
+    if (!helps) {
+      return false; // Strictly refuse 1-card junk!
+    }
+  }
+
+  // Fast Chachi extreme run preference check:
+  if (options.personality === 'FAST_CHACHI') {
+    const testHand = [...hand, topCard];
+    const newMelds = findPotentialNewMelds(testHand, { requirePure });
+    const hasExtremeMeld = newMelds.some(
+      (m) =>
+        m.type === 'RUN' &&
+        m.cards.some((c) => c.id === topCard.id) &&
+        m.cards.some((c) => c.rank === 14 || c.rank === 3 || c.rank === 13)
+    );
+    if (hasExtremeMeld) return true;
+  }
+
+  // Cheetah specific check: when hand <= 3, stay lean for Pukar
+  if (options.personality === 'CHEETAH' && hand.length <= 3) {
+    if (!isMilestoneCard) {
+      return false;
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // PRIORITY RULE 2:
+  // "If the card helps then connect cards - 1 to 2 close to the card then they should pick up.
+  // But only if they also have a card that they can discard and will not hinder their sequences
+  // or give the opponents a lot of points with the card they drop."
+  // -------------------------------------------------------------------------
+  const topConnects = isCardConnecting(topCard, hand, teamMelds);
+  if (topConnects) {
+    // For The Long-Term Guy and Fast Chachi: topCard must add sequence value (same-suit run or table run)
+    // (Fast Chachi focuses strictly on sequences / extreme runs, not sets / three-of-a-kind)
+    const helpsSequence =
+      (options.personality !== 'THE_LONG_TERM_GUY' && options.personality !== 'FAST_CHACHI') ||
+      isCardValuableForSequences(topCard, hand, teamMelds);
+
+    // The Jadugar only takes 1-2 connectors on piles <= 2 if it is a tight pair/run or direct add
+    const jadugarOk =
+      options.personality !== 'THE_JADUGAR' ||
+      pileLength <= 2 &&
+        (teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid) ||
+          hand.some(
+            (h) =>
+              h.rank === topCard.rank ||
+              (h.suit === topCard.suit && Math.abs(h.rank - topCard.rank) <= 1)
+          ));
+
+    if (helpsSequence && jadugarOk) {
+      const combined = [...hand, ...discardPile];
+      const disallowedId = pileLength === 1 ? topCard.id : undefined;
+      const safeDiscardExists = hasSafeDiscard(
+        combined,
+        teamMelds,
+        opponentMelds,
+        options.opponentWants,
+        requirePure,
+        disallowedId
+      );
+
+      if (safeDiscardExists) {
+        if (options.personality === 'FAST_CHACHI' && hand.length > 14) {
+          // Past 14 cards, Fast Chachi stops taking loose connectors
+        } else {
+          return true;
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // PRIORITY RULE 3:
+  // "If there are three or more cards tendency should be pick unless moving close to a pukar
+  // (Less than 7 cards and a lot of connecting which can get them towards pukar)."
+  // -------------------------------------------------------------------------
+  if (pileLength >= 3) {
+    if (closeToPukar) {
+      return false;
+    }
+    if (options.personality === 'FAST_CHACHI') {
+      if (hand.length <= 14) return true;
+    } else if (options.personality === 'THE_JADUGAR') {
+      // The Jadugar requires an immediate meld or direct table add to hoard 3+ cards
+    } else {
+      // Must have at least 1 connecting card or sequence value in the pile to take 3+ cards
+      const hasConnectionInPile = discardPile.some((c) =>
+        options.personality === 'THE_LONG_TERM_GUY'
+          ? isCardValuableForSequences(c, hand, teamMelds)
+          : isCardConnecting(c, hand, teamMelds)
+      );
+      if (hasConnectionInPile || pileLength >= 4) {
+        return true;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // PRIORITY RULE 4:
+  // "If they don't have good cards to discard and there are 2 or more cards at the bottom then pick
+  // (Exception is the Chachi bot, she doesn't do that, she will be a bit more aggresive and doesn't as frequently pick up trash cards)."
+  // -------------------------------------------------------------------------
+  if (pileLength >= 2) {
+    if (options.personality !== 'FAST_CHACHI') {
+      const hasGoodDiscardInHand = hasSafeDiscard(
+        hand,
+        teamMelds,
+        opponentMelds,
+        options.opponentWants,
+        requirePure
+      );
+      if (!hasGoodDiscardInHand) {
+        return true; // Pick up 2+ cards from bottom to find a safe deadwood exit!
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Melds / Additions from whole pile check:
+  // -------------------------------------------------------------------------
   const testHand = [...hand, ...discardPile];
   const hypMelds = findPotentialNewMelds(testHand, { requirePure });
   const hypAdds = findPotentialAdditionsToMelds(testHand, teamMelds);
@@ -1506,187 +2213,47 @@ export function evaluateDiscardPilePickup(
   const pileCreatesMelds = hypMelds.length > currMelds.length || hypAdds.length > currAdds.length;
 
   if (pileCreatesMelds) {
-    if (options.personality === 'THE_LONG_TERM_GUY') {
-      const createsNewRun = hypMelds.some(
-        (m) => m.type === 'RUN' && m.cards.some((c) => discardPile.some((dp) => dp.id === c.id))
-      );
-      const createsRunAddition = hypAdds.some((a) => {
-        const target = teamMelds.find((m) => m.id === a.meldId);
-        return target?.type === 'RUN' && a.cards.some((c) => discardPile.some((dp) => dp.id === c.id));
-      });
-      if (createsNewRun || createsRunAddition) {
-        return true;
-      }
-    } else {
-      return true;
-    }
-  }
-
-  // Fast Chachi: past hoarding ceiling (> 14 cards), does not hoard or take loose connectors
-  if (options.personality === 'FAST_CHACHI') {
-    return false;
-  }
-
-  // Cheetah: when close to Pukar (hand.length <= 3), do not take loose connectors or junk
-  if (options.personality === 'CHEETAH' && hand.length <= 3) {
-    return false;
-  }
-
-  // 4. The Long-Term Guy: Sequence Value Specific Evaluation
-  if (options.personality === 'THE_LONG_TERM_GUY') {
-    const topAddsSeqValue = isCardValuableForSequences(topCard, hand, teamMelds);
-    const seqValuableInPile = discardPile.filter((c) =>
-      isCardValuableForSequences(c, hand, teamMelds)
+    const disallowedId = pileLength === 1 ? topCard.id : undefined;
+    const safeDiscardExists = hasSafeDiscard(
+      testHand,
+      teamMelds,
+      opponentMelds,
+      options.opponentWants,
+      requirePure,
+      disallowedId
     );
-    const valuableCount = seqValuableInPile.length;
-
-    // Do not leave 4+ card piles if they contain sequence builders!
-    if (pileLength >= 4 && valuableCount >= 1 && hand.length > 1) {
-      return true;
-    }
-
-    if (topAddsSeqValue) {
-      // Top card directly adds value to a sequence
-      if (pileLength <= 2) {
-        return true;
-      }
-      // If pile has 3+ cards, only take if multiple cards add sequence value
-      // or top card directly extends a table run and pile isn't bloated
-      const isDirectTableRunAdd = teamMelds.some(
-        (m) => m.type === 'RUN' && canAddCardsToMeld(m, [topCard]).valid
-      );
-      if (valuableCount >= 2 || (pileLength === 3 && isDirectTableRunAdd)) {
-        return true;
-      }
-    } else {
-      // Top card does not add sequence value:
-      // Only take if multiple cards in the pile add sequence value and it is not mostly junk
-      if (valuableCount >= 2 && valuableCount >= Math.ceil(pileLength / 2)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // 5. Connecting Cards analysis (Issue 2: "Leaving more connecting cards at the bottom when they should not")
-  const topConnects = isCardConnecting(topCard, hand, teamMelds);
-  const totalConnectingInPile = discardPile.filter((c) => isCardConnecting(c, hand, teamMelds)).length;
-
-  if (topConnects) {
-    if (options.personality === 'THE_JADUGAR') {
-      const isDirectAdd = teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid);
-      const isTightPairOrRun = hand.some(
-        (h) => h.rank === topCard.rank || (h.suit === topCard.suit && Math.abs(h.rank - topCard.rank) <= 1)
-      );
-      if (isDirectAdd || (isTightPairOrRun && pileLength <= 2)) {
-        return true;
-      }
-    } else if (options.personality === 'CHEETAH') {
-      if (hand.length <= 3) {
-        return false;
-      }
-      const isDirectAdd = teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid);
-      const isTightPairOrRun = hand.some(
-        (h) => h.rank === topCard.rank || (h.suit === topCard.suit && Math.abs(h.rank - topCard.rank) <= 1)
-      );
-      if (isDirectAdd || (isTightPairOrRun && pileLength <= 2)) {
-        return true;
-      }
-      if (pileLength <= 4 && totalConnectingInPile >= 2 && hand.length <= 10) {
-        return true;
-      }
-    } else if (options.personality === 'SMART_CHACHA') {
-      const isDirectAdd = teamMelds.some((m) => canAddCardsToMeld(m, [topCard]).valid);
-      const isTightPairOrRun = hand.some(
-        (h) =>
-          !isWildcard(h) &&
-          (h.rank === topCard.rank ||
-            (h.suit !== null &&
-              topCard.suit !== null &&
-              h.suit === topCard.suit &&
-              Math.abs(h.rank - topCard.rank) === 1))
-      );
-
-      // Smart Chacha evaluates connecting cards:
-      // - If pile is small (<= 2 cards), require tight connection (direct table add or pair/adjacent run)
-      //   AND hand has room (hand.length > 3, so lean hands on <= 3 cards don't get bloated)
-      if (pileLength <= 2) {
-        if ((isDirectAdd || isTightPairOrRun) && hand.length > 3) {
-          return true;
-        }
-      } else if (pileLength === 3) {
-        // If pile has 3 cards, require 2+ connectors and hand has room
-        if (totalConnectingInPile >= 2 && hand.length > 4) {
-          return true;
-        }
-      } else if (pileLength >= 4) {
-        // If pile has 4+ cards and top card connects, take it (large volume advantage)
-        if (hand.length > 1) {
-          return true;
-        }
-      }
-    } else {
-      return true;
-    }
-  }
-
-  if (totalConnectingInPile >= 2) {
-    if (options.personality === 'SMART_CHACHA') {
-      if (hand.length > 4 && pileLength >= 3) {
-        return true;
-      }
-    } else if (options.personality === 'CHEETAH') {
-      if (hand.length > 3 && hand.length <= 10 && pileLength <= 4) {
-        return true;
-      }
-    }
-  }
-
-  // 6. Opponent Denial (Smart Chacha)
-  if (options.personality === 'SMART_CHACHA' && options.opponentWants) {
-    // Only deny if bot has room in hand (not lean / close to Pukar)
-    if (hand.length > 4) {
-      const isJustDiscardedByOpponent =
-        options.lastDiscarderTeam !== undefined &&
-        options.botTeam !== undefined &&
-        options.lastDiscarderTeam !== options.botTeam &&
-        pileLength === 1;
-
-      if (!isJustDiscardedByOpponent) {
-        const topKey = topCard.suit ? `${topCard.suit}_${topCard.rank}` : 'WILD';
-        if (options.opponentWants.has(topKey) || options.opponentWants.has(topCard.id)) {
-          return true;
-        }
-      }
-
-      // If pile has >= 4 cards and opponents want any card in the pile, deny them!
-      if (pileLength >= 4) {
-        const oppWantsCard = discardPile.some((c) => {
-          const k = c.suit ? `${c.suit}_${c.rank}` : 'WILD';
-          return options.opponentWants?.has(k) || options.opponentWants?.has(c.id);
+    if (safeDiscardExists) {
+      if (options.personality === 'THE_LONG_TERM_GUY' || options.personality === 'FAST_CHACHI') {
+        const createsNewRun = hypMelds.some(
+          (m) => m.type === 'RUN' && m.cards.some((c) => discardPile.some((dp) => dp.id === c.id))
+        );
+        const createsRunAddition = hypAdds.some((a) => {
+          const target = teamMelds.find((m) => m.id === a.meldId);
+          return target?.type === 'RUN' && a.cards.some((c) => discardPile.some((dp) => dp.id === c.id));
         });
-        if (oppWantsCard) {
+        if (createsNewRun || createsRunAddition) {
           return true;
         }
+      } else {
+        return true;
       }
     }
   }
 
-  // 7. Card Volume / Hoarding (Issue: "not randomly leaving 4 cards also that easily")
-  switch (options.personality) {
-    case 'SMART_CHACHA':
-      // If pile has 4+ cards and at least 1 connecting card, take it!
-      if (pileLength >= 4 && totalConnectingInPile >= 1 && hand.length > 1) {
+  // Smart Chacha opponent denial for >= 4 cards
+  if (options.personality === 'SMART_CHACHA' && options.opponentWants && hand.length > 4) {
+    if (pileLength >= 4) {
+      const oppWantsCard = discardPile.some((c) => {
+        const k = c.suit ? `${c.suit}_${c.rank}` : 'WILD';
+        return options.opponentWants?.has(k) || options.opponentWants?.has(c.id);
+      });
+      if (oppWantsCard) {
         return true;
       }
-      // If pile reaches 5+ cards, high volume card advantage unless close to going out
-      if (pileLength >= 5 && hand.length >= 4) {
-        return true;
-      }
-      break;
+    }
   }
 
   return false;
 }
+
 

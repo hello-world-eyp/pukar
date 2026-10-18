@@ -199,6 +199,7 @@ describe('Hooks Interactive Execution & Edge Cases (Stage 3)', () => {
       dispatchAction: vi.fn(),
       kickPlayer: vi.fn(),
       leaveRoom: vi.fn(),
+      endGame: vi.fn(),
       clearError: vi.fn(),
     };
 
@@ -242,6 +243,7 @@ describe('Hooks Interactive Execution & Edge Cases (Stage 3)', () => {
       dispatchAction: vi.fn(),
       kickPlayer: vi.fn(),
       leaveRoom: vi.fn(),
+      endGame: vi.fn(),
       clearError: vi.fn(),
     };
 
