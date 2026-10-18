@@ -462,6 +462,7 @@ export function findPotentialAdditionsToMelds(
   options?: { isCloseToPukar?: boolean; isFinalTurn?: boolean; canGuaranteePukar?: boolean }
 ): CandidateAddition[] {
   const isCloseToPukar = options?.isCloseToPukar ?? (hand.length <= 3);
+  const isVeryCloseToPukar = hand.length <= 2 || Boolean(options?.canGuaranteePukar);
   const isFinalTurn = options?.isFinalTurn ?? false;
   const hasNaturalJokerInHand = hand.some((c) => isNaturalJoker(c));
   const additions: CandidateAddition[] = [];
@@ -476,13 +477,27 @@ export function findPotentialAdditionsToMelds(
     for (const card of hand) {
       // Rule: All bots should refrain from putting 2 2s in the same sequence.
       // That just leads to a permanent hundred and a waste of jokers.
-      if (meld.type === 'RUN' && card.rank === 2 && countTwosInMeld(meld) >= 1) {
-        continue;
+      // Minor exception: If the bot is very close to Pukar (<= 2 cards in hand or guaranteed Pukar),
+      // adding a second 2 to a sequence of less than 8 cards is allowed to help claim Pukar or shed deadwood.
+      // If the sequence is 8 or more cards (and especially 10+), it is not allowed because gambling
+      // the 500-pt Pure 13 milestone is not worth it.
+      if (meld.type === 'RUN' && card.rank === 2) {
+        const existing2s = countTwosInMeld(meld);
+        const meldLen = meld.cards.length;
+        const canAllowSecondTwo =
+          existing2s === 1 &&
+          meldLen < 8 &&
+          isVeryCloseToPukar;
+        if (existing2s >= 1 && !canAllowSecondTwo) {
+          continue;
+        }
       }
 
       // Disallow using cross-suit 2 in a run unless:
       // 1. Very close to Pukar (<= 3 cards) or Pukar guaranteed
       // 2. The run is NOT clean (never taint clean sequences and forfeit Clean 7 / Pure 13)
+      //    (Minor exception: allow cross-suit 2 to taint a clean sequence of < 8 cards when very close to Pukar (<= 2 cards),
+      //     but never if >= 8 cards / 10+ chasing 500)
       // 3. No Natural Joker is available in hand (prefer Natural Joker whenever 2 suit doesn't match)
       if (
         meld.type === 'RUN' &&
@@ -490,7 +505,15 @@ export function findPotentialAdditionsToMelds(
         card.rank === 2 &&
         card.suit !== meld.suit
       ) {
-        if ((!isCloseToPukar && !options?.canGuaranteePukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
+        const meldLen = meld.cards.length;
+        const allowTaintClean =
+          meldLen < 8 &&
+          isVeryCloseToPukar;
+        if (
+          (!isCloseToPukar && !options?.canGuaranteePukar && !isFinalTurn) ||
+          (isCleanRun && !allowTaintClean) ||
+          (hasNaturalJokerInHand && !allowTaintClean)
+        ) {
           continue;
         }
       }
@@ -571,10 +594,17 @@ export function findPotentialAdditionsToMelds(
           const pair = [hand[i], hand[j]];
           // Rule: All bots should refrain from putting 2 2s in the same sequence.
           // That just leads to a permanent hundred and a waste of jokers.
+          // Minor exception: If the bot is very close to Pukar (<= 2 cards in hand or guaranteed Pukar),
+          // adding a second 2 to a sequence of less than 8 cards is allowed.
           if (meld.type === 'RUN') {
             const existing2s = countTwosInMeld(meld);
             const added2s = pair.filter((c) => c.rank === 2).length;
-            if (existing2s + added2s > 1) {
+            const meldLen = meld.cards.length;
+            const canAllowSecondTwo =
+              existing2s + added2s === 2 &&
+              meldLen < 8 &&
+              isVeryCloseToPukar;
+            if (existing2s + added2s > 1 && !canAllowSecondTwo) {
               continue;
             }
           }
@@ -584,7 +614,15 @@ export function findPotentialAdditionsToMelds(
             meld.suit &&
             pair.some((c) => c.rank === 2 && c.suit !== meld.suit)
           ) {
-            if ((!isCloseToPukar && !options?.canGuaranteePukar && !isFinalTurn) || isCleanRun || hasNaturalJokerInHand) {
+            const meldLen = meld.cards.length;
+            const allowTaintClean =
+              meldLen < 8 &&
+              isVeryCloseToPukar;
+            if (
+              (!isCloseToPukar && !options?.canGuaranteePukar && !isFinalTurn) ||
+              (isCleanRun && !allowTaintClean) ||
+              (hasNaturalJokerInHand && !allowTaintClean)
+            ) {
               continue;
             }
           }
@@ -1045,10 +1083,19 @@ function internalFindBestMeldPlan(
         const targetMeld = virtualMelds[targetMeldIndex];
         // Rule: All bots should refrain from putting 2 2s in the same sequence.
         // That just leads to a permanent hundred and a waste of jokers.
+        // Minor exception: If the bot is very close to Pukar (<= 2 cards in hand or guaranteed Pukar),
+        // adding a second 2 to a sequence of less than 8 cards is allowed.
         if (targetMeld.type === 'RUN') {
           const existing2s = countTwosInMeld(targetMeld);
           const added2s = add.cards.filter((c) => c.rank === 2).length;
-          if (existing2s + added2s > 1) {
+          const meldLen = targetMeld.cards.length;
+          const isVeryClose =
+            remainingCards.length <= 2 || Boolean(options?.canGuaranteePukar);
+          const canAllowSecondTwo =
+            existing2s + added2s === 2 &&
+            meldLen < 8 &&
+            isVeryClose;
+          if (existing2s + added2s > 1 && !canAllowSecondTwo) {
             continue;
           }
         }
@@ -1217,8 +1264,18 @@ export function evaluateDeadwoodAndDiscard(
       (options?.protectedCardIds?.has(card.id) ||
         (options?.teamMelds &&
           options.teamMelds.some((m) => {
-            if (m.type === 'RUN' && card.rank === 2 && countTwosInMeld(m) >= 1) {
-              return false;
+            if (m.type === 'RUN' && card.rank === 2) {
+              const existing2s = countTwosInMeld(m);
+              const meldLen = m.cards.length;
+              const isVeryClose =
+                pool.length <= 2 || Boolean(options?.isFinalTurn);
+              const canAllowSecondTwo =
+                existing2s === 1 &&
+                meldLen < 8 &&
+                isVeryClose;
+              if (existing2s >= 1 && !canAllowSecondTwo) {
+                return false;
+              }
             }
             return canAddCardsToMeld(m, [card]).valid;
           })));

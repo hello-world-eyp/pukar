@@ -322,5 +322,91 @@ describe('Bot Hand Analyzer', () => {
       const addAction = plan.additionsToPlay.find((a) => a.cardIds.includes('h2_wild'));
       expect(addAction).toBeUndefined();
     });
+
+    it('allows adding a second 2 to a sequence of < 8 cards when very close to Pukar (<= 2 cards)', () => {
+      const teamMeld: Meld = {
+        id: 'meld-hearts-run',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          makeCard('hA', 'HEARTS', 14),
+          makeCard('h2_nat', 'HEARTS', 2),
+          makeCard('h3', 'HEARTS', 3),
+          makeCard('h4', 'HEARTS', 4),
+          makeCard('h5', 'HEARTS', 5),
+        ],
+        slots: [
+          { card: makeCard('hA', 'HEARTS', 14), representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h2_nat', 'HEARTS', 2), representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h3', 'HEARTS', 3), representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h4', 'HEARTS', 4), representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h5', 'HEARTS', 5), representedRank: 5, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        team: 'A',
+        points: 25,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      const hand: Card[] = [
+        makeCard('s2_wild', 'SPADES', 2), // cross-suit 2
+        makeCard('c9', 'CLUBS', 9),
+      ];
+
+      const plan = findBestMeldPlan(hand, [teamMeld]);
+
+      // Should add the 2 of Spades to the 5-card Hearts run when holding 2 cards
+      const addAction = plan.additionsToPlay.find((a) => a.cardIds.includes('s2_wild'));
+      expect(addAction).toBeDefined();
+    });
+
+    it('forbids adding a second 2 to a sequence of 10+ cards even when holding 2 cards (protecting 500)', () => {
+      const teamMeld: Meld = {
+        id: 'meld-hearts-10',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [
+          makeCard('h1', 'HEARTS', 14),
+          makeCard('h2', 'HEARTS', 2),
+          makeCard('h3', 'HEARTS', 3),
+          makeCard('h4', 'HEARTS', 4),
+          makeCard('h5', 'HEARTS', 5),
+          makeCard('h6', 'HEARTS', 6),
+          makeCard('h7', 'HEARTS', 7),
+          makeCard('h8', 'HEARTS', 8),
+          makeCard('h9', 'HEARTS', 9),
+          makeCard('h10', 'HEARTS', 10),
+        ],
+        slots: [
+          { card: makeCard('h1', 'HEARTS', 14), representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h2', 'HEARTS', 2), representedRank: 2, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h3', 'HEARTS', 3), representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h4', 'HEARTS', 4), representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h5', 'HEARTS', 5), representedRank: 5, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h6', 'HEARTS', 6), representedRank: 6, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h7', 'HEARTS', 7), representedRank: 7, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h8', 'HEARTS', 8), representedRank: 8, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h9', 'HEARTS', 9), representedRank: 9, representedSuit: 'HEARTS', isWildcard: false },
+          { card: makeCard('h10', 'HEARTS', 10), representedRank: 10, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        team: 'A',
+        points: 200,
+        isClean: true,
+        isPure: true,
+        isPure13: false,
+      };
+
+      const hand: Card[] = [
+        makeCard('s2_wild', 'SPADES', 2), // cross-suit 2
+        makeCard('c9', 'CLUBS', 9),
+      ];
+
+      const plan = findBestMeldPlan(hand, [teamMeld]);
+
+      // Should strictly forbid tainting the 10-card sequence
+      const addAction = plan.additionsToPlay.find((a) => a.cardIds.includes('s2_wild'));
+      expect(addAction).toBeUndefined();
+    });
   });
 });

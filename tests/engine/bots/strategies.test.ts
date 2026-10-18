@@ -4078,6 +4078,154 @@ describe('Bot Personality Strategies', () => {
         // Sid must NOT discard 6♦! Sid should discard 13♠!
         expect(plan.discardAction.cardId).toBe('s13');
       });
+
+      it('allows adding 2 of Diamonds to a 5-card Spade sequence containing 2 of Spades when very close to Pukar (< 8 cards)', () => {
+        const state = createTestState();
+        state.phase = 'MELD';
+        state.turnPhase = 'MELD';
+        state.players[1].team = 'A';
+
+        // Team A has A♠-2♠-3♠-4♠-5♠ on table (5 cards, clean, contains 2♠)
+        state.melds.A = [
+          {
+            id: 'meld-spades-5',
+            type: 'RUN',
+            suit: 'SPADES',
+            isClean: true,
+            team: 'A',
+            cards: [
+              makeCard('s14', 'SPADES', 14),
+              makeCard('s2', 'SPADES', 2),
+              makeCard('s3', 'SPADES', 3),
+              makeCard('s4', 'SPADES', 4),
+              makeCard('s5', 'SPADES', 5),
+            ],
+            slots: [
+              { card: makeCard('s14', 'SPADES', 14), representedRank: 1, isWildcard: false },
+              { card: makeCard('s2', 'SPADES', 2), representedRank: 2, isWildcard: false },
+              { card: makeCard('s3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+              { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+            ],
+          },
+        ];
+
+        // Sid holds 2♦ and 8♥ (2 cards in hand, very close to Pukar)
+        state.players[1].hand = [
+          makeCard('d2', 'DIAMONDS', 2),
+          makeCard('h8', 'HEARTS', 8),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+
+        // Sid adds 2♦ to the Spades sequence as 6th card (representing 6♠) to close in on Pukar
+        const additions = plan.meldActions.filter((a) => a.type === 'ADD_TO_MELD');
+        expect(additions.some((a) => a.cardIds.includes('d2'))).toBe(true);
+        expect(plan.discardAction.cardId).toBe('h8');
+      });
+
+      it('strictly forbids adding a second 2 or cross-suit 2 when sequence has 10 or more cards (preserving 500-pt Pure 13)', () => {
+        const state = createTestState();
+        state.phase = 'MELD';
+        state.turnPhase = 'MELD';
+        state.players[1].team = 'A';
+
+        // Team A has 10-card clean sequence A♠ through 10♠ (chasing Pure 13 for 500 pts)
+        state.melds.A = [
+          {
+            id: 'meld-spades-10',
+            type: 'RUN',
+            suit: 'SPADES',
+            isClean: true,
+            team: 'A',
+            cards: [
+              makeCard('s14', 'SPADES', 14),
+              makeCard('s2', 'SPADES', 2),
+              makeCard('s3', 'SPADES', 3),
+              makeCard('s4', 'SPADES', 4),
+              makeCard('s5', 'SPADES', 5),
+              makeCard('s6', 'SPADES', 6),
+              makeCard('s7', 'SPADES', 7),
+              makeCard('s8', 'SPADES', 8),
+              makeCard('s9', 'SPADES', 9),
+              makeCard('s10', 'SPADES', 10),
+            ],
+            slots: [
+              { card: makeCard('s14', 'SPADES', 14), representedRank: 1, isWildcard: false },
+              { card: makeCard('s2', 'SPADES', 2), representedRank: 2, isWildcard: false },
+              { card: makeCard('s3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+              { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+              { card: makeCard('s6', 'SPADES', 6), representedRank: 6, isWildcard: false },
+              { card: makeCard('s7', 'SPADES', 7), representedRank: 7, isWildcard: false },
+              { card: makeCard('s8', 'SPADES', 8), representedRank: 8, isWildcard: false },
+              { card: makeCard('s9', 'SPADES', 9), representedRank: 9, isWildcard: false },
+              { card: makeCard('s10', 'SPADES', 10), representedRank: 10, isWildcard: false },
+            ],
+          },
+        ];
+
+        // Sid holds 2♦ and 8♥ (close to Pukar, but sequence has 10 cards)
+        state.players[1].hand = [
+          makeCard('d2', 'DIAMONDS', 2),
+          makeCard('h8', 'HEARTS', 8),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+
+        // Sid MUST NOT taint the 10-card clean sequence with 2♦ (not worth gambling the 500)
+        const additions = plan.meldActions.filter((a) => a.type === 'ADD_TO_MELD');
+        expect(additions.some((a) => a.cardIds.includes('d2'))).toBe(false);
+      });
+
+      it('refrains from putting 2 2s in sequence when bot is NOT close to Pukar', () => {
+        const state = createTestState();
+        state.phase = 'MELD';
+        state.turnPhase = 'MELD';
+        state.players[1].team = 'A';
+
+        // Team A has A♠-2♠-3♠-4♠-5♠ on table
+        state.melds.A = [
+          {
+            id: 'meld-spades-5',
+            type: 'RUN',
+            suit: 'SPADES',
+            isClean: true,
+            team: 'A',
+            cards: [
+              makeCard('s14', 'SPADES', 14),
+              makeCard('s2', 'SPADES', 2),
+              makeCard('s3', 'SPADES', 3),
+              makeCard('s4', 'SPADES', 4),
+              makeCard('s5', 'SPADES', 5),
+            ],
+            slots: [
+              { card: makeCard('s14', 'SPADES', 14), representedRank: 1, isWildcard: false },
+              { card: makeCard('s2', 'SPADES', 2), representedRank: 2, isWildcard: false },
+              { card: makeCard('s3', 'SPADES', 3), representedRank: 3, isWildcard: false },
+              { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+            ],
+          },
+        ];
+
+        // Sid holds 7 cards (not close to Pukar)
+        state.players[1].hand = [
+          makeCard('d2', 'DIAMONDS', 2),
+          makeCard('h7', 'HEARTS', 7),
+          makeCard('c8', 'CLUBS', 8),
+          makeCard('d9', 'DIAMONDS', 9),
+          makeCard('s10', 'SPADES', 10),
+          makeCard('h11', 'HEARTS', 11),
+          makeCard('c12', 'CLUBS', 12),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+
+        // Sid refrains from putting 2 2s in sequence in mid-game
+        const additions = plan.meldActions.filter((a) => a.type === 'ADD_TO_MELD');
+        expect(additions.some((a) => a.cardIds.includes('d2'))).toBe(false);
+      });
     });
   });
 });

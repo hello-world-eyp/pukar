@@ -147,11 +147,20 @@ export function decideTheLongTermGuyTurn(
             const targetMeld = virtualMelds[targetMeldIndex];
             // Rule: All bots should refrain from putting 2 2s in the same sequence.
             // That just leads to a permanent hundred and a waste of jokers.
-            if (
-              targetMeld.type === 'RUN' &&
-              countTwosInMeld(targetMeld) + addition.cards.filter((c) => c.rank === 2).length > 1
-            ) {
-              continue;
+            // Minor exception: If the bot is very close to Pukar (<= 2 cards in hand or guaranteed Pukar),
+            // adding a second 2 to a sequence of less than 8 cards is allowed.
+            if (targetMeld.type === 'RUN') {
+              const existing2s = countTwosInMeld(targetMeld);
+              const added2s = addition.cards.filter((c) => c.rank === 2).length;
+              const meldLen = targetMeld.cards.length;
+              const isVeryClose = remainingHand.length <= 1 || canGuaranteePukar;
+              const canAllowSecondTwo =
+                existing2s + added2s === 2 &&
+                meldLen < 8 &&
+                isVeryClose;
+              if (existing2s + added2s > 1 && !canAllowSecondTwo) {
+                continue;
+              }
             }
 
             const validation = canAddCardsToMeld(targetMeld, addition.cards);
