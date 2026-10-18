@@ -5,7 +5,7 @@
   "4": "server/types.ts",
   "5": "useLocalGame.ts",
   "7": "room-manager.ts",
-  "17": "App",
+  "17": "App.tsx",
   "21": "Game Rules & Mechanics",
   "22": "Design Specification: Pukar Multiplayer (LAN & Online)",
   "23": "bot-game-hook.test.tsx",
@@ -18,9 +18,10 @@
   "30": "build-royal-heritage-deck.py",
   "31": "CLAUDE.md",
   "32": "GEMINI.md",
-  "33": "GameSetupModal.tsx",
+  "33": "react",
   "34": "app-multiplayer-integration.test.tsx",
-  "36": "lucide-react",
+  "35": "Global Constraints",
+  "36": "PureSequenceCelebrationModal.tsx",
   "40": "TableMeldBoard.tsx",
   "42": "top-nav-bar-and-pages.test.tsx"
 }

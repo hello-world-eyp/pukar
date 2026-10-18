@@ -1943,8 +1943,85 @@ export function isPotential500or200Card(
 }
 
 /**
+ * Identifies wildcards (Natural Jokers and 2s) in hand that are currently stranded:
+ * - Cannot be legally added to existing team table melds
+ * - Cannot be used in valid non-overlapping new melds formed from hand cards
+ */
+export function getStuckJokersInHand(
+  hand: Card[],
+  teamMelds: Meld[],
+  requirePure: boolean = false
+): Card[] {
+  const jokers = hand.filter((c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2);
+  if (jokers.length === 0) {
+    return [];
+  }
+
+  // 1. Check which jokers can be absorbed by additions to existing team table melds
+  const additions = findPotentialAdditionsToMelds(hand, teamMelds);
+  const usedJokerIds = new Set<string>();
+
+  for (const add of additions) {
+    for (const card of add.cards) {
+      if ((isWildcard(card) || isNaturalJoker(card) || card.rank === 2) && !usedJokerIds.has(card.id)) {
+        usedJokerIds.add(card.id);
+        break; // each addition accounts for at most 1 wildcard
+      }
+    }
+  }
+
+  // 2. Check which remaining jokers can be absorbed by new candidate melds formed from hand
+  const remainingHand = hand.filter((c) => !usedJokerIds.has(c.id));
+  const newMelds = findPotentialNewMelds(remainingHand, { requirePure });
+  for (const meld of newMelds) {
+    const wildcardInMeld = meld.cards.find(
+      (c) => (isWildcard(c) || isNaturalJoker(c) || c.rank === 2) && !usedJokerIds.has(c.id)
+    );
+    if (wildcardInMeld) {
+      usedJokerIds.add(wildcardInMeld.id);
+    }
+  }
+
+  return jokers.filter((j) => !usedJokerIds.has(j.id));
+}
+
+/**
+ * Checks if cards contain a natural pair or run connector that can form
+ * a 3-card meld with a single wildcard/joker:
+ * - Pairs of identical rank (e.g. 8-8): with a joker forms a 3-of-a-kind set
+ * - Two cards of same suit with rank gap <= 2 (e.g. 4D-6D, 7S-8S, A-3): with a joker forms a run
+ */
+export function hasConnectingCardsForJoker(cards: Card[]): boolean {
+  if (cards.length < 2) return false;
+  for (let i = 0; i < cards.length; i++) {
+    const c1 = cards[i];
+    if (isWildcard(c1) || isNaturalJoker(c1) || c1.rank === 2) continue;
+    for (let j = i + 1; j < cards.length; j++) {
+      const c2 = cards[j];
+      if (isWildcard(c2) || isNaturalJoker(c2) || c2.rank === 2) continue;
+
+      // Same rank -> pair forms set with joker
+      if (c1.rank === c2.rank) {
+        return true;
+      }
+
+      // Same suit consecutive or near-consecutive -> run with joker
+      if (c1.suit && c2.suit && c1.suit === c2.suit) {
+        if (Math.abs(c1.rank - c2.rank) <= 2) {
+          return true;
+        }
+        if ((c1.rank === 14 && c2.rank === 3) || (c1.rank === 3 && c2.rank === 14)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Evaluates whether a bot is very close to declaring Pukar or finishing the round:
- * - Hand length <= 2 (1 or 2 cards left in hand)
+ * - Hand length <= 2 (1 or 2 cards left in hand) unless holding stranded jokers
  * - Hand length < 7 with high connectivity (deadwood <= 2, or nearly all cards connect towards Pukar)
  */
 export function isBotCloseToPukar(
@@ -1956,7 +2033,18 @@ export function isBotCloseToPukar(
     return false;
   }
 
-  // 1 or 2 cards left is always close to Pukar / endgame
+  const stuckJokers = getStuckJokersInHand(hand, teamMelds, requirePure);
+
+  // If the bot has 2 or more stuck jokers, or hand consists entirely of wildcards and none can be melded,
+  // the bot is NOT close to Pukar - it is stuck / trapped!
+  if (
+    stuckJokers.length >= 2 ||
+    (stuckJokers.length > 0 && hand.every((c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2))
+  ) {
+    return false;
+  }
+
+  // 1 or 2 cards left is normally close to Pukar / endgame (as long as not stuck with unplayable jokers)
   if (hand.length <= 2) {
     return true;
   }
@@ -1967,9 +2055,8 @@ export function isBotCloseToPukar(
   const deadwoodCount = hand.length - committedCount;
 
   // If bot has melds formed and only 1 or 2 deadwood cards remaining,
-  // it is very close to Pukar! (e.g. 4 cards with 3 melded = 1 deadwood;
-  // 5 cards with 3-4 melded = 1-2 deadwood; 6 cards with 4-6 melded = 0-2 deadwood)
-  if (committedCount > 0 && deadwoodCount <= 2) {
+  // it is very close to Pukar!
+  if (committedCount > 0 && deadwoodCount <= 2 && stuckJokers.length === 0) {
     return true;
   }
 
@@ -2327,6 +2414,70 @@ export function evaluateDiscardPilePickup(
     }
     // Otherwise, prioritize drawing from the stock deck!
     return false;
+  }
+
+  // -------------------------------------------------------------------------
+  // STUCK JOKERS RESCUE RULE (Sid Bot & General Bot Optimization):
+  // "We should also optimize sid bot that if it is getting stuck with a bunch of jokers
+  // in the hand, it should pick up the connecting or extra cards from the bottom
+  // to connect it in the future rather than giving the jokers away at a later stage."
+  // -------------------------------------------------------------------------
+  const stuckJokers = getStuckJokersInHand(hand, teamMelds, requirePure);
+  const isStuckWithJokers =
+    stuckJokers.length >= 2 ||
+    (stuckJokers.length >= 1 &&
+      hand.every((c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2));
+
+  if (isStuckWithJokers) {
+    const combined = [...hand, ...discardPile];
+    const disallowedId = pileLength === 1 ? topCard.id : undefined;
+    const safeDiscardExists = hasSafeDiscard(
+      combined,
+      teamMelds,
+      opponentMelds,
+      options.opponentWants,
+      requirePure,
+      disallowedId
+    );
+
+    if (safeDiscardExists) {
+      // 1. Check if the pile immediately helps absorb any stuck jokers into melds or additions
+      const combinedStuck = getStuckJokersInHand(combined, teamMelds, requirePure);
+      if (combinedStuck.length < stuckJokers.length) {
+        return true;
+      }
+
+      // 2. Check if the pile contains connecting cards for the jokers:
+      // - Pairs in the pile (forms a 3-of-a-kind set with a joker)
+      // - Same-suit run connectors in the pile (distance <= 2, forms a run with a joker)
+      if (hasConnectingCardsForJoker(discardPile)) {
+        return true;
+      }
+
+      // 3. Check if any card in the pile connects with remaining natural hand cards
+      const naturalHandCards = hand.filter(
+        (c) => !isWildcard(c) && !isNaturalJoker(c) && c.rank !== 2
+      );
+      if (naturalHandCards.length > 0) {
+        const connectsWithHand = discardPile.some((c) =>
+          isCardConnecting(c, naturalHandCards, teamMelds)
+        );
+        if (connectsWithHand) {
+          return true;
+        }
+      }
+
+      // 4. Multi-card extra cards from the bottom (pile >= 2 cards):
+      // When hand consists entirely of wildcards/jokers, drawing single cards from stock
+      // cannot form a meld and leads to paralysis. Picking up extra cards from the bottom
+      // supplies the natural cards needed to build sequences around jokers in future turns.
+      if (
+        pileLength >= 2 &&
+        hand.every((c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2)
+      ) {
+        return true;
+      }
+    }
   }
 
   // -------------------------------------------------------------------------

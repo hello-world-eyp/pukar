@@ -4231,6 +4231,139 @@ describe('Bot Personality Strategies', () => {
         const additions = plan.meldActions.filter((a) => a.type === 'ADD_TO_MELD');
         expect(additions.some((a) => a.cardIds.includes('d2'))).toBe(false);
       });
+
+      it('rescues Sid when stuck with jokers: picks up connecting cards from bottom to form meld and free jokers', () => {
+        const state = createTestState();
+        state.phase = 'DRAW';
+        state.turnPhase = 'DRAW';
+        state.players[1].team = 'A';
+
+        // Team A has melds on the table, all containing wildcards (no additions possible)
+        state.melds.A = [
+          {
+            id: 'meld-spades',
+            type: 'RUN',
+            suit: 'SPADES',
+            isClean: false,
+            team: 'A',
+            cards: [
+              makeCard('s4', 'SPADES', 4),
+              makeCard('s5', 'SPADES', 5),
+              makeCard('j1', null, 0, true), // Joker
+            ],
+            slots: [
+              { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+              { card: makeCard('j1', null, 0, true), representedRank: 6, isWildcard: true },
+            ],
+          },
+        ];
+
+        // Sid holds 2 unplayable jokers (2♣ and Natural Joker)
+        state.players[1].hand = [
+          makeCard('c2', 'CLUBS', 2),
+          makeCard('j2', null, 0, true),
+        ];
+
+        // Discard pile has 3 cards: 13♣, 4♦, 6♦ (4♦ and 6♦ connect with j2 to form 4♦-j2-6♦)
+        state.discardPile = [
+          makeCard('c13', 'CLUBS', 13),
+          makeCard('d4', 'DIAMONDS', 4),
+          makeCard('d6', 'DIAMONDS', 6),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createInitialBotMemory());
+
+        // Sid must TAKE_DISCARD to rescue the stuck jokers
+        expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+      });
+
+      it('picks up 2+ extra cards from bottom when holding only jokers to acquire natural cards for future connections', () => {
+        const state = createTestState();
+        state.phase = 'DRAW';
+        state.turnPhase = 'DRAW';
+        state.players[1].team = 'A';
+
+        state.melds.A = [
+          {
+            id: 'meld-spades',
+            type: 'RUN',
+            suit: 'SPADES',
+            isClean: false,
+            team: 'A',
+            cards: [
+              makeCard('s4', 'SPADES', 4),
+              makeCard('s5', 'SPADES', 5),
+              makeCard('j1', null, 0, true),
+            ],
+            slots: [
+              { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+              { card: makeCard('j1', null, 0, true), representedRank: 6, isWildcard: true },
+            ],
+          },
+        ];
+
+        // Sid holds 2 unplayable jokers
+        state.players[1].hand = [
+          makeCard('c2', 'CLUBS', 2),
+          makeCard('j2', null, 0, true),
+        ];
+
+        // Discard pile has 2 extra natural cards: 13♠ and 12♣
+        state.discardPile = [
+          makeCard('s13', 'SPADES', 13),
+          makeCard('c12', 'CLUBS', 12),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createInitialBotMemory());
+
+        // Sid picks up the 2-card pile from bottom to get natural cards and avoid starvation
+        expect(plan.drawAction.type).toBe('TAKE_DISCARD');
+      });
+
+      it('strictly refuses 1-card junk discard pile when holding only jokers so as not to be forced to discard a joker', () => {
+        const state = createTestState();
+        state.phase = 'DRAW';
+        state.turnPhase = 'DRAW';
+        state.players[1].team = 'A';
+
+        state.melds.A = [
+          {
+            id: 'meld-spades',
+            type: 'RUN',
+            suit: 'SPADES',
+            isClean: false,
+            team: 'A',
+            cards: [
+              makeCard('s4', 'SPADES', 4),
+              makeCard('s5', 'SPADES', 5),
+              makeCard('j1', null, 0, true),
+            ],
+            slots: [
+              { card: makeCard('s4', 'SPADES', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('s5', 'SPADES', 5), representedRank: 5, isWildcard: false },
+              { card: makeCard('j1', null, 0, true), representedRank: 6, isWildcard: true },
+            ],
+          },
+        ];
+
+        // Sid holds 2 unplayable jokers
+        state.players[1].hand = [
+          makeCard('c2', 'CLUBS', 2),
+          makeCard('j2', null, 0, true),
+        ];
+
+        // Discard pile has only 1 card: 10♥
+        state.discardPile = [
+          makeCard('h10', 'HEARTS', 10),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createInitialBotMemory());
+
+        // Sid must NOT pick up 1 card because taking 1 card would disallow discarding it and force giving away a joker!
+        expect(plan.drawAction.type).toBe('DRAW_FROM_STOCK');
+      });
     });
   });
 });
