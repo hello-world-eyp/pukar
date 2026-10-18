@@ -9,6 +9,7 @@ import {
   isWildcard,
   isNaturalJoker,
   MatchStats,
+  MeldCardAddition,
 } from './types';
 import { dealInitialState, shuffleDeck } from './deck';
 import {
@@ -420,7 +421,17 @@ function handlePlayNewMeld(
     };
   }
 
-  return handlePostMeldState(state, remainingHand, updatedMelds, updatedMatchStats);
+  const currentTurn = state.turnCount ?? 1;
+  const currentIdx = state.currentPlayerIndex;
+  const newAdditions: MeldCardAddition[] = cardsToMeld.map((c) => ({
+    cardId: c.id,
+    turnNumber: currentTurn,
+    playerIndex: currentIdx,
+    addedAt: Date.now(),
+  }));
+  const updatedAdditions = [...(state.meldCardAdditions ?? []), ...newAdditions];
+
+  return handlePostMeldState(state, remainingHand, updatedMelds, updatedMatchStats, updatedAdditions);
 }
 
 function handleAddToMeld(
@@ -545,7 +556,27 @@ function handleAddToMeld(
     };
   }
 
-  const postResult = handlePostMeldState(state, remainingHand, updatedMelds, updatedMatchStats);
+  const currentTurn = state.turnCount ?? 1;
+  const currentIdx = state.currentPlayerIndex;
+  let updatedAdditions = state.meldCardAdditions ? [...state.meldCardAdditions] : [];
+  if (validation.pickedUpCard) {
+    updatedAdditions = updatedAdditions.filter((a) => a.cardId !== validation.pickedUpCard!.id);
+  }
+  const newAdditions: MeldCardAddition[] = cardsToAdd.map((c) => ({
+    cardId: c.id,
+    turnNumber: currentTurn,
+    playerIndex: currentIdx,
+    addedAt: Date.now(),
+  }));
+  updatedAdditions.push(...newAdditions);
+
+  const postResult = handlePostMeldState(
+    state,
+    remainingHand,
+    updatedMelds,
+    updatedMatchStats,
+    updatedAdditions
+  );
   if (validation.pickedUpCard) {
     postResult.state = {
       ...postResult.state,
@@ -567,7 +598,8 @@ function handlePostMeldState(
   state: GameState,
   remainingHand: Card[],
   updatedMelds: { A: Meld[]; B: Meld[] },
-  newMatchStats?: MatchStats
+  newMatchStats?: MatchStats,
+  updatedAdditions?: MeldCardAddition[]
 ): { state: GameState; error?: string } {
   const updatedPlayers = state.players.map((p, idx) => {
     if (idx !== state.currentPlayerIndex) return p;
@@ -587,6 +619,7 @@ function handlePostMeldState(
     players: updatedPlayers,
     melds: updatedMelds,
     hasOpened: nextHasOpened,
+    ...(updatedAdditions ? { meldCardAdditions: updatedAdditions } : {}),
     ...(newMatchStats ? { matchStats: newMatchStats } : {}),
   };
 
@@ -782,6 +815,11 @@ function handleDiscardCard(
     newlyPickedUpCardIds,
     cardsPickedUpThisTurn,
     initialHandSizeThisTurn,
+    turnCount: (state.turnCount ?? 1) + 1,
+    lastTurnEndedAtTurnByPlayer: {
+      ...(state.lastTurnEndedAtTurnByPlayer ?? {}),
+      [state.currentPlayerIndex]: state.turnCount ?? 1,
+    },
     ...(updatedMatchStats ? { matchStats: updatedMatchStats } : {}),
   };
 

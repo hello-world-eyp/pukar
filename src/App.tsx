@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { GameState, SanitizedGameState } from './engine/types';
 import { hasTeamOpened } from './engine/meld-validator';
+import { getNewMeldCardIds } from './engine/sanitizer';
 import { exportDebugLogFile } from './engine/debug-logger';
 import { TopNavBar } from './ui/components/TopNavBar';
 import { SequencesPage } from './ui/components/SequencesPage';
@@ -319,6 +320,14 @@ export function App({
     clearAllNotifications,
     setJokerPromptData,
   });
+
+  // Newly added cards on table sequences (melds) from viewing player's perspective
+  const newMeldCardIds = useMemo(() => {
+    if (isMultiplayerActive && activeGameState.newMeldCardIds) {
+      return activeGameState.newMeldCardIds;
+    }
+    return getNewMeldCardIds(activeGameState, currentViewIndex);
+  }, [activeGameState, currentViewIndex, isMultiplayerActive]);
 
   // Collapsible Hand state across all game modes (Bot, Local, Multiplayer)
   const [isHandCollapsed, setIsHandCollapsed] = useState(false);
@@ -913,6 +922,7 @@ export function App({
             onBackToTable={() => setActiveGameTab('table')}
             onZoomMeld={(meld) => setZoomedMeld(meld)}
             players={activeGameState.players}
+            newMeldCardIds={newMeldCardIds}
           />
         </main>
       ) : activeGameTab === 'scoreboard' ? (
@@ -997,6 +1007,7 @@ export function App({
                     onAddToMeld={handleAddToMeld}
                     isRippling={isTableRippling}
                     cardSize="md"
+                    newMeldCardIds={newMeldCardIds}
                   />
                 </div>
               </div>
@@ -1222,6 +1233,7 @@ export function App({
         isOpen={Boolean(zoomedMeld)}
         meld={zoomedMeld}
         onClose={() => setZoomedMeld(null)}
+        newMeldCardIds={newMeldCardIds}
       />
 
       {/* 4. Game Setup & New Game Modal (Local Mode Only) */}

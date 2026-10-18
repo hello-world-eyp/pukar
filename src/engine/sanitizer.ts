@@ -86,6 +86,18 @@ export function sanitizeStateForPlayer(
       matchStats: state?.matchStats
         ? JSON.parse(JSON.stringify(state.matchStats))
         : undefined,
+      turnCount: state?.turnCount ?? 1,
+      meldCardAdditions: state?.meldCardAdditions ? [...state.meldCardAdditions] : [],
+      lastTurnEndedAtTurnByPlayer: state?.lastTurnEndedAtTurnByPlayer
+        ? { ...state.lastTurnEndedAtTurnByPlayer }
+        : {},
+      newMeldCardIds: getNewMeldCardIds(
+        state,
+        (() => {
+          const idx = (state?.players ?? []).findIndex((p) => p.id === playerId);
+          return idx >= 0 ? idx : 0;
+        })()
+      ),
       hasOpened: {
         A: hasTeamOpened(state, 'A'),
         B: hasTeamOpened(state, 'B'),
@@ -111,4 +123,49 @@ export function sanitizeStateForPlayer(
       activeFrustration: null,
     };
   }
+}
+
+/**
+ * Calculates which cards currently displayed in table melds are "new" from the perspective of playerIndex.
+ * A card is considered new if it was added to a meld (by anyone: partner, opponent, or self)
+ * after this player's last turn ended.
+ * When the player ends their turn, all previously added cards immediately become normal cards.
+ */
+export function getNewMeldCardIds(
+  state: GameState | SanitizedGameState,
+  playerIndex: number
+): string[] {
+  if (!state) return [];
+  const additions = state.meldCardAdditions;
+  if (!additions || additions.length === 0) return [];
+
+  const lastEndedTurn = state.lastTurnEndedAtTurnByPlayer?.[playerIndex] ?? 0;
+
+  // Collect all card IDs currently present on the table (melds A and B)
+  const meldsA = state.melds?.A ?? [];
+  const meldsB = state.melds?.B ?? [];
+  const currentTableCardIds = new Set<string>();
+  for (const m of meldsA) {
+    if (Array.isArray(m?.cards)) {
+      for (const c of m.cards) {
+        if (c?.id) currentTableCardIds.add(c.id);
+      }
+    }
+  }
+  for (const m of meldsB) {
+    if (Array.isArray(m?.cards)) {
+      for (const c of m.cards) {
+        if (c?.id) currentTableCardIds.add(c.id);
+      }
+    }
+  }
+
+  const newCardIds = new Set<string>();
+  for (const addition of additions) {
+    if (addition.turnNumber > lastEndedTurn && currentTableCardIds.has(addition.cardId)) {
+      newCardIds.add(addition.cardId);
+    }
+  }
+
+  return Array.from(newCardIds);
 }

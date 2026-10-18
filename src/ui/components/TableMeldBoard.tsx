@@ -34,6 +34,7 @@ export interface TableMeldBoardProps {
   cardSize?: 'sm' | 'md';
   isRippling?: boolean;
   compactMeldHeaders?: boolean;
+  newMeldCardIds?: string[];
 }
 
 export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
@@ -54,6 +55,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   cardSize = 'md',
   isRippling = false,
   compactMeldHeaders,
+  newMeldCardIds,
 }) => {
   const sortDirection: MeldSortDirection = defaultSortDirection;
 
@@ -126,6 +128,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           onAddToMeld={onAddToMeld}
           isRippling={isRippling}
           compactMeldHeaders={compactMeldHeaders}
+          newMeldCardIds={newMeldCardIds}
         />
 
         {/* TEAM B MELDS COLUMN */}
@@ -147,6 +150,7 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
           onAddToMeld={onAddToMeld}
           isRippling={isRippling}
           compactMeldHeaders={compactMeldHeaders}
+          newMeldCardIds={newMeldCardIds}
         />
       </div>
     </div>
@@ -171,6 +175,7 @@ interface TeamMeldColumnProps {
   onAddToMeld?: (meldId: string, cardIds: string[]) => void;
   isRippling?: boolean;
   compactMeldHeaders?: boolean;
+  newMeldCardIds?: string[];
 }
 
 export function sortMelds(
@@ -252,6 +257,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
   onAddToMeld,
   isRippling = false,
   compactMeldHeaders,
+  newMeldCardIds,
 }) => {
   const isBlue = teamColor === 'blue';
 
@@ -370,6 +376,7 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
                 canAdd={canAdd}
                 isOwnTeam={isOwnTeam}
                 selectedCards={selectedCards}
+                newMeldCardIds={newMeldCardIds}
               />
             );
           })
@@ -399,6 +406,7 @@ export interface MeldCardItemProps {
   canAdd?: boolean;
   isOwnTeam?: boolean;
   selectedCards?: Card[];
+  newMeldCardIds?: string[];
 }
 
 /**
@@ -467,6 +475,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
   canAdd = true,
   isOwnTeam = true,
   selectedCards,
+  newMeldCardIds,
 }) => {
   const { isComplete7, isPure13 } = evaluation;
   const isCompleteSequence = isPure13 || evaluation.points === 500;
@@ -921,6 +930,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
                 card={card}
                 size={cardSize}
                 isWild={isSlotWild}
+                isNew={Boolean(newMeldCardIds && newMeldCardIds.includes(card.id))}
                 representedRank={slot.representedRank}
                 representedSuit={slot.representedSuit}
                 wildcardLabel={wildLabel}

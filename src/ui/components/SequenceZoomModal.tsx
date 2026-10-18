@@ -9,6 +9,7 @@ export interface SequenceZoomModalProps {
   meld: Meld | null;
   onClose: () => void;
   className?: string;
+  newMeldCardIds?: string[];
 }
 
 export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
@@ -16,6 +17,7 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
   meld,
   onClose,
   className = '',
+  newMeldCardIds,
 }) => {
   const handleSafeClose = () => {
     try {
@@ -163,6 +165,7 @@ export const SequenceZoomModal: React.FC<SequenceZoomModalProps> = ({
                     card={card}
                     size="lg"
                     isWild={isSlotWild}
+                    isNew={Boolean(newMeldCardIds && newMeldCardIds.includes(card.id))}
                     representedRank={slot.representedRank}
                     representedSuit={slot.representedSuit ?? undefined}
                     wildcardLabel={wildLabel}

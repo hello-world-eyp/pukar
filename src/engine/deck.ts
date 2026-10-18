@@ -152,6 +152,9 @@ export function dealInitialState(
     finalTurnPlayerIndex: null,
     newlyPickedUpCardIds: [],
     cardsPickedUpThisTurn: [],
+    turnCount: 1,
+    meldCardAdditions: [],
+    lastTurnEndedAtTurnByPlayer: {},
     matchStats: {
       playerStats,
       scoreTimeline: [{ round: 0, scoreA: 0, scoreB: 0 }],

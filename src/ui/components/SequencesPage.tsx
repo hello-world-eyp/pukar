@@ -23,6 +23,7 @@ export interface SequencesPageProps {
   onZoomMeld?: (meld: Meld) => void;
   players?: { id: string; name: string; team: Team }[];
   className?: string;
+  newMeldCardIds?: string[];
 }
 
 export const SequencesPage: React.FC<SequencesPageProps> = ({
@@ -32,6 +33,7 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
   onZoomMeld,
   players = [],
   className = '',
+  newMeldCardIds,
 }) => {
   const sortDirection: MeldSortDirection = 'desc';
   const [teamFilter, setTeamFilter] = useState<'ALL' | 'A' | 'B'>('ALL');
@@ -238,6 +240,7 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
                     sortDirection={sortDirection}
                     onZoom={onZoomMeld}
                     team="A"
+                    newMeldCardIds={newMeldCardIds}
                   />
                 ))}
               </div>
@@ -279,6 +282,7 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
                     sortDirection={sortDirection}
                     onZoom={onZoomMeld}
                     team="B"
+                    newMeldCardIds={newMeldCardIds}
                   />
                 ))}
               </div>
@@ -295,6 +299,7 @@ interface EnlargedMeldCardProps {
   sortDirection: MeldSortDirection;
   onZoom?: (meld: Meld) => void;
   team: 'A' | 'B';
+  newMeldCardIds?: string[];
 }
 
 const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
@@ -302,6 +307,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
   sortDirection,
   onZoom,
   team,
+  newMeldCardIds,
 }) => {
   const evaluation = evaluateMeldScore(meld);
   const { isComplete7, isPure13, points, description } = evaluation;
@@ -459,6 +465,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
                   card={card}
                   size="lg"
                   isWild={isSlotWild}
+                  isNew={Boolean(newMeldCardIds && newMeldCardIds.includes(card.id))}
                   representedRank={slot.representedRank}
                   representedSuit={slot.representedSuit}
                   wildcardLabel={wildLabel}

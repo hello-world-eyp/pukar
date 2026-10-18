@@ -111,6 +111,17 @@ export interface GameState {
     A: boolean;
     B: boolean;
   };
+  turnCount?: number;
+  meldCardAdditions?: MeldCardAddition[];
+  lastTurnEndedAtTurnByPlayer?: Record<number, number>;
+  newMeldCardIds?: string[];
+}
+
+export interface MeldCardAddition {
+  cardId: string;
+  turnNumber: number;
+  playerIndex: number;
+  addedAt?: number;
 }
 
 export interface PlayerMatchStats {
@@ -233,6 +244,10 @@ export interface SanitizedGameState {
     A: boolean;
     B: boolean;
   };
+  turnCount?: number;
+  meldCardAdditions?: MeldCardAddition[];
+  lastTurnEndedAtTurnByPlayer?: Record<number, number>;
+  newMeldCardIds?: string[];
 }
 
 /**
