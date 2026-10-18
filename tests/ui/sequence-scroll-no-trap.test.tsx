@@ -37,11 +37,14 @@ describe('Global Vertical Page Scroll: No Sequence Scroll Trapping', () => {
     expect(match).not.toBeNull();
     const classNames = match![1];
 
-    // Must NOT have scroll trap classes that block wheel scrolling on parent page
+    // Must NOT have scroll trap classes that block wheel scrolling on parent page or cause vertical card scrolling
     expect(classNames).not.toContain('overflow-x-auto');
     expect(classNames).not.toContain('overflow-y-hidden');
+    expect(classNames).not.toContain('overflow-x-hidden');
+    expect(classNames).not.toContain('overflow-y-auto');
     expect(classNames).not.toContain('overscroll-y-contain');
     expect(classNames).not.toContain('scrollbar-thin');
+    expect(classNames).toContain('overflow-y-visible');
   });
 
   it('SequencesPage enlarged cards row does NOT contain scroll trap classes', () => {
@@ -63,8 +66,11 @@ describe('Global Vertical Page Scroll: No Sequence Scroll Trapping', () => {
     // Must NOT have scroll trap classes
     expect(classNames).not.toContain('overflow-x-auto');
     expect(classNames).not.toContain('overflow-y-hidden');
+    expect(classNames).not.toContain('overflow-x-hidden');
+    expect(classNames).not.toContain('overflow-y-auto');
     expect(classNames).not.toContain('overscroll-y-contain');
     expect(classNames).not.toContain('scrollbar-thin');
+    expect(classNames).toContain('overflow-y-visible');
   });
 
   it('calculates adaptive negative margin for long sequences to fit within board', () => {

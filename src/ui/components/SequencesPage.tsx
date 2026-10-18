@@ -430,10 +430,10 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
           </div>
         </div>
 
-        {/* Enlarged Cards Row - Clean background matching normal table without scroll trapping */}
+        {/* Enlarged Cards Row - Clean background matching normal table without vertical or horizontal scroll trapping */}
         <div
           data-testid={`enlarged-cards-row-${meld.id}`}
-          className="flex items-center pt-3 pb-2.5 px-1 overflow-x-hidden"
+          className="flex items-center pt-3 pb-2.5 px-1 overflow-y-visible [overflow-x:clip]"
         >
           {sortedSlots.map((slot, index) => {
             const card = slot.card;

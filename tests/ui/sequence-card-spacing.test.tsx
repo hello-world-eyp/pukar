@@ -154,8 +154,10 @@ describe('Compact Sequence Card Spacing (Up to 10+ Cards without Horizontal Scro
         />
       );
 
-      // Verify meld-cards-row has overflow-x-hidden to prevent horizontal scrolling
-      expect(html).toContain('overflow-x-hidden');
+      // Verify meld-cards-row has overflow-y-visible to eliminate vertical scrolling completely
+      expect(html).toContain('overflow-y-visible');
+      expect(html).not.toContain('overflow-x-hidden');
+      expect(html).not.toContain('overflow-y-auto');
       expect(html).toContain('data-testid="meld-cards-row"');
 
       // Verify all 10 cards are rendered

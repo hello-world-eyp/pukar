@@ -559,8 +559,11 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
     typeof window !== 'undefined' ? React.useLayoutEffect : React.useEffect;
 
   useIsomorphicLayoutEffect(() => {
-    if (cardsRowRef.current && cardsRowRef.current.clientWidth > 0) {
-      setMeasuredRowWidth(cardsRowRef.current.clientWidth);
+    if (cardsRowRef.current) {
+      cardsRowRef.current.scrollTop = 0;
+      if (cardsRowRef.current.clientWidth > 0) {
+        setMeasuredRowWidth(cardsRowRef.current.clientWidth);
+      }
     }
   }, []);
 
@@ -587,8 +590,11 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
       }
 
       const rowEl = cardsRowRef.current;
-      if (rowEl && rowEl.clientWidth > 0) {
-        setMeasuredRowWidth(rowEl.clientWidth);
+      if (rowEl) {
+        rowEl.scrollTop = 0;
+        if (rowEl.clientWidth > 0) {
+          setMeasuredRowWidth(rowEl.clientWidth);
+        }
       }
     };
 
@@ -851,7 +857,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
           ? 'Complete Sequence (500 pts) • Full 13-card sequence; no cards can be added'
           : undefined
       }
-      className={`relative group rounded-xl p-1.5 sm:p-2 transition-all w-full min-w-0 max-w-full [overflow-x:clip] ${
+      className={`relative group rounded-xl p-1.5 sm:p-2 transition-all w-full min-w-0 max-w-full [overflow-x:clip] overflow-y-visible ${
         isCompleteSequence
           ? 'cursor-not-allowed'
           : isDragOverTarget
@@ -967,12 +973,12 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
         )}
       </div>
 
-      {/* Sequential Cards Layout (Overlapping for compact fit without scroll trapping) */}
+      {/* Sequential Cards Layout (Overlapping for compact fit without vertical or horizontal scroll trapping) */}
       <div
         ref={cardsRowRef}
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center pt-2 pb-1 px-1.5 w-full max-w-full min-w-0 overflow-x-hidden"
+        className="flex items-center pt-2 pb-1 px-1.5 w-full max-w-full min-w-0 overflow-y-visible [overflow-x:clip]"
       >
         {(() => {
           const isSmallScreen = typeof window !== 'undefined' ? window.innerWidth < 640 : false;
