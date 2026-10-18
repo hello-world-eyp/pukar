@@ -210,6 +210,7 @@ export function decideTheLongTermGuyTurn(
           if (
             shouldHoldNewRunToExtendExistingSequence(meld, virtualMelds, {
               isFinalTurn,
+              isCloseToPukar,
               canGuaranteePukar,
               partnerCardCount,
               partnerKnownCards,

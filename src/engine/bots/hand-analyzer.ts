@@ -330,6 +330,7 @@ export function shouldHoldNewRunToExtendExistingSequence(
   options?: {
     isFinalTurn?: boolean;
     canGuaranteePukar?: boolean;
+    isCloseToPukar?: boolean;
     partnerCardCount?: number;
     partnerKnownCards?: Card[];
   }
@@ -357,6 +358,10 @@ export function shouldHoldNewRunToExtendExistingSequence(
   if (largestRun.cards.length >= 13 || (largestRun.slots && largestRun.slots.length >= 13)) {
     return false;
   }
+
+  const isLargestRunComplete =
+    largestRun.cards.length >= 7 ||
+    Boolean(largestRun.slots && largestRun.slots.length >= 7);
 
   const runRanks = largestRun.slots
     ? largestRun.slots
@@ -404,6 +409,18 @@ export function shouldHoldNewRunToExtendExistingSequence(
     }
   } else {
     // Overlapping ranks: duplicate cards in the same suit
+    // If the existing primary run is incomplete (< 7 cards), do NOT open a duplicate sequence!
+    // The priority is growing smaller sequences to larger ones (>= 7 cards for 100/200 pts).
+    // Opening duplicate sequences fragments suit cards and wastes wildcards.
+    // Only allow opening if very close to Pukar (options?.isCloseToPukar), guaranteed Pukar, or final turn.
+    if (
+      !isLargestRunComplete &&
+      !options?.isCloseToPukar &&
+      !options?.canGuaranteePukar &&
+      !options?.isFinalTurn
+    ) {
+      return true; // HOLD
+    }
     return false;
   }
 
@@ -819,6 +836,90 @@ function internalFindBestMeldPlan(
     }
   }
 
+  // PRIORITY 1.5: Sequence & Set Growth on Incomplete Table Melds (< 7 cards).
+  // The primary objective in Pukar is growing smaller runs/sets to >= 7 cards (100/200 pts).
+  // Commit natural (non-wildcard) additions that extend existing incomplete team melds
+  // before candidate new melds compete for or fragment those cards.
+  for (let iter = 0; iter < 10; iter++) {
+    const remainingCards = hand.filter(
+      (c) => !usedCardIds.has(c.id) && !isWildcard(c) && !isNaturalJoker(c) && c.rank !== 2
+    );
+    if (options?.preserveDiscardCard && hand.filter((c) => !usedCardIds.has(c.id)).length <= 1) {
+      break;
+    }
+
+    const incompleteMelds = virtualMelds.filter(
+      (m) => (m.cards?.length ?? m.slots?.length ?? 0) < 7
+    );
+    if (incompleteMelds.length === 0) break;
+
+    const potentialAdditions = findPotentialAdditionsToMelds(
+      remainingCards,
+      incompleteMelds,
+      { isCloseToPukar, isFinalTurn, canGuaranteePukar: options?.canGuaranteePukar }
+    );
+    if (potentialAdditions.length === 0) {
+      break;
+    }
+
+    let addedInIter = false;
+    for (const add of potentialAdditions) {
+      const hasOverlap = add.cards.some((c) => usedCardIds.has(c.id));
+      if (hasOverlap) continue;
+
+      if (add.cards.length >= hand.length) {
+        continue;
+      }
+
+      const potentialUsed = new Set([...usedCardIds, ...add.cards.map((c) => c.id)]);
+      const remainingHand = hand.filter((c) => !potentialUsed.has(c.id));
+
+      if (options?.preserveDiscardCard && remainingHand.length === 0) {
+        continue;
+      }
+
+      if (options?.disallowedCardId) {
+        const remainingNonDisallowed = remainingHand.filter(
+          (c) => c.id !== options.disallowedCardId
+        );
+        if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+          continue;
+        }
+      }
+
+      const targetMeldIndex = virtualMelds.findIndex((m) => m.id === add.meldId);
+      if (targetMeldIndex >= 0) {
+        const targetMeld = virtualMelds[targetMeldIndex];
+        const validation = canAddCardsToMeld(targetMeld, add.cards);
+        if (validation.valid && validation.updatedSlots) {
+          const scoreBefore = evaluateMeldScore(targetMeld).points;
+          const meldCardsWithoutPickedUp = validation.pickedUpCard
+            ? targetMeld.cards.filter((c) => c.id !== validation.pickedUpCard!.id)
+            : targetMeld.cards;
+          const nextVirtualMeld: Meld = {
+            ...targetMeld,
+            cards: [...meldCardsWithoutPickedUp, ...add.cards],
+            slots: validation.updatedSlots,
+          };
+          const scoreAfter = evaluateMeldScore(nextVirtualMeld).points;
+          if (scoreAfter < scoreBefore && !options?.canGuaranteePukar) {
+            continue;
+          }
+
+          virtualMelds[targetMeldIndex] = nextVirtualMeld;
+          additionsToPlay.push(add);
+          add.cards.forEach((c) => usedCardIds.add(c.id));
+          addedInIter = true;
+          break;
+        }
+      }
+    }
+
+    if (!addedInIter) {
+      break;
+    }
+  }
+
   // PRIORITY 2: Form new candidate melds from remaining uncommitted hand cards.
   const stageCandidateMelds = (candidates: CandidateMeld[]) => {
     for (const meld of candidates) {
@@ -852,6 +953,7 @@ function internalFindBestMeldPlan(
         if (
           shouldHoldNewRunToExtendExistingSequence(meld, virtualMelds, {
             isFinalTurn,
+            isCloseToPukar,
             canGuaranteePukar: options?.canGuaranteePukar,
             partnerCardCount: options?.partnerCardCount,
             partnerKnownCards: options?.partnerKnownCards,
@@ -1125,8 +1227,9 @@ export function evaluateDeadwoodAndDiscard(
       reason = 'Can be added to team sequence (protected from discard)';
     }
 
-    // 2. Team Table Melds: Open-end neighbor (adjacent to a team run on table)
+    // 2. Team Table Melds: Open-end neighbor (adjacent or 1-gap to a team run on table)
     let isTeamMeldNeighbor = false;
+    let isTeamMeldGapNeighbor = false;
     if (!isExplicitPartnerPass && options?.teamMelds && card.suit) {
       for (const meld of options.teamMelds) {
         if (meld.type === 'RUN' && meld.suit === card.suit) {
@@ -1134,9 +1237,21 @@ export function evaluateDeadwoodAndDiscard(
           if (ranks.length > 0) {
             const minR = ranks[0];
             const maxR = ranks[ranks.length - 1];
-            if (card.rank === minR - 1 || card.rank === maxR + 1) {
+            if (
+              card.rank === minR - 1 ||
+              card.rank === maxR + 1 ||
+              (card.rank === 14 && minR === 2) ||
+              (card.rank === 2 && maxR === 14)
+            ) {
               isTeamMeldNeighbor = true;
               break;
+            } else if (
+              card.rank === minR - 2 ||
+              card.rank === maxR + 2 ||
+              (card.rank === 14 && minR === 3) ||
+              (card.rank === 3 && minR === 2)
+            ) {
+              isTeamMeldGapNeighbor = true;
             }
           }
         }
@@ -1145,6 +1260,9 @@ export function evaluateDeadwoodAndDiscard(
     if (isTeamMeldNeighbor) {
       score += 180;
       reason = 'Connects to open end of team table sequence';
+    } else if (isTeamMeldGapNeighbor) {
+      score += 90;
+      reason = 'Connects to team table sequence with 1-gap';
     }
 
     // 3. Opponent Table Melds: Does this card feed or extend opponent sequences/sets on table?
@@ -1244,6 +1362,9 @@ export function evaluateDeadwoodAndDiscard(
       } else if (options?.personality === 'CHEETAH' && isCloseToPukar) {
         score += 20;
         reason = 'Cheetah aggressive rush: feeds opponent sequence';
+      } else if (options?.personality === 'SMART_CHACHA') {
+        score += 450;
+        reason = 'Smart Chacha denial: feeds opponent table meld';
       } else {
         score += 150;
         reason = 'Feeds opponent sequence on table (denial protection)';
@@ -1263,6 +1384,9 @@ export function evaluateDeadwoodAndDiscard(
       } else if (options?.personality === 'CHEETAH' && isCloseToPukar) {
         score += 20;
         reason = 'Cheetah aggressive rush: opponent want tolerated for Pukar rush';
+      } else if (options?.personality === 'SMART_CHACHA') {
+        score += 350;
+        reason = 'Smart Chacha memory denial: opponents predicted to need this card';
       } else {
         score += 160;
         reason = 'Opponents predicted to need this card';
@@ -1347,10 +1471,16 @@ export function evaluateDeadwoodAndDiscard(
         hasGapNeighbor ||
         sameRankCount > 0 ||
         isDirectTeamAdd ||
-        isTeamMeldNeighbor);
+        isTeamMeldNeighbor ||
+        isTeamMeldGapNeighbor);
 
     if (!isCloseToPukar && !isFinalTurn && hasAnyConnection) {
-      score += 60; // Strong penalty against discarding connecting cards when not close to Pukar!
+      if (options?.personality === 'SMART_CHACHA') {
+        score += 350; // Sid strictly preserves connecting cards when not close to Pukar!
+        reason = 'Smart Chacha connection preservation';
+      } else {
+        score += 60; // Strong penalty against discarding connecting cards when not close to Pukar!
+      }
     }
 
     // 7. Partner likely wants (Smart Chacha partner assist):
@@ -1360,7 +1490,7 @@ export function evaluateDeadwoodAndDiscard(
       !isTeamMeldNeighbor &&
       (options?.partnerLikelyWants?.has(cardKey) || options?.partnerLikelyWants?.has(card.id))
     ) {
-      score -= 80;
+      score -= options?.personality === 'SMART_CHACHA' ? 160 : 80;
       reason = 'Passed to partner via discard pile';
     }
 
@@ -1375,6 +1505,9 @@ export function evaluateDeadwoodAndDiscard(
     if (shouldBury && isCompletelyIrrelevantDeadwood) {
       score -= 60;
       reason = 'Completely irrelevant deadwood (buries connector for partner / lockdown)';
+    } else if (options?.personality === 'SMART_CHACHA' && isCompletelyIrrelevantDeadwood) {
+      score -= 80;
+      reason = 'Smart Chacha isolated deadwood dump';
     }
 
     // 9. Isolated high deadwood (ranks 10-K with zero connections and not feeding opponents):
@@ -2315,7 +2448,11 @@ export function evaluateDiscardPilePickup(
     if (pileLength >= 4) {
       const oppWantsCard = discardPile.some((c) => {
         const k = c.suit ? `${c.suit}_${c.rank}` : 'WILD';
-        return options.opponentWants?.has(k) || options.opponentWants?.has(c.id);
+        return (
+          options.opponentWants?.has(k) ||
+          options.opponentWants?.has(c.id) ||
+          options.opponentWants?.has(`RANK_${c.rank}`)
+        );
       });
       if (oppWantsCard) {
         return true;

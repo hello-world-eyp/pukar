@@ -53,6 +53,13 @@ export function predictOpponentWants(
         const maxRank = ranks[ranks.length - 1];
         if (minRank > 2) wants.add(`${meld.suit}_${minRank - 1}`);
         if (maxRank < 14) wants.add(`${meld.suit}_${maxRank + 1}`);
+        if (minRank > 3) wants.add(`${meld.suit}_${minRank - 2}`);
+        if (maxRank < 13) wants.add(`${meld.suit}_${maxRank + 2}`);
+        if (minRank === 2) wants.add(`${meld.suit}_14`);
+        if (maxRank === 14) wants.add(`${meld.suit}_2`);
+        for (const r of ranks) {
+          wants.add(`RANK_${r}`);
+        }
       }
     } else if (meld.type === 'SET' && meld.slots.length > 0) {
       const setRank = meld.slots[0].representedRank;
@@ -295,6 +302,7 @@ export function decideSmartChachaTurn(
     // Does card connect to team table melds?
     const isTeamMeldAdd = myTeamMelds.some((m) => canAddCardsToMeld(m, [card]).valid);
     let isTeamMeldNeighbor = false;
+    let isTeamMeldGapNeighbor = false;
     if (card.suit) {
       for (const tm of myTeamMelds) {
         if (tm.type === 'RUN' && tm.suit === card.suit) {
@@ -302,9 +310,21 @@ export function decideSmartChachaTurn(
           if (ranks.length > 0) {
             const minR = ranks[0];
             const maxR = ranks[ranks.length - 1];
-            if (card.rank === minR - 1 || card.rank === maxR + 1) {
+            if (
+              card.rank === minR - 1 ||
+              card.rank === maxR + 1 ||
+              (card.rank === 14 && minR === 2) ||
+              (card.rank === 2 && maxR === 14)
+            ) {
               isTeamMeldNeighbor = true;
               break;
+            } else if (
+              card.rank === minR - 2 ||
+              card.rank === maxR + 2 ||
+              (card.rank === 14 && minR === 3) ||
+              (card.rank === 3 && minR === 2)
+            ) {
+              isTeamMeldGapNeighbor = true;
             }
           }
         }
@@ -315,13 +335,14 @@ export function decideSmartChachaTurn(
       partnerNeeds.has(cardKey) ||
       partnerNeeds.has(rankKey) ||
       isTeamMeldAdd ||
-      isTeamMeldNeighbor;
+      isTeamMeldNeighbor ||
+      isTeamMeldGapNeighbor;
 
-    if (partnerNeedsCard) {
-      if (opponentCanIntercept) {
-        // Opponent would intercept: strictly avoid giving it! Hold in hand.
-        protectedCardIds.add(card.id);
-      } else if (!isDiscardPileCleanForPartner) {
+    if (opponentCanIntercept) {
+      // Opponent would intercept: strictly avoid giving it! Hold in hand.
+      protectedCardIds.add(card.id);
+    } else if (partnerNeedsCard) {
+      if (!isDiscardPileCleanForPartner) {
         // Discard pile is dirty (>= 2 opponent cards): avoid giving it!
         protectedCardIds.add(card.id);
       } else if (isPartnerOnLessThan3Cards) {
@@ -336,7 +357,7 @@ export function decideSmartChachaTurn(
         // Partner has >= 3 cards (building hand):
         // If it's a table sequence card, do NOT throw it to partner (protect it so opponents don't scoop).
         // Otherwise, it's a hand card partner needs: pass it to partner!
-        if (isTeamMeldAdd || isTeamMeldNeighbor) {
+        if (isTeamMeldAdd || isTeamMeldNeighbor || isTeamMeldGapNeighbor) {
           protectedCardIds.add(card.id);
         } else if (partner) {
           partnerLikelyWants.add(cardKey);
@@ -347,7 +368,7 @@ export function decideSmartChachaTurn(
     } else {
       // Not specifically flagged as partner need:
       // Protect table sequence cards from discard
-      if (isTeamMeldAdd || isTeamMeldNeighbor) {
+      if (isTeamMeldAdd || isTeamMeldNeighbor || isTeamMeldGapNeighbor) {
         protectedCardIds.add(card.id);
       }
     }
@@ -358,6 +379,7 @@ export function decideSmartChachaTurn(
     new Set(),
     {
       disallowedCardId,
+      personality: 'SMART_CHACHA',
       opponentWants,
       partnerLikelyWants,
       protectedCardIds,

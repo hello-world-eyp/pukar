@@ -3921,6 +3921,164 @@ describe('Bot Personality Strategies', () => {
       const planCheetah = decideCheetahTurn(state, 1, createEmptyMemory());
       expect(planCheetah.drawAction.type).toBe('DRAW_FROM_STOCK');
     });
+
+    describe('Sid Bot (Smart Chacha) Intelligence & Duplicate Run Management', () => {
+      it('attaches natural card to existing incomplete table sequence and holds duplicate run instead of opening duplicate meld', () => {
+        const state = createTestState();
+        state.phase = 'MELD';
+        state.turnPhase = 'MELD';
+        state.players[1].team = 'A';
+
+        // Team A already has 10♣-11♣-12♣ on table (incomplete run, 3 cards)
+        state.melds.A = [
+          {
+            id: 'meld-c1',
+            type: 'RUN',
+            suit: 'CLUBS',
+            isClean: true,
+            team: 'A',
+            cards: [
+              makeCard('tc1', 'CLUBS', 10),
+              makeCard('tc2', 'CLUBS', 11),
+              makeCard('tc3', 'CLUBS', 12),
+            ],
+            slots: [
+              { card: makeCard('tc1', 'CLUBS', 10), representedRank: 10, isWildcard: false },
+              { card: makeCard('tc2', 'CLUBS', 11), representedRank: 11, isWildcard: false },
+              { card: makeCard('tc3', 'CLUBS', 12), representedRank: 12, isWildcard: false },
+            ],
+          },
+        ];
+
+        // Sid holds 9♣ (extends table sequence) + duplicate 10♣ + 7♣ + Joker + other cards
+        state.players[1].hand = [
+          makeCard('c9', 'CLUBS', 9),
+          makeCard('c10_dup', 'CLUBS', 10),
+          makeCard('c7', 'CLUBS', 7),
+          makeCard('j1', null, 0, true), // Joker
+          makeCard('d4', 'DIAMONDS', 4),
+          makeCard('h5', 'HEARTS', 5),
+          makeCard('s8', 'SPADES', 8),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+
+        // 1. Sid MUST add 9♣ to the existing table run
+        const additions = plan.meldActions.filter((a) => a.type === 'ADD_TO_MELD');
+        expect(additions.some((a) => a.cardIds.includes('c9'))).toBe(true);
+
+        // 2. Sid must NOT open a new duplicate clubs meld
+        const newMelds = plan.meldActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+        expect(newMelds.length).toBe(0);
+      });
+
+      it('permits opening duplicate run when existing team run is complete (>= 7 cards)', () => {
+        const state = createTestState();
+        state.phase = 'MELD';
+        state.turnPhase = 'MELD';
+        state.players[1].team = 'A';
+
+        // Team A has complete 7-card run 4♣-10♣
+        state.melds.A = [
+          {
+            id: 'meld-c-7',
+            type: 'RUN',
+            suit: 'CLUBS',
+            isClean: true,
+            team: 'A',
+            cards: [
+              makeCard('tc4', 'CLUBS', 4),
+              makeCard('tc5', 'CLUBS', 5),
+              makeCard('tc6', 'CLUBS', 6),
+              makeCard('tc7', 'CLUBS', 7),
+              makeCard('tc8', 'CLUBS', 8),
+              makeCard('tc9', 'CLUBS', 9),
+              makeCard('tc10', 'CLUBS', 10),
+            ],
+            slots: [
+              { card: makeCard('tc4', 'CLUBS', 4), representedRank: 4, isWildcard: false },
+              { card: makeCard('tc5', 'CLUBS', 5), representedRank: 5, isWildcard: false },
+              { card: makeCard('tc6', 'CLUBS', 6), representedRank: 6, isWildcard: false },
+              { card: makeCard('tc7', 'CLUBS', 7), representedRank: 7, isWildcard: false },
+              { card: makeCard('tc8', 'CLUBS', 8), representedRank: 8, isWildcard: false },
+              { card: makeCard('tc9', 'CLUBS', 9), representedRank: 9, isWildcard: false },
+              { card: makeCard('tc10', 'CLUBS', 10), representedRank: 10, isWildcard: false },
+            ],
+          },
+        ];
+
+        // Hand holds duplicate 7♣-8♣-9♣ and other cards
+        state.players[1].hand = [
+          makeCard('c7_dup', 'CLUBS', 7),
+          makeCard('c8_dup', 'CLUBS', 8),
+          makeCard('c9_dup', 'CLUBS', 9),
+          makeCard('d4', 'DIAMONDS', 4),
+          makeCard('h5', 'HEARTS', 5),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+        const newMelds = plan.meldActions.filter((a) => a.type === 'PLAY_NEW_MELD');
+        expect(newMelds.length).toBe(1);
+        expect(newMelds[0].cardIds).toEqual(expect.arrayContaining(['c7_dup', 'c8_dup', 'c9_dup']));
+      });
+
+      it('strictly refuses to discard connecting cards when isolated deadwood exists', () => {
+        const state = createTestState();
+        state.phase = 'DISCARD';
+        state.turnPhase = 'DISCARD';
+        state.players[1].team = 'A';
+
+        // Hand holds: 8♠ (connected to 9♠), 9♠, and 3♦ (completely isolated deadwood)
+        state.players[1].hand = [
+          makeCard('s8', 'SPADES', 8),
+          makeCard('s9', 'SPADES', 9),
+          makeCard('d3', 'DIAMONDS', 3),
+          makeCard('h11', 'HEARTS', 11),
+          makeCard('h12', 'HEARTS', 12),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+        // Sid should discard isolated deadwood 3♦ and NEVER discard 8♠, 9♠, 11♥, or 12♥
+        expect(plan.discardAction.cardId).toBe('d3');
+      });
+
+      it('strictly refuses to discard a card that feeds an opponent table set', () => {
+        const state = createTestState();
+        state.phase = 'DISCARD';
+        state.turnPhase = 'DISCARD';
+        state.players[1].team = 'A';
+
+        // Team B (opponents) has a set of 6s on table: 6♥-6♣-6♠
+        state.melds.B = [
+          {
+            id: 'meld-b-6s',
+            type: 'SET',
+            rank: 6,
+            team: 'B',
+            cards: [
+              makeCard('b6h', 'HEARTS', 6),
+              makeCard('b6c', 'CLUBS', 6),
+              makeCard('b6s', 'SPADES', 6),
+            ],
+            slots: [
+              { card: makeCard('b6h', 'HEARTS', 6), representedRank: 6, isWildcard: false },
+              { card: makeCard('b6c', 'CLUBS', 6), representedRank: 6, isWildcard: false },
+              { card: makeCard('b6s', 'SPADES', 6), representedRank: 6, isWildcard: false },
+            ],
+          },
+        ];
+
+        // Sid holds 6♦ (would feed opponent set) and 13♠ (isolated deadwood)
+        state.players[1].hand = [
+          makeCard('d6', 'DIAMONDS', 6),
+          makeCard('s13', 'SPADES', 13),
+        ];
+
+        const plan = decideSmartChachaTurn(state, 1, createEmptyMemory());
+        // Sid must NOT discard 6♦! Sid should discard 13♠!
+        expect(plan.discardAction.cardId).toBe('s13');
+      });
+    });
   });
 });
 
