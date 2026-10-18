@@ -96,19 +96,12 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
   const scoreB = calculateTeamPoints(listB);
 
   return (
-    <div className={`w-full flex flex-col gap-2 sm:gap-2.5 ${className}`}>
-      {/* Board Controls Bar */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <span className="text-sm sm:text-base font-black text-stone-800">Table Sequences</span>
-          <span className="text-sm text-stone-400">•</span>
-          <span className="text-xs sm:text-sm font-bold text-stone-600">
-            {sortDirection === 'desc' ? 'Sorted Highest to Lowest' : 'Sorted Lowest to Highest'}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-3.5">
+    <div
+      aria-label={`Table Sequences (${sortDirection === 'desc' ? 'Sorted Highest to Lowest' : 'Sorted Lowest to Highest'})`}
+      data-testid="table-meld-board"
+      className={`w-full ${className}`}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-2.5">
         {/* TEAM A MELDS COLUMN */}
         <TeamMeldColumn
           team="A"
@@ -275,13 +268,13 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
       data-team={team}
       className={`rounded-2xl sm:rounded-3xl border-2 ${
         isBlue ? 'border-sky-300/80 bg-white/60' : 'border-amber-300/80 bg-white/60'
-      } p-2.5 sm:p-3 flex flex-col gap-2 sm:gap-2.5 shadow-sm transition-all ${
+      } p-2 sm:p-2.5 flex flex-col gap-1.5 sm:gap-2 shadow-sm transition-all ${
         isActive ? activeRing : ''
       }`}
     >
       {/* Column Header */}
       <div
-        className={`flex items-center justify-between px-3 py-1.5 rounded-xl ${headerBg} border ${headerBorder}`}
+        className={`flex items-center justify-between px-2.5 py-1 rounded-xl ${headerBg} border ${headerBorder}`}
       >
         <div className="flex items-center gap-2">
           <Shield className={`w-4 h-4 ${headerTextColor}`} />
@@ -305,9 +298,9 @@ const TeamMeldColumn: React.FC<TeamMeldColumnProps> = ({
       </div>
 
       {/* Sequences List: Strictly 2 columns on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-2.5 min-h-[75px] w-full min-w-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 sm:gap-2 min-h-[60px] w-full min-w-0">
         {sortedMelds.length === 0 ? (
-          <div className="col-span-full flex-1 flex flex-col items-center justify-center p-2 sm:p-3 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-xs sm:text-sm text-center bg-white/40 min-h-[60px]">
+          <div className="col-span-full flex-1 flex flex-col items-center justify-center p-2 sm:p-2.5 border-2 border-dashed border-stone-300/80 rounded-xl text-stone-500 text-xs sm:text-sm text-center bg-white/40 min-h-[50px]">
             <p className="font-bold text-stone-700">No sequences placed yet</p>
             <p className="text-xs text-stone-500 mt-0.5">
               {`Sequences placed by ${teamName} will appear here.`}
@@ -857,7 +850,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
           ? 'Complete Sequence (500 pts) • Full 13-card sequence; no cards can be added'
           : undefined
       }
-      className={`relative group rounded-xl p-2 sm:p-2.5 transition-all w-full min-w-0 max-w-full [overflow-x:clip] ${
+      className={`relative group rounded-xl p-1.5 sm:p-2 transition-all w-full min-w-0 max-w-full [overflow-x:clip] ${
         isCompleteSequence
           ? 'cursor-not-allowed'
           : isDragOverTarget
@@ -910,7 +903,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
         ref={headerRef}
         data-testid={`meld-header-${meld.id}`}
         data-compact={isCompact ? 'true' : 'false'}
-        className="min-h-[28px] flex items-center justify-between mb-2 gap-1.5 flex-nowrap"
+        className="min-h-[24px] flex items-center justify-between mb-1 sm:mb-1.5 gap-1.5 flex-nowrap"
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-nowrap">
           <span
@@ -978,7 +971,7 @@ export const MeldCardItem: React.FC<MeldCardItemProps> = ({
         ref={cardsRowRef}
         data-testid="meld-cards-row"
         data-sort-direction={sortDirection}
-        className="flex items-center pt-4 pb-2.5 px-2 w-full max-w-full min-w-0 overflow-x-hidden"
+        className="flex items-center pt-2 pb-1 px-1.5 w-full max-w-full min-w-0 overflow-x-hidden"
       >
         {(() => {
           const isSmallScreen = typeof window !== 'undefined' ? window.innerWidth < 640 : false;

@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1792326041.9071107,
-    "seen": 1792326079.722337,
-    "ast_hash": "6521f3302d7ccf44b7d292721e227a50",
+    "mtime": 1792326319.336598,
+    "seen": 1792326352.1488278,
+    "ast_hash": "32ffe1827a8f29fe41ee3bfe69657fff",
     "semantic_hash": ""
   },
   "src/engine/bots/bot-player.ts": {
@@ -306,9 +306,9 @@
     "semantic_hash": ""
   },
   "src/ui/components/TableMeldBoard.tsx": {
-    "mtime": 1792325661.4931111,
-    "seen": 1792325734.2576032,
-    "ast_hash": "46c5bfb52f665b7c9a27b123a9a6ae25",
+    "mtime": 1792326301.7907572,
+    "seen": 1792326352.148876,
+    "ast_hash": "d929badc3110a1cc39f4d49d0a470250",
     "semantic_hash": ""
   },
   "src/ui/components/TableSeating.tsx": {

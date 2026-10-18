@@ -897,9 +897,9 @@ export function App({
         /* =====================================================================
             3. MAIN PLAYING ARENA (EXPANDED WIDESCREEN FIT)
         ====================================================================== */
-        <main className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-1.5 sm:py-2 flex flex-col gap-2 sm:gap-2.5 flex-1 min-h-0">
+        <main className="w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-1 sm:py-1.5 flex flex-col gap-1 sm:gap-1.5 flex-1 min-h-0">
           {/* Spatial Seating & Casino Felt Card Table Arena */}
-          <section aria-label="Table Arena and Seating" className="w-full flex flex-col justify-start my-0.5">
+          <section aria-label="Table Arena and Seating" className="w-full flex flex-col justify-start my-0">
             <TableSeating
               players={activeGameState.players}
               viewedPlayerIndex={currentViewIndex}
@@ -919,7 +919,7 @@ export function App({
 
               {/* The Modern Wood & Cream Table Arena Mat */}
               <div
-                className={`w-full rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-5 table-cream-mat flex flex-col gap-3 sm:gap-3.5 shadow-2xl transition-transform ${
+                className={`w-full rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 table-cream-mat flex flex-col gap-2 sm:gap-2.5 shadow-2xl transition-transform ${
                   isTableRippling ? 'animate-table-quake' : ''
                 }`}
               >
