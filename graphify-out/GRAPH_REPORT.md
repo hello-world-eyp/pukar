@@ -1,7 +1,7 @@
 # Graph Report - Pukar game  (2026-10-21)
 
 ## Corpus Check
-- 173 files · ~230,178 words
+- 173 files · ~230,244 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .css 1, .command 1)
 
@@ -11,13 +11,13 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `038ea3bf`
+- Built from commit: `46250bf4`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - TableSeating
-- Deck Creation & Sequence Mechanics
+- vitest
 - RoomManager
 - App.tsx
 - server/types.ts
@@ -33,25 +33,25 @@
 - Security Overrides
 - Production Dependencies
 - Vite Build Configuration
-- App
+- bot-game-hook.test.tsx
 - Game Launcher Shell Script
 - Game Rules & Mechanics
 - Design Specification: Pukar Multiplayer (LAN & Online)
-- bot-game-hook.test.tsx
+- lucide-react
 - ErrorBoundary.tsx
 - 3. Game Rules & Formal Specification
 - server.ts
 - useMultiplayerGame.test.ts
-- react
+- App
 - SanitizedGameState
 - build-royal-heritage-deck.py
 - CLAUDE.md
 - GEMINI.md
 - GameSetupModal.tsx
-- app-multiplayer-integration.test.tsx
+- PukarSlamOverlay.tsx
 - Global Constraints
 - PureSequenceCelebrationModal.tsx
-- TableMeldBoard.tsx
+- engine/types.ts
 - top-nav-bar-and-pages.test.tsx
 
 ## God Nodes (most connected - your core abstractions)
@@ -87,7 +87,7 @@
 Cohesion: 0.31
 Nodes (9): Global Constraints, Pukar Table UI Redesign & Sequence Renaming Plan, Task 1: UI Terminology Migration: "Meld" -> "Sequence" Across Components & Modals, Task 2: Relative Seating Calculation & `PlayerSeat` / `TableSeating` Component, Task 3: Casino Felt Table Styling & Wide Layout Container, Task 6: Full Integration Verification & Build Audit, getRelativeTableSeats(), PlayerSeat() (+1 more)
 
-### Community 1 - "Deck Creation & Sequence Mechanics"
+### Community 1 - "vitest"
 Cohesion: 0.08
 Nodes (37): Task 2: Core Data Types & Deck Management, Global Constraints, Pukar Multiplayer (LAN & Online) Implementation Plan, Task 2: Decoupled Room Manager & Reconnection Session Store, Task 3: Authoritative Game Coordinator & State Sanitization, Task 4: WebSocket Server, Connection Lifecycle & Multi-Client E2E Test Suite, Task 5: Client Networking Layer & React State Hook (`useMultiplayerGame`), Core Objectives: (+29 more)
 
@@ -147,9 +147,9 @@ Nodes (5): overrides, braces, micromatch, postcss-selector-parser, tinypool
 Cohesion: 0.50
 Nodes (4): dependencies, lucide-react, react-dom, ws
 
-### Community 17 - "App"
-Cohesion: 0.47
-Nodes (4): App(), useVoiceChat(), YourTurnModal(), YourTurnModalProps
+### Community 17 - "bot-game-hook.test.tsx"
+Cohesion: 0.25
+Nodes (4): UnclePukarChoiceModal(), UnclePukarChoiceModalProps, findElement(), runHook()
 
 ### Community 21 - "Game Rules & Mechanics"
 Cohesion: 0.08
@@ -159,9 +159,9 @@ Nodes (23): Deck Setup & Dealing, Game Modes, Game Rules & Mechanics, Getting St
 Cohesion: 0.10
 Nodes (19): 1. Executive Summary & Objective, 2. High-Level Architecture & System Topology, 3.1 Client → Server Messages, 3.2 Server → Client Messages, 3. Network Protocol Specification, 4.1 Diagnostic Logger (`server/logger.ts`), 4.2 Room Manager (`server/room-manager.ts`), 4.3 Game Coordinator (`server/game-coordinator.ts`) (+11 more)
 
-### Community 23 - "bot-game-hook.test.tsx"
-Cohesion: 0.25
-Nodes (4): UnclePukarChoiceModal(), UnclePukarChoiceModalProps, findElement(), runHook()
+### Community 23 - "lucide-react"
+Cohesion: 0.16
+Nodes (10): Task 7: App Integration, In-Game Multiplayer Experience & End-to-End Verification, react, lucide-react, parseRoomCodeFromUrl(), JokerPromptModal(), ModeSelectorModal(), ModeSelectorModalProps, MultiplayerStatusBar() (+2 more)
 
 ### Community 24 - "ErrorBoundary.tsx"
 Cohesion: 0.18
@@ -179,17 +179,17 @@ Nodes (14): ws, broadcastGameState(), broadcastLobby(), broadcastToRoom(), __dir
 Cohesion: 0.06
 Nodes (39): Task 6: Multiplayer UI Components: Mode Selector, Create/Join View & Interactive Lobby, LobbySeat, clearSessionCredentials(), getLocalStorage(), getSessionCredentials(), getStorage(), getStoredPlayerName(), memoryFallback (+31 more)
 
-### Community 28 - "react"
-Cohesion: 0.40
-Nodes (5): BurstParticle, CELEBRATION_SYMBOLS, generateParticles(), PukarSlamOverlay(), PukarSlamOverlayProps
+### Community 28 - "App"
+Cohesion: 0.47
+Nodes (4): App(), useVoiceChat(), YourTurnModal(), YourTurnModalProps
 
 ### Community 30 - "build-royal-heritage-deck.py"
 Cohesion: 0.25
 Nodes (8): build_aces_and_jokers(), build_court_cards(), build_master_base_pristine(), create_bespoke_gold_numeral(), erase_isolated_emblem(), generate_pip_card(), get_positions(), main()
 
-### Community 34 - "app-multiplayer-integration.test.tsx"
-Cohesion: 0.16
-Nodes (10): Task 7: App Integration, In-Game Multiplayer Experience & End-to-End Verification, react, lucide-react, parseRoomCodeFromUrl(), JokerPromptModal(), ModeSelectorModal(), ModeSelectorModalProps, MultiplayerStatusBar() (+2 more)
+### Community 34 - "PukarSlamOverlay.tsx"
+Cohesion: 0.40
+Nodes (5): BurstParticle, CELEBRATION_SYMBOLS, generateParticles(), PukarSlamOverlay(), PukarSlamOverlayProps
 
 ### Community 35 - "Global Constraints"
 Cohesion: 0.29
@@ -199,7 +199,7 @@ Nodes (6): Global Constraints, Pukar Card Game Implementation Plan, Task 1: Proj
 Cohesion: 0.60
 Nodes (3): PureSequenceCelebrationModal(), PureSequenceCelebrationModalProps, isSoundEnabled()
 
-### Community 40 - "TableMeldBoard.tsx"
+### Community 40 - "engine/types.ts"
 Cohesion: 0.05
 Nodes (84): Task 5: Visual Card & Meld Board UI Components, Task 6: Hand, Action Controls, Scoreboard & Inspector Components, Task 4: Center Table Deck Refinement & Click-To-Zoom on Discard Pile, Task 5: Sequence Zoom Modal & Enlarged Card Sizing, 6.3 In-Game Multiplayer Experience, react-dom, DiscardEvaluationOptions, MilestoneRunTarget (+76 more)
 
@@ -215,15 +215,15 @@ Nodes (6): PlayerInfo, TEAM_AVATAR_PALETTE, TopNavBar(), TopNavBarProps, VoiceCh
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `vitest` connect `Deck Creation & Sequence Mechanics` to `TableSeating`, `GameSetupModal.tsx`, `app-multiplayer-integration.test.tsx`, `App.tsx`, `server/types.ts`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `room-manager.ts`, `TableMeldBoard.tsx`, `PureSequenceCelebrationModal.tsx`, `top-nav-bar-and-pages.test.tsx`, `Package Manifest & Metadata`, `App`, `bot-game-hook.test.tsx`, `ErrorBoundary.tsx`, `server.ts`, `useMultiplayerGame.test.ts`, `SanitizedGameState`?**
+- **Why does `vitest` connect `vitest` to `TableSeating`, `GameSetupModal.tsx`, `App.tsx`, `server/types.ts`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `room-manager.ts`, `engine/types.ts`, `PureSequenceCelebrationModal.tsx`, `top-nav-bar-and-pages.test.tsx`, `Package Manifest & Metadata`, `bot-game-hook.test.tsx`, `lucide-react`, `ErrorBoundary.tsx`, `server.ts`, `useMultiplayerGame.test.ts`, `App`, `SanitizedGameState`?**
   _High betweenness centrality (0.134) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `Card` (e.g. with `Task 2: Core Data Types & Deck Management` and `Task 5: Visual Card & Meld Board UI Components`) actually correct?**
   _`Card` has 3 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `@types/node`, `@types/react`, `@types/react-dom` to the rest of the system?**
   _12 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `Deck Creation & Sequence Mechanics` be split into smaller, more focused modules?**
+- **Should `vitest` be split into smaller, more focused modules?**
   _Cohesion score 0.07758907758907758 - nodes in this community are weakly interconnected._
-- **Why does `Card` connect `TableMeldBoard.tsx` to `Deck Creation & Sequence Mechanics`, `app-multiplayer-integration.test.tsx`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `top-nav-bar-and-pages.test.tsx`, `bot-game-hook.test.tsx`, `SanitizedGameState`?**
+- **Why does `Card` connect `engine/types.ts` to `vitest`, `useLocalGame.ts`, `Bot AI & Turn Decision Strategies`, `top-nav-bar-and-pages.test.tsx`, `bot-game-hook.test.tsx`, `lucide-react`, `SanitizedGameState`?**
   _High betweenness centrality (0.062) - this node is a cross-community bridge._
 - **Are the 3 inferred relationships involving `Meld` (e.g. with `Task 2: Core Data Types & Deck Management` and `Task 5: Visual Card & Meld Board UI Components`) actually correct?**
   _`Meld` has 3 INFERRED edges - model-reasoned connections that need verification._

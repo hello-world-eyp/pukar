@@ -196,8 +196,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     >
       {/* MOBILE BAR (<768px): Logo + Active Player + Hamburger Toggle */}
       <div className="flex md:hidden items-center justify-between w-full gap-2">
-        {/* Left: Logo & Title */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Left: Logo & Title (clickable to return to home screen) */}
+        <button
+          type="button"
+          data-testid="btn-nav-home-mobile"
+          onClick={onExitToMenu}
+          disabled={!onExitToMenu}
+          title={onExitToMenu ? 'Return to Home Screen' : undefined}
+          className={`flex items-center gap-2 shrink-0 transition-transform ${
+            onExitToMenu ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'
+          }`}
+        >
           <div className="h-9 w-9 rounded-xl bg-lime-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-md shrink-0">
             ♠
           </div>
@@ -209,7 +218,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               {displayTitle}
             </span>
           ) : null}
-        </div>
+        </button>
 
         {/* Right: Active Player Pill & Hamburger Button */}
         <div className="flex items-center gap-2 shrink-0">
@@ -247,8 +256,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             1. LEFT: LOGO, TITLE, AND NAVIGATION PILLS
         ====================================================================== */}
         <div className="flex items-center gap-5 sm:gap-7 shrink-0">
-        {/* Branding & Subtitle */}
-        <div className="flex items-center gap-3.5 shrink-0">
+        {/* Branding & Subtitle (clickable to return to home screen) */}
+        <button
+          type="button"
+          data-testid="btn-nav-home"
+          onClick={onExitToMenu}
+          disabled={!onExitToMenu}
+          title={onExitToMenu ? 'Return to Home Screen' : undefined}
+          className={`flex items-center gap-3.5 shrink-0 transition-transform ${
+            onExitToMenu ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'
+          }`}
+        >
           <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-lime-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-md shrink-0">
             ♠
           </div>
@@ -262,7 +280,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               </span>
             ) : null}
           </div>
-        </div>
+        </button>
 
         {/* Navigation Tabs (Table, Sequences, Scoreboard, How to play) */}
         <nav className="flex items-center gap-1.5 sm:gap-2" aria-label="Game navigation">

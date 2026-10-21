@@ -318,9 +318,9 @@
     "semantic_hash": "fafc2303c9300975effae3e001515e98"
   },
   "src/ui/components/TopNavBar.tsx": {
-    "mtime": 1792584388.8912044,
-    "seen": 1792584530.161797,
-    "ast_hash": "c9cdcadfb8b46fbba6551a24694429aa",
+    "mtime": 1792584731.3682187,
+    "seen": 1792584786.540823,
+    "ast_hash": "78dd3f14f52d3da3e98b36a89684b1a0",
     "semantic_hash": ""
   },
   "src/ui/components/UnclePukarChoiceModal.tsx": {
@@ -852,10 +852,10 @@
     "semantic_hash": "261d8486575576c5833600e93b556eab"
   },
   "tests/ui/top-nav-bar-and-pages.test.tsx": {
-    "mtime": 1792172709.363852,
-    "seen": 1792235760.4497752,
-    "ast_hash": "078c30479674a965ece47cf55249eb9e",
-    "semantic_hash": "078c30479674a965ece47cf55249eb9e"
+    "mtime": 1792584754.7338643,
+    "seen": 1792584786.5409348,
+    "ast_hash": "c55b44099407e4bdb88cf8ba1397cc51",
+    "semantic_hash": ""
   },
   "tests/ui/top-nav-bar-comprehensive.test.tsx": {
     "mtime": 1792179255.7497997,

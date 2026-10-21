@@ -30,6 +30,8 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       // Lime spade badge and lowercase pukar
       expect(html).toContain('♠');
       expect(html).toContain('pukar');
+      expect(html).toContain('data-testid="btn-nav-home"');
+      expect(html).toContain('data-testid="btn-nav-home-mobile"');
       expect(html).not.toContain('Friday game night');
 
       // Random text from before is NOT present
@@ -169,6 +171,9 @@ describe('Top Navigation Bar, Sequences Page & Scoreboard Page', () => {
       expect(html).toContain('data-testid="btn-sound-toggle"');
       expect(html).toContain('data-testid="btn-restart-game"');
       expect(html).toContain('data-testid="btn-exit-to-menu"');
+      expect(html).toContain('data-testid="btn-nav-home"');
+      expect(html).toContain('data-testid="btn-nav-home-mobile"');
+      expect(html).toContain('title="Return to Home Screen"');
       expect(html).toContain('New Game');
       expect(html).toContain('Menu');
     });
