@@ -44,7 +44,7 @@ describe('Mobile Responsiveness & Viewport Adaptations', () => {
   });
 
   describe('2. ActionControls & Discard Button Accessibility', () => {
-    it('renders Discard button with min-w-fit, adaptive wrapping and responsive text in unifiedMode', () => {
+    it('renders Discard button with min-w-fit, clean single-line flex-nowrap and responsive text in unifiedMode', () => {
       const html = renderToString(
         <ActionControls
           phase="MELD"
@@ -56,23 +56,36 @@ describe('Mobile Responsiveness & Viewport Adaptations', () => {
       );
       expect(html).toContain('data-testid="btn-discard"');
       expect(html).toContain('min-w-fit');
-      expect(html).toContain('flex-wrap sm:flex-nowrap');
+      expect(html).toContain('flex-nowrap');
       expect(html).toContain('sm:hidden');
       expect(html).toContain('hidden sm:inline');
     });
+
+    it('always renders btn-play-meld in unifiedMode during DRAW phase so players know where to play sequences', () => {
+      const html = renderToString(
+        <ActionControls
+          phase="DRAW"
+          unifiedMode={true}
+          selectedCards={[sampleCard]}
+          selectedCardIds={['c1']}
+          allHandCards={[sampleCard]}
+        />
+      );
+      expect(html).toContain('data-testid="btn-play-meld"');
+      expect(html).toContain('disabled=""');
+      expect(html).toContain('Draw First');
+    });
   });
 
-  describe('2b. PlayerHand Responsive Actions Row', () => {
-    it('wraps actionsSlot into a responsive container on mobile and inline on desktop', () => {
+  describe('2b. PlayerHand Responsive Single-Line Toolbar', () => {
+    it('renders toolbar and actionsSlot in a clean single-line container (flex-nowrap) without wrapping into 2 rows', () => {
       const html = renderToString(
         <PlayerHand
           cards={[sampleCard]}
           actionsSlot={<button data-testid="dummy-action">Action</button>}
         />
       );
-      expect(html).toContain('w-full md:w-auto');
-      expect(html).toContain('order-last md:order-none');
-      expect(html).toContain('min-h-9 md:h-9');
+      expect(html).toContain('flex-nowrap');
       expect(html).toContain('dummy-action');
     });
   });

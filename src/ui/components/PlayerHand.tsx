@@ -630,96 +630,114 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
       data-testid="player-hand"
       className={`w-full wood-hand-tray rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-2xl flex flex-col gap-1.5 text-stone-900 ${className}`}
     >
-      {/* HAND TOOLBAR & STATUS */}
-      <div className="relative flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5 sm:gap-2 border-b border-[#a47b4e]/40 pb-1.5 w-full overflow-x-hidden overflow-y-hidden">
+      {/* HAND TOOLBAR & STATUS (STRICT ONE LINE) */}
+      <div className="relative flex flex-nowrap items-center justify-between gap-1 sm:gap-2 border-b border-[#a47b4e]/40 pb-1.5 w-full overflow-x-hidden overflow-y-hidden">
         {/* PLAYER IDENTITY & CARD COUNTS */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-          <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-md">
-              {playerName ? playerName.charAt(0).toUpperCase() : 'P'}
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                <span className="font-black text-stone-950 text-sm sm:text-base tracking-tight">{playerName}</span>
-                {playerTeam && (
-                  <span
-                    className={`text-[10px] sm:text-xs font-black px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider shadow-sm ${
-                      playerTeam === 'A'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-amber-600 text-white'
-                    }`}
-                  >
-                    {`Team ${playerTeam}`}
-                  </span>
-                )}
-                {isCurrentPlayer && (
-                  <span className="text-[10px] sm:text-xs font-black text-emerald-950 bg-emerald-300 border border-emerald-500 px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm">
-                    Active Turn
-                  </span>
-                )}
-                {isHovering && (
-                  <span
-                    data-testid="badge-hovering-dock"
-                    className="text-[10px] sm:text-xs font-black text-amber-950 bg-amber-300 border border-amber-500 px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1"
-                    title="Hand is hovering docked at the bottom because sequences have expanded to a second row. Scroll the board up/down to see all sequences."
-                  >
-                    <Pin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-900" />
-                    <span>Docked at Bottom</span>
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-stone-700 font-bold leading-none">
+        {/* Mobile Compact Identity (<768px): Avatar + Name + Selected Count */}
+        <div className="flex md:hidden items-center gap-1 shrink-0 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
+            {playerName ? playerName.charAt(0).toUpperCase() : 'P'}
+          </div>
+          <span className="font-black text-stone-950 text-xs tracking-tight truncate max-w-[50px]">
+            {playerName}
+          </span>
+          {!isChoosingPukar && selectedCardIds.length > 0 && (
+            <span
+              data-testid="selected-count"
+              className="text-amber-950 font-black bg-amber-200 border border-amber-400 px-1 py-0.5 rounded-md text-[10px] shrink-0 leading-none"
+            >
+              {selectedCardIds.length}
+            </span>
+          )}
+        </div>
+
+        {/* Desktop Full Identity (md: and up - 100% untouched) */}
+        <div className="hidden md:flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-stone-900 text-stone-100 border-2 border-white flex items-center justify-center font-black text-sm sm:text-base shrink-0 shadow-md">
+            {playerName ? playerName.charAt(0).toUpperCase() : 'P'}
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-black text-stone-950 text-sm sm:text-base tracking-tight">{playerName}</span>
+              {playerTeam && (
                 <span
-                  data-testid="card-count"
-                  className={`font-extrabold ${isChoosingPukar ? 'text-amber-800 animate-pulse' : 'text-stone-900'}`}
+                  className={`text-[10px] sm:text-xs font-black px-1.5 sm:px-2 py-0.5 rounded-md uppercase tracking-wider shadow-sm ${
+                    playerTeam === 'A'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-amber-600 text-white'
+                  }`}
                 >
-                  {isChoosingPukar
-                    ? 'Selecting Pukar Deck...'
-                    : `${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
+                  {`Team ${playerTeam}`}
                 </span>
-                {!isChoosingPukar && selectedCardIds.length > 0 && (
-                  <>
-                    <span className="text-stone-500">•</span>
-                    <span
-                      data-testid="selected-count"
-                      className="text-amber-950 font-black bg-amber-200 border border-amber-400 px-1.5 py-0.5 rounded-md leading-none inline-flex items-center text-xs"
-                    >
-                      {`${selectedCardIds.length} selected`}
-                    </span>
-                  </>
-                )}
-                {!isChoosingPukar && (
-                  <>
-                    <span className="text-stone-400 hidden 2xl:inline">•</span>
-                    <span className="text-xs font-semibold text-stone-600 hidden 2xl:inline" title="Drag cards to rearrange them in any custom order">
-                      Drag cards to reorder
-                    </span>
-                  </>
-                )}
-              </div>
+              )}
+              {isCurrentPlayer && (
+                <span className="text-[10px] sm:text-xs font-black text-emerald-950 bg-emerald-300 border border-emerald-500 px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm">
+                  Active Turn
+                </span>
+              )}
+              {isHovering && (
+                <span
+                  data-testid="badge-hovering-dock"
+                  className="text-[10px] sm:text-xs font-black text-amber-950 bg-amber-300 border border-amber-500 px-1.5 sm:px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1"
+                  title="Hand is hovering docked at the bottom because sequences have expanded to a second row. Scroll the board up/down to see all sequences."
+                >
+                  <Pin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-900" />
+                  <span>Docked at Bottom</span>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-stone-700 font-bold leading-none">
+              <span
+                data-testid="card-count"
+                className={`font-extrabold ${isChoosingPukar ? 'text-amber-800 animate-pulse' : 'text-stone-900'}`}
+              >
+                {isChoosingPukar
+                  ? 'Selecting Pukar Deck...'
+                  : `${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`}
+              </span>
+              {!isChoosingPukar && selectedCardIds.length > 0 && (
+                <>
+                  <span className="text-stone-500">•</span>
+                  <span
+                    data-testid="selected-count"
+                    className="text-amber-950 font-black bg-amber-200 border border-amber-400 px-1.5 py-0.5 rounded-md leading-none inline-flex items-center text-xs"
+                  >
+                    {`${selectedCardIds.length} selected`}
+                  </span>
+                </>
+              )}
+              {!isChoosingPukar && (
+                <>
+                  <span className="text-stone-400 hidden 2xl:inline">•</span>
+                  <span className="text-xs font-semibold text-stone-600 hidden 2xl:inline" title="Drag cards to rearrange them in any custom order">
+                    Drag cards to reorder
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* CONTEXTUAL ACTION CONTROLS SLOT (RESPONSIVE DEDICATED ROW ON MOBILE) */}
+        {/* CONTEXTUAL ACTION CONTROLS SLOT (CENTER INLINE ROW) */}
         {!isChoosingPukar && actionsSlot && (
-          <div className="w-full md:w-auto order-last md:order-none flex items-center justify-center my-0.5 md:my-0 flex-1 min-w-0 max-w-xl mx-auto min-h-9 md:h-9 overflow-visible md:overflow-hidden">
+          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-1 h-8 sm:h-9 overflow-visible md:overflow-hidden">
             {actionsSlot}
           </div>
         )}
 
         {/* RIGHT ACTIONS: CLEAR SELECTION + FRUSTRATION BUTTON + HIDE HAND */}
-        <div className="shrink-0 flex items-center justify-end gap-1.5 sm:gap-2 h-9 z-10">
+        <div className="shrink-0 flex items-center justify-end gap-1 sm:gap-2 h-8 sm:h-9 z-10">
           {!isChoosingPukar && selectedCardIds.length > 0 && (
             <button
               type="button"
               aria-label="Clear Selection"
               data-testid="btn-clear-selection"
               onClick={onClearSelection}
-              className="h-8 sm:h-8.5 px-2 sm:px-2.5 text-xs font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-xl flex items-center gap-1 transition-colors cursor-pointer shadow-sm animate-in fade-in duration-100 shrink-0"
+              className="h-7 sm:h-8.5 px-1.5 sm:px-2.5 text-xs font-bold text-stone-800 hover:text-stone-950 bg-stone-200 hover:bg-stone-300 border border-stone-400 rounded-lg sm:rounded-xl flex items-center gap-1 transition-colors cursor-pointer shadow-sm animate-in fade-in duration-100 shrink-0"
+              title="Clear selection"
             >
               <X className="w-3.5 h-3.5 shrink-0" />
-              <span>Clear</span>
+              <span className="hidden sm:inline">Clear</span>
             </button>
           )}
 
@@ -735,14 +753,14 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                   ? `Frustration is on cooldown (${frustrationRemainingSecs}s remaining)`
                   : 'Express your frustration!'
               }
-              className={`h-8 sm:h-8.5 px-2 sm:px-2.5 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
+              className={`h-7 sm:h-8.5 px-1.5 sm:px-2.5 text-xs sm:text-sm font-black rounded-lg sm:rounded-xl flex items-center justify-center gap-1 transition-all shadow-sm shrink-0 ${
                 isFrustratedOnCooldown || isChoosingPukar
                   ? 'bg-stone-300/80 text-stone-500 border border-stone-400 cursor-not-allowed opacity-75'
                   : 'bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-600 hover:to-rose-700 text-white border border-rose-700 active:scale-95 shadow-orange-500/20 cursor-pointer'
               }`}
             >
               <span className="text-sm leading-none shrink-0" role="img" aria-label="fire">🔥</span>
-              <span>{isFrustratedOnCooldown ? `Frustration (${frustrationRemainingSecs}s)` : 'Frustration'}</span>
+              <span className="hidden sm:inline">{isFrustratedOnCooldown ? `Frustration (${frustrationRemainingSecs}s)` : 'Frustration'}</span>
             </button>
           )}
 
@@ -758,7 +776,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 ? 'Show your hand cards'
                 : 'Hide your hand cards to view the table'
             }
-            className={`h-8 sm:h-8.5 px-2.5 sm:px-3 text-xs sm:text-sm font-black rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shadow-md shrink-0 ${
+            className={`h-7 sm:h-8.5 px-1.5 sm:px-3 text-xs sm:text-sm font-black rounded-lg sm:rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer shadow-md shrink-0 ${
               isCollapsed
                 ? 'bg-amber-400 hover:bg-amber-300 text-stone-950 border-2 border-amber-300 font-black shadow-amber-500/30 ring-2 ring-amber-400/60'
                 : 'bg-stone-900 hover:bg-stone-800 text-amber-300 hover:text-amber-200 border-2 border-amber-400/80 shadow-stone-950/40'
@@ -767,12 +785,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             {isCollapsed ? (
               <>
                 <Eye className="w-4 h-4 text-stone-950 shrink-0" />
-                <span>Show Cards</span>
+                <span className="hidden sm:inline">Show Cards</span>
               </>
             ) : (
               <>
                 <EyeOff className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>Hide Cards</span>
+                <span className="hidden sm:inline">Hide Cards</span>
               </>
             )}
           </button>
