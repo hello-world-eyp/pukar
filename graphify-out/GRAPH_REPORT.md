@@ -1,7 +1,7 @@
 # Graph Report - Pukar game  (2026-10-21)
 
 ## Corpus Check
-- 173 files · ~230,609 words
+- 173 files · ~230,516 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 6 file(s) not represented in the graph (top: (none) 4, .css 1, .command 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `356b0aea`
+- Built from commit: `9a4dac97`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

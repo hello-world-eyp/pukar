@@ -192,9 +192,9 @@
     "semantic_hash": "e1c810f025b83c08b71605dec73e385e"
   },
   "src/ui/components/CenterTable.tsx": {
-    "mtime": 1792583352.8953395,
-    "seen": 1792583806.4779232,
-    "ast_hash": "5ed4f49ad8c4533935b040e8efeef21a",
+    "mtime": 1792585905.2157772,
+    "seen": 1792585939.08599,
+    "ast_hash": "8b55bb797d12dcd3d43f199e7a7ba637",
     "semantic_hash": ""
   },
   "src/ui/components/DevInspector.tsx": {
