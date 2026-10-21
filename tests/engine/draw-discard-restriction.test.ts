@@ -46,7 +46,7 @@ describe('Rule: Discard restriction on picked up cards', () => {
     });
 
     expect(discardResult.error).toBe(
-      'Cannot discard the single card picked up this turn unless you started with only 1 card in hand'
+      'Cannot discard the single card picked up this turn unless you started with only 1 card in hand or are finishing for Pukar'
     );
   });
 
@@ -173,7 +173,7 @@ describe('Rule: Discard restriction on picked up cards', () => {
     });
 
     expect(discardResult.error).toBe(
-      'Cannot discard the single card picked up this turn unless you started with only 1 card in hand'
+      'Cannot discard the single card picked up this turn unless you started with only 1 card in hand or are finishing for Pukar'
     );
 
     // Discarding filler succeeds
@@ -182,6 +182,64 @@ describe('Rule: Discard restriction on picked up cards', () => {
       cardId: fillerCard.id,
     });
     expect(validDiscard.error).toBeUndefined();
+  });
+
+  it('ALLOWS discarding the single card picked up if player melded all other cards and is finishing for Pukar', () => {
+    let state = dealInitialState(4);
+    // Player starts with 2 cards (initial hand size was 2 > 1)
+    const meldCards = [
+      makeCard('r1', 'SPADES', 3),
+      makeCard('r2', 'SPADES', 4),
+    ];
+    state.melds.A = [
+      {
+        id: 'meld-A-1',
+        team: 'A',
+        type: 'RUN',
+        suit: 'SPADES',
+        cards: [makeCard('s5', 'SPADES', 5), makeCard('s6', 'SPADES', 6), makeCard('s7', 'SPADES', 7)],
+        slots: [
+          { card: makeCard('s5', 'SPADES', 5), representedRank: 5, representedSuit: 'SPADES', isWildcard: false },
+          { card: makeCard('s6', 'SPADES', 6), representedRank: 6, representedSuit: 'SPADES', isWildcard: false },
+          { card: makeCard('s7', 'SPADES', 7), representedRank: 7, representedSuit: 'SPADES', isWildcard: false },
+        ],
+        isClean: false,
+        isPure: true,
+        isPure13: false,
+        points: 0,
+      },
+    ];
+    state.players[0].hand = [...meldCards];
+
+    // Discard pile has 1 card
+    const soloDiscard = makeCard('disc-solo-pukar', 'HEARTS', 13);
+    state.discardPile = [soloDiscard];
+
+    // Pick up 1 card from discard (initial hand size was 2)
+    const takeResult = pukarReducer(state, { type: 'TAKE_DISCARD' });
+    expect(takeResult.error).toBeUndefined();
+    expect(takeResult.state.players[0].hand).toHaveLength(3);
+
+    // Player melds r1 and r2 onto table meld
+    const addResult = pukarReducer(takeResult.state, {
+      type: 'ADD_TO_MELD',
+      meldId: 'meld-A-1',
+      cardIds: ['r1', 'r2'],
+    });
+    expect(addResult.error).toBeUndefined();
+    // Hand now has exactly 1 card: soloDiscard
+    expect(addResult.state.players[0].hand).toHaveLength(1);
+    expect(addResult.state.players[0].hand[0].id).toBe('disc-solo-pukar');
+
+    // Player discards soloDiscard to finish for Pukar (remainingHand becomes 0)
+    const discardResult = pukarReducer(addResult.state, {
+      type: 'DISCARD_CARD',
+      cardId: soloDiscard.id,
+    });
+
+    expect(discardResult.error).toBeUndefined();
+    // Hand emptied, Pukar claimed (+50 pts)
+    expect(discardResult.state.pukarsClaimed?.A).toBe(1);
   });
 
   it('sanitizes cardsPickedUpThisTurn and initialHandSizeThisTurn for player perspective', () => {

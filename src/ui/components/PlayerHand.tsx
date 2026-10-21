@@ -382,8 +382,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     if (initialHandSizeThisTurn === 1) {
       return new Set<string>();
     }
+    // If finishing for Pukar (only 1 card left in hand, discarding all cards), allowed!
+    if (cards.length === 1) {
+      return new Set<string>();
+    }
     return new Set<string>(cardsPickedUpThisTurn);
-  }, [cardsPickedUpThisTurn, initialHandSizeThisTurn]);
+  }, [cardsPickedUpThisTurn, initialHandSizeThisTurn, cards.length]);
 
   const effectiveContainerWidth =
     containerWidth !== undefined

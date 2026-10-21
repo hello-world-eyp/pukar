@@ -74,13 +74,15 @@ export function decideCheetahTurn(
   }
 
   // 2. MELD PHASE DECISION (High-tempo: play everything valid to reduce hand size towards Pukar)
+  const isFinishingForPukar = hand.length === 1;
   const disallowedCardId =
     (state.cardsPickedUpThisTurn &&
     state.cardsPickedUpThisTurn.length === 1 &&
-    state.initialHandSizeThisTurn !== 1
+    state.initialHandSizeThisTurn !== 1 &&
+    !isFinishingForPukar
       ? state.cardsPickedUpThisTurn[0]
       : undefined) ??
-    (drawAction.type === 'TAKE_DISCARD' && state.discardPile.length === 1 && hand.length !== 1
+    (drawAction.type === 'TAKE_DISCARD' && state.discardPile.length === 1 && !isFinishingForPukar
       ? state.discardPile[0]?.id
       : undefined);
 

@@ -359,7 +359,8 @@ export function useBotGame({
             const hand = currentState.players[botIdx]?.hand ?? [];
             const disallowedId =
               currentState.cardsPickedUpThisTurn?.length === 1 &&
-              currentState.initialHandSizeThisTurn !== 1
+              currentState.initialHandSizeThisTurn !== 1 &&
+              hand.length > 1
                 ? currentState.cardsPickedUpThisTurn[0]
                 : null;
             const fallbackCard = hand.find((c) => !disallowedId || c.id !== disallowedId) ?? hand[0];
@@ -382,7 +383,8 @@ export function useBotGame({
         if (hand.length > 0) {
           const disallowedId =
             currentState.cardsPickedUpThisTurn?.length === 1 &&
-            currentState.initialHandSizeThisTurn !== 1
+            currentState.initialHandSizeThisTurn !== 1 &&
+            hand.length > 1
               ? currentState.cardsPickedUpThisTurn[0]
               : null;
           const fallbackCard = hand.find((c) => !disallowedId || c.id !== disallowedId) ?? hand[0];

@@ -651,17 +651,19 @@ function handleDiscardCard(
   }
 
   // Rule: If player picked up only 1 card this turn, they cannot discard that same card,
-  // unless they started with only 1 card in hand.
+  // unless they started with only 1 card in hand or are finishing for Pukar (discarding all their cards).
+  const isFinishingForPukar = activePlayer.hand.length === 1;
   if (
     state.cardsPickedUpThisTurn &&
     state.cardsPickedUpThisTurn.length === 1 &&
     state.cardsPickedUpThisTurn[0] === cardId &&
-    state.initialHandSizeThisTurn !== 1
+    state.initialHandSizeThisTurn !== 1 &&
+    !isFinishingForPukar
   ) {
     return {
       state,
       error:
-        'Cannot discard the single card picked up this turn unless you started with only 1 card in hand',
+        'Cannot discard the single card picked up this turn unless you started with only 1 card in hand or are finishing for Pukar',
     };
   }
 

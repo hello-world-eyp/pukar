@@ -123,8 +123,10 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     if (cardsPickedUpThisTurn[0] !== selectedCardId) return false;
     // Exception: player started turn with only 1 card in hand
     if (initialHandSizeThisTurn === 1) return false;
+    // Exception: player is finishing for Pukar (only 1 card left in hand, discarding all cards)
+    if (allHandCards && allHandCards.length === 1) return false;
     return true;
-  }, [selectedCardCount, selectedCards, cardsPickedUpThisTurn, initialHandSizeThisTurn]);
+  }, [selectedCardCount, selectedCards, cardsPickedUpThisTurn, initialHandSizeThisTurn, allHandCards]);
 
   // Discard Card Eligibility
   const canDiscard =

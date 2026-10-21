@@ -752,7 +752,7 @@ function findCompletionSequence(
       const remainingNonDisallowed = remainingHand.filter(
         (c) => c.id !== options.disallowedCardId
       );
-      if (remainingNonDisallowed.length === 0 && fullHand.length > 1) {
+      if (remainingNonDisallowed.length === 0 && remainingHand.length > 1) {
         continue;
       }
     }
@@ -920,7 +920,7 @@ function internalFindBestMeldPlan(
         const remainingNonDisallowed = remainingHand.filter(
           (c) => c.id !== options.disallowedCardId
         );
-        if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+        if (remainingNonDisallowed.length === 0 && remainingHand.length > 1) {
           continue;
         }
       }
@@ -1073,7 +1073,7 @@ function internalFindBestMeldPlan(
         const remainingNonDisallowed = remainingHand.filter(
           (c) => c.id !== options.disallowedCardId
         );
-        if (remainingNonDisallowed.length === 0 && hand.length > 1) {
+        if (remainingNonDisallowed.length === 0 && remainingHand.length > 1) {
           continue;
         }
       }
@@ -1173,9 +1173,7 @@ export function findBestMeldPlan(
   });
 
   const remainingSafeHand = hand.filter((c) => !safePlan.usedCardIds.has(c.id));
-  const isSafePukar =
-    remainingSafeHand.length === 1 &&
-    (!options?.disallowedCardId || remainingSafeHand[0].id !== options.disallowedCardId);
+  const isSafePukar = remainingSafeHand.length === 1;
 
   if (isSafePukar) {
     return safePlan;
@@ -1188,9 +1186,7 @@ export function findBestMeldPlan(
   });
 
   const remainingPukarHand = hand.filter((c) => !pukarPlan.usedCardIds.has(c.id));
-  const isPukarGuaranteed =
-    remainingPukarHand.length === 1 &&
-    (!options?.disallowedCardId || remainingPukarHand[0].id !== options.disallowedCardId);
+  const isPukarGuaranteed = remainingPukarHand.length === 1;
 
   if (isPukarGuaranteed) {
     return pukarPlan;
@@ -1240,7 +1236,13 @@ export function evaluateDeadwoodAndDiscard(
 
   const discardScores = pool.map((card) => {
     // Disallowed card (e.g. single drawn card this turn): strictly forbidden
-    if (options?.disallowedCardId && card.id === options.disallowedCardId) {
+    // unless finishing for Pukar (only 1 card left in hand to discard)
+    const isFinishingForPukar = hand.length === 1;
+    if (
+      options?.disallowedCardId &&
+      card.id === options.disallowedCardId &&
+      !isFinishingForPukar
+    ) {
       return { card, score: 999999, reason: 'Disallowed from discard by rule' };
     }
 
@@ -1578,9 +1580,10 @@ export function evaluateDeadwoodAndDiscard(
   // Sort by score ascending (lowest score = best to discard)
   discardScores.sort((a, b) => a.score - b.score);
 
-  // Filter out legally disallowed discard if any alternative exists in the pool
+  // Filter out legally disallowed discard if any alternative exists in the pool (and not finishing for Pukar)
+  const isFinishingForPukar = hand.length === 1;
   const eligibleCandidates = discardScores.filter(
-    (ds) => !options?.disallowedCardId || ds.card.id !== options.disallowedCardId
+    (ds) => isFinishingForPukar || !options?.disallowedCardId || ds.card.id !== options.disallowedCardId
   );
 
   const recommendedDiscard =
@@ -2084,9 +2087,6 @@ export function canDeclareImmediatePukar(
   if (uncommitted.length !== 1) return false;
 
   const discardCard = uncommitted[0];
-  if (discardPile.length === 1 && discardCard.id === discardPile[0].id) {
-    return false;
-  }
 
   // Defending against opponent 500:
   // Discarding this card must NOT complete an opponent 500-pt Pure 13 sequence!
