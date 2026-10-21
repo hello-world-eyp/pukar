@@ -66,9 +66,9 @@
     "semantic_hash": "52acf44ae7a71b50f349012f3f0185be"
   },
   "src/engine/bots/hand-analyzer.ts": {
-    "mtime": 1792336235.127827,
-    "seen": 1792336303.669635,
-    "ast_hash": "c1ee2bf006ffb7801d7fdb2817c02e5a",
+    "mtime": 1792595397.3323853,
+    "seen": 1792596179.304557,
+    "ast_hash": "96b943cb4bb75bad2f37e193d48ce64d",
     "semantic_hash": ""
   },
   "src/engine/bots/strategies/cheetah.ts": {
@@ -84,9 +84,9 @@
     "semantic_hash": ""
   },
   "src/engine/bots/strategies/smart-chacha.ts": {
-    "mtime": 1792333072.068218,
-    "seen": 1792333210.407752,
-    "ast_hash": "eb6d18aa9a4fe1586d90ab552224d176",
+    "mtime": 1792595254.7127156,
+    "seen": 1792596179.304636,
+    "ast_hash": "5762fc25fc9118864a5abc78285823e2",
     "semantic_hash": ""
   },
   "src/engine/bots/strategies/the-jadugar.ts": {
@@ -360,10 +360,10 @@
     "semantic_hash": "f3ae74c2d850909fd9b48da2a555e0a7"
   },
   "src/ui/hooks/useBotGame.ts": {
-    "mtime": 1792176759.3086615,
-    "seen": 1792235760.4496782,
-    "ast_hash": "b7bd4d21f4ff5c85645ee2ee42d7be01",
-    "semantic_hash": "b7bd4d21f4ff5c85645ee2ee42d7be01"
+    "mtime": 1792595264.9585414,
+    "seen": 1792596179.306185,
+    "ast_hash": "38d188298da4525c9e9174becacd4b4d",
+    "semantic_hash": ""
   },
   "src/ui/hooks/useGameAudio.ts": {
     "mtime": 1791649454.9630566,
@@ -1047,6 +1047,12 @@
     "mtime": 1792584510.9338462,
     "seen": 1792584530.1618938,
     "ast_hash": "cf428a7e0d7b331feecfbb83e959e95e",
+    "semantic_hash": ""
+  },
+  "tests/engine/bots/discard-pickup-incidents.test.ts": {
+    "mtime": 1792596272.4405098,
+    "seen": 1792596319.192967,
+    "ast_hash": "e34dd7ff937cfb9d32bcd046a0126f5e",
     "semantic_hash": ""
   }
 }

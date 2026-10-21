@@ -7,7 +7,7 @@
  * - If discard pile does not add value to opponents, lets it slide; otherwise takes it to deny them.
  * - If next opponent is close to Pukar and selective, tries to pass helpful cards to partner through discard.
  */
-import { GameAction, GameState, Team, isWildcard } from '../../types';
+import { GameAction, GameState, Team, Meld, isWildcard, isNaturalJoker } from '../../types';
 import { BotMemory, BotTurnPlan } from '../types';
 import { canAddCardsToMeld } from '../../meld-validator';
 import {
@@ -24,11 +24,25 @@ export function predictOpponentWants(
   const wants = new Set<string>();
   const opponentTeam: Team = botTeam === 'A' ? 'B' : 'A';
 
+  // Collect card IDs currently on the table in melds
+  const tableCardIds = new Set<string>();
+  if (state.melds) {
+    Object.values(state.melds).forEach((meldList) => {
+      (meldList as Meld[]).forEach((m) => {
+        m.cards?.forEach((c) => tableCardIds.add(c.id));
+        m.slots?.forEach((s) => s.card && tableCardIds.add(s.card.id));
+      });
+    });
+  }
+
   // 1. Analyze cards opponents picked up from the bottom pile
   state.players.forEach((player, pIdx) => {
     if (player.team === opponentTeam) {
       const pickups = memory.bottomPickupsByPlayer[pIdx] || [];
       for (const card of pickups) {
+        // If the card was already melded to the table, it is no longer an unknown card in opponent's hand
+        if (tableCardIds.has(card.id)) continue;
+
         if (card.suit) {
           // Opponent is building around this card's rank and suit
           wants.add(`${card.suit}_${card.rank}`);
@@ -57,9 +71,13 @@ export function predictOpponentWants(
         if (maxRank < 13) wants.add(`${meld.suit}_${maxRank + 2}`);
         if (minRank === 2) wants.add(`${meld.suit}_14`);
         if (maxRank === 14) wants.add(`${meld.suit}_2`);
-        for (const r of ranks) {
-          wants.add(`RANK_${r}`);
+        // If there's a replaceable normal joker in this run, opponent wants that specific card
+        for (const slot of meld.slots) {
+          if (slot.isWildcard && isNaturalJoker(slot.card)) {
+            wants.add(`${meld.suit}_${slot.representedRank}`);
+          }
         }
+        // Note: Do NOT add generic RANK_${r} for table runs across other suits!
       }
     } else if (meld.type === 'SET' && meld.slots.length > 0) {
       const setRank = meld.slots[0].representedRank;
@@ -99,6 +117,17 @@ export function predictPartnerNeeds(
     }
   });
 
+  // Collect table card IDs
+  const tableCardIds = new Set<string>();
+  if (state.melds) {
+    Object.values(state.melds).forEach((meldList) => {
+      (meldList as Meld[]).forEach((m) => {
+        m.cards?.forEach((c) => tableCardIds.add(c.id));
+        m.slots?.forEach((s) => s.card && tableCardIds.add(s.card.id));
+      });
+    });
+  }
+
   for (const partnerIdx of partnerIndices) {
     // 1. Cards partner discarded (deadwood partner does NOT want)
     const discards = memory.discardsByPlayer[partnerIdx] || [];
@@ -112,6 +141,7 @@ export function predictPartnerNeeds(
     // 2. Cards partner picked up from bottom (partner is building runs / sets in hand)
     const pickups = memory.bottomPickupsByPlayer[partnerIdx] || [];
     for (const card of pickups) {
+      if (tableCardIds.has(card.id)) continue;
       if (card.suit) {
         // Run connectors
         const runRanks = [card.rank - 2, card.rank - 1, card.rank + 1, card.rank + 2];
@@ -161,6 +191,9 @@ export function decideSmartChachaTurn(
   const lastPlayer = state.players[lastPlayerIndex];
   const lastDiscarderTeam = lastPlayer?.team;
 
+  const actualPukarPoolCount = state.pukarPool ? state.pukarPool.length : ((state as any).pukarPoolCount ?? 0);
+  const actualStockDeckCount = state.stockDeck ? state.stockDeck.length : ((state as any).stockDeckCount ?? 0);
+
   // 1. DRAW PHASE DECISION
   let drawAction: { type: 'DRAW_FROM_STOCK' } | { type: 'TAKE_DISCARD' } = {
     type: 'DRAW_FROM_STOCK',
@@ -170,12 +203,12 @@ export function decideSmartChachaTurn(
     if (
       evaluateDiscardPilePickup(hand, state.discardPile, myTeamMelds, {
         personality: 'SMART_CHACHA',
-        pukarPoolCount: state.pukarPool.length,
+        pukarPoolCount: actualPukarPoolCount,
         opponentWants,
         allTableMelds,
         isBoardOpen,
         isTeamOpen,
-        stockDeckCount: state.stockDeck.length,
+        stockDeckCount: actualStockDeckCount,
         nextOpponentCardCount,
         lastDiscarderTeam,
         botTeam: team,
@@ -188,9 +221,9 @@ export function decideSmartChachaTurn(
   }
 
   // Fallback: If stock deck is exhausted and discard pile has cards, must take discard pile
-  if (state.stockDeck.length === 0 && state.discardPile.length > 0) {
+  if (actualStockDeckCount === 0 && state.discardPile.length > 0) {
     drawAction = { type: 'TAKE_DISCARD' };
-  } else if (state.discardPile.length === 0 && state.stockDeck.length > 0) {
+  } else if (state.discardPile.length === 0 && actualStockDeckCount > 0) {
     drawAction = { type: 'DRAW_FROM_STOCK' };
   }
 

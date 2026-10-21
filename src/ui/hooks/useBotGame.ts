@@ -84,7 +84,15 @@ export function useBotGame({
     };
   }, []);
 
-  // Reset bot memory when a fresh game starts
+  // Reset bot memory when a fresh game starts or when moving to a new round
+  const prevRoundRef = useRef<number>(gameState.round);
+  useEffect(() => {
+    if (prevRoundRef.current !== gameState.round) {
+      prevRoundRef.current = gameState.round;
+      botMemoryRef.current = createInitialBotMemory();
+    }
+  }, [gameState.round]);
+
   useEffect(() => {
     if (appMode === 'BOTS' && gameState.round === 1 && gameState.phase === 'DRAW' && gameState.currentPlayerIndex === 0) {
       botMemoryRef.current = createInitialBotMemory();

@@ -2272,6 +2272,36 @@ export function isCardSafeDiscard(
 }
 
 /**
+ * Evaluates whether there is at least one viable non-milestone discard in the pool.
+ * A viable discard is a non-wildcard card that:
+ * 1. Is not disallowed (e.g. single drawn card this turn)
+ * 2. Is not committed to current meld plan
+ * 3. Does not complete an opponent milestone (Pure 13 500-pt or Clean 7 200-pt)
+ * 4. Does not directly add to an existing open opponent meld
+ */
+export function hasViableNonMilestoneDiscard(
+  cards: Card[],
+  committedCardIds: Set<string>,
+  teamMelds: Meld[],
+  opponentMelds: Meld[],
+  opponentWants?: Set<string>,
+  disallowedCardId?: string
+): boolean {
+  return cards.some((card) => {
+    if (disallowedCardId && card.id === disallowedCardId) return false;
+    if (isWildcard(card) || isNaturalJoker(card) || card.rank === 2) return false;
+    if (committedCardIds && committedCardIds.has(card.id)) return false;
+    if (isPotential500or200Card(card, [card], teamMelds, opponentMelds, opponentWants)) {
+      return false;
+    }
+    if (opponentMelds.some((m) => canAddCardsToMeld(m, [card]).valid)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+/**
  * Evaluates whether there is at least one safe card to discard in the given card pool.
  */
 export function hasSafeDiscard(
@@ -2346,6 +2376,31 @@ export function evaluateDiscardPilePickup(
     return true;
   }
 
+  // -------------------------------------------------------------------------
+  // JOKER HEIST / REPLACEMENT OPPORTUNITY:
+  // If the top discard card (or any card in the pile) can replace a Normal Joker
+  // in ANY table meld (team melds or opponent melds), it retrieves a 100-pt Joker
+  // into the bot's hand! This is a massive swing (+100 heist points + wildcard in hand).
+  // Priority: unconditionally grab it unless bot has 1 card with 0 pukars.
+  // -------------------------------------------------------------------------
+  const allTableMelds = options.allTableMelds || [...teamMelds, ...opponentMelds];
+  const canRetrieveJokerFromTable = allTableMelds.some((meld) => {
+    if (pileLength === 1) {
+      const res = canAddCardsToMeld(meld, [topCard]);
+      return res.valid && Boolean(res.pickedUpCard);
+    }
+    return discardPile.some((card) => {
+      const res = canAddCardsToMeld(meld, [card]);
+      return res.valid && Boolean(res.pickedUpCard);
+    });
+  });
+
+  if (canRetrieveJokerFromTable) {
+    if (pileLength > 1 || hand.length >= 1) {
+      return true;
+    }
+  }
+
   // Wildcard / Joker in pile: unconditionally valuable across all bots unless endgame guard triggered above
   const hasJokerInPile = discardPile.some(
     (c) => isWildcard(c) || isNaturalJoker(c) || c.rank === 2
@@ -2408,7 +2463,11 @@ export function evaluateDiscardPilePickup(
     if (isDirectTableRunAdd && pileLength <= 2) {
       const combined = [...hand, ...discardPile];
       const disallowedId = pileLength === 1 ? topCard.id : undefined;
-      if (hasSafeDiscard(combined, teamMelds, opponentMelds, options.opponentWants, requirePure, disallowedId)) {
+      const plan = findBestMeldPlan(combined, teamMelds, { requirePure });
+      if (
+        hasSafeDiscard(combined, teamMelds, opponentMelds, options.opponentWants, requirePure, disallowedId) ||
+        hasViableNonMilestoneDiscard(combined, plan.usedCardIds, teamMelds, opponentMelds, options.opponentWants, disallowedId)
+      ) {
         return true;
       }
     }
@@ -2497,6 +2556,27 @@ export function evaluateDiscardPilePickup(
     );
     if (!helps) {
       return false; // Strictly refuse 1-card junk!
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // DIRECT TABLE SEQUENCE EXTENSION:
+  // If topCard directly extends an existing team sequence on the table and pile is small (<= 2 cards),
+  // it can immediately be played to the table during meld phase.
+  // Taking 1 card, melding 1 card, and discarding 1 card REDUCES hand count by 1 card towards Pukar!
+  // -------------------------------------------------------------------------
+  const isDirectTableRunAdd = teamMelds.some(
+    (m) => m.type === 'RUN' && canAddCardsToMeld(m, [topCard]).valid
+  );
+  if (isDirectTableRunAdd && pileLength <= 2) {
+    const combined = [...hand, ...discardPile];
+    const disallowedId = pileLength === 1 ? topCard.id : undefined;
+    const plan = findBestMeldPlan(combined, teamMelds, { requirePure });
+    if (
+      hasSafeDiscard(combined, teamMelds, opponentMelds, options.opponentWants, requirePure, disallowedId) ||
+      hasViableNonMilestoneDiscard(combined, plan.usedCardIds, teamMelds, opponentMelds, options.opponentWants, disallowedId)
+    ) {
+      return true;
     }
   }
 
@@ -2625,14 +2705,25 @@ export function evaluateDiscardPilePickup(
 
   if (pileCreatesMelds) {
     const disallowedId = pileLength === 1 ? topCard.id : undefined;
-    const safeDiscardExists = hasSafeDiscard(
-      testHand,
-      teamMelds,
-      opponentMelds,
-      options.opponentWants,
-      requirePure,
-      disallowedId
-    );
+    const plan = findBestMeldPlan(testHand, teamMelds, { requirePure });
+    const safeDiscardExists =
+      hasSafeDiscard(
+        testHand,
+        teamMelds,
+        opponentMelds,
+        options.opponentWants,
+        requirePure,
+        disallowedId
+      ) ||
+      (pileLength <= 2 &&
+        hasViableNonMilestoneDiscard(
+          testHand,
+          plan.usedCardIds,
+          teamMelds,
+          opponentMelds,
+          options.opponentWants,
+          disallowedId
+        ));
     if (safeDiscardExists) {
       if (options.personality === 'THE_LONG_TERM_GUY' || options.personality === 'FAST_CHACHI') {
         const createsNewRun = hypMelds.some(
