@@ -720,7 +720,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
         {/* CONTEXTUAL ACTION CONTROLS SLOT (CENTER INLINE ROW) */}
         {!isChoosingPukar && actionsSlot && (
-          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-1 h-8 sm:h-9 overflow-visible md:overflow-hidden">
+          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-1 md:mx-auto h-8 md:h-9 overflow-visible md:overflow-hidden">
             {actionsSlot}
           </div>
         )}
