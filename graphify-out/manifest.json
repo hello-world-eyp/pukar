@@ -54,9 +54,9 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1792326819.7075906,
-    "seen": 1792326860.258141,
-    "ast_hash": "289a0da5890d57739fea85e625ed0200",
+    "mtime": 1792584380.0839634,
+    "seen": 1792584530.161746,
+    "ast_hash": "48750d7924505af7fd806f8aca241de0",
     "semantic_hash": ""
   },
   "src/engine/bots/bot-player.ts": {
@@ -180,9 +180,9 @@
     "semantic_hash": ""
   },
   "src/ui/components/ActionControls.tsx": {
-    "mtime": 1792323317.7529252,
-    "seen": 1792323353.930229,
-    "ast_hash": "bf31fbd8ae9d707ae7e94a2ae46bec11",
+    "mtime": 1792584359.6322832,
+    "seen": 1792584530.161772,
+    "ast_hash": "a5f3c76dd308ef7635cc2d9bb216fc5e",
     "semantic_hash": ""
   },
   "src/ui/components/BotSetupModal.tsx": {
@@ -192,10 +192,10 @@
     "semantic_hash": "e1c810f025b83c08b71605dec73e385e"
   },
   "src/ui/components/CenterTable.tsx": {
-    "mtime": 1791836779.204394,
-    "seen": 1792235760.449646,
-    "ast_hash": "44bcd32fec4638c2d517f6d06870f4c8",
-    "semantic_hash": "44bcd32fec4638c2d517f6d06870f4c8"
+    "mtime": 1792583352.8953395,
+    "seen": 1792583806.4779232,
+    "ast_hash": "5ed4f49ad8c4533935b040e8efeef21a",
+    "semantic_hash": ""
   },
   "src/ui/components/DevInspector.tsx": {
     "mtime": 1791757207.6254184,
@@ -216,10 +216,10 @@
     "semantic_hash": "cfd1c57045241a2b4e02455c84e7828c"
   },
   "src/ui/components/FrustrationOverlay.tsx": {
-    "mtime": 1791665369.4717445,
-    "seen": 1792235760.449651,
-    "ast_hash": "ab0675aba86e0d86f3024ee51d490f1a",
-    "semantic_hash": "ab0675aba86e0d86f3024ee51d490f1a"
+    "mtime": 1792583177.679107,
+    "seen": 1792583806.477927,
+    "ast_hash": "20d0035bef3c72661b108c7e2558d862",
+    "semantic_hash": ""
   },
   "src/ui/components/GameSetupModal.tsx": {
     "mtime": 1791624277.4681742,
@@ -240,10 +240,10 @@
     "semantic_hash": "80a4a31715b54bb9980d05f47b2c5806"
   },
   "src/ui/components/MatchAnalyticsView.tsx": {
-    "mtime": 1792235487.184449,
-    "seen": 1792235760.449655,
-    "ast_hash": "c0f6218782249ca81dedd03d57ffa84e",
-    "semantic_hash": "c0f6218782249ca81dedd03d57ffa84e"
+    "mtime": 1792583601.5632994,
+    "seen": 1792583806.477932,
+    "ast_hash": "57586c0bf82c20fb5897927c13a4c434",
+    "semantic_hash": ""
   },
   "src/ui/components/ModeSelectorModal.tsx": {
     "mtime": 1791839679.95469,
@@ -252,9 +252,9 @@
     "semantic_hash": "f4cb9a58a801a5dbb95d153d111c22d5"
   },
   "src/ui/components/PlayerHand.tsx": {
-    "mtime": 1792326594.7177033,
-    "seen": 1792326663.877583,
-    "ast_hash": "3d7ba0f9aa8afe85ca685379b8c58453",
+    "mtime": 1792584456.970224,
+    "seen": 1792584530.1617851,
+    "ast_hash": "842161ec5a9d855e7759e3cbf254b403",
     "semantic_hash": ""
   },
   "src/ui/components/PlayingCard.tsx": {
@@ -300,15 +300,15 @@
     "semantic_hash": ""
   },
   "src/ui/components/SequencesPage.tsx": {
-    "mtime": 1792327925.7588031,
-    "seen": 1792327983.95371,
-    "ast_hash": "21a5ef0237e4131721450e180b9ff6a5",
+    "mtime": 1792583636.5634825,
+    "seen": 1792583806.477942,
+    "ast_hash": "8a9b5a8552770d7c135f54e299069cf7",
     "semantic_hash": ""
   },
   "src/ui/components/TableMeldBoard.tsx": {
-    "mtime": 1792327910.0784369,
-    "seen": 1792327983.953711,
-    "ast_hash": "b5cc760e9684af0a4c0bffa8ac56c94f",
+    "mtime": 1792583388.2960584,
+    "seen": 1792583806.477943,
+    "ast_hash": "160e53ab17fe3ddacc335f53f32e63a3",
     "semantic_hash": ""
   },
   "src/ui/components/TableSeating.tsx": {
@@ -318,16 +318,16 @@
     "semantic_hash": "fafc2303c9300975effae3e001515e98"
   },
   "src/ui/components/TopNavBar.tsx": {
-    "mtime": 1792323248.2135694,
-    "seen": 1792323353.930264,
-    "ast_hash": "cbca4a32e18cc131e0ce3a54eb64b92d",
+    "mtime": 1792584388.8912044,
+    "seen": 1792584530.161797,
+    "ast_hash": "c9cdcadfb8b46fbba6551a24694429aa",
     "semantic_hash": ""
   },
   "src/ui/components/UnclePukarChoiceModal.tsx": {
-    "mtime": 1791663146.0886507,
-    "seen": 1792235760.449672,
-    "ast_hash": "e1a0316cebac0836ae374ee179f1c583",
-    "semantic_hash": "e1a0316cebac0836ae374ee179f1c583"
+    "mtime": 1792583589.1214066,
+    "seen": 1792583806.477946,
+    "ast_hash": "269a39010b8c9e918445005fc6150ff2",
+    "semantic_hash": ""
   },
   "src/ui/components/multiplayer/CreateJoinView.tsx": {
     "mtime": 1792178326.831529,
@@ -936,9 +936,9 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1791626323.1612122,
-    "seen": 1792235837.88122,
-    "ast_hash": "d71254ffd9370dfdbdacf59ebeae2608",
+    "mtime": 1792583155.5648038,
+    "seen": 1792583806.47807,
+    "ast_hash": "2b9dd9acfb9fac6de8f145b857a8304f",
     "semantic_hash": ""
   },
   "uncle-pukar-modal-preview.html": {
@@ -1035,6 +1035,18 @@
     "mtime": 1792326050.0883334,
     "seen": 1792326079.722498,
     "ast_hash": "5a99957a88bc35f688a5dc0aa43fd41b",
+    "semantic_hash": ""
+  },
+  "tests/ui/mobile-responsiveness.test.tsx": {
+    "mtime": 1792584444.2417417,
+    "seen": 1792584530.161885,
+    "ast_hash": "ace26ed45223bc398eb70ff5c8fa8cdb",
+    "semantic_hash": ""
+  },
+  "tests/ui/player-hand-touch.test.tsx": {
+    "mtime": 1792584510.9338462,
+    "seen": 1792584530.1618938,
+    "ast_hash": "cf428a7e0d7b331feecfbb83e959e95e",
     "semantic_hash": ""
   }
 }

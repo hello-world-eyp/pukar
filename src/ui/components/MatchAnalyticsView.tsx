@@ -355,11 +355,11 @@ export const MatchAnalyticsView: React.FC<MatchAnalyticsViewProps> = ({
         </div>
 
         {/* SVG Chart Container */}
-        <div className="w-full overflow-x-auto">
-          <div className="min-w-[650px]">
+        <div className="w-full overflow-x-auto sm:overflow-x-visible">
+          <div className="w-full min-w-0">
             <svg
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full h-40 sm:h-44 overflow-visible"
+              className="w-full h-36 sm:h-44 overflow-visible"
             >
               {/* Grid Lines */}
               <line

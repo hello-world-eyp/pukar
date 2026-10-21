@@ -187,7 +187,129 @@ export const CenterTable: React.FC<CenterTableProps> = ({
       <div
         className={`relative w-full rounded-2xl sm:rounded-3xl p-2 sm:p-2.5 text-stone-900 ${className}`}
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 items-stretch">
+        {/* MOBILE COMPACT ARENA BAR (<768px): Stock Deck, Discard Pile, Pukar Pool */}
+        <div className="md:hidden flex items-stretch justify-between gap-1.5 h-[110px] w-full">
+          {/* 1. Stock Deck (Mobile) */}
+          <div
+            aria-label="Stock Deck"
+            className="flex-1 flex flex-col items-center justify-between p-1.5 rounded-xl table-well-light min-w-0"
+          >
+            <span className="sr-only">Stock Deck</span>
+            <div className="flex items-center gap-1.5 flex-1 min-h-0">
+              {actualStockCount > 0 ? (
+                <div
+                  onClick={drawStockAllowed ? handleDrawStock : undefined}
+                  className={`relative cursor-pointer transition-all ${
+                    drawStockAllowed ? 'hover:scale-105 active:scale-95 ring-2 ring-sky-500 rounded-lg' : ''
+                  }`}
+                >
+                  <PlayingCard card={dummyStockCard} faceDown size="sm" />
+                </div>
+              ) : (
+                <div className="w-10 h-14 rounded-lg border border-dashed border-stone-300 flex flex-col items-center justify-center p-1 text-center text-stone-500 text-[10px] bg-stone-100">
+                  <span className="font-bold">0</span>
+                </div>
+              )}
+              <div className="flex flex-col text-left">
+                <span className="text-[11px] font-black text-stone-800 leading-tight">Stock</span>
+                <span className="text-[10px] font-extrabold text-stone-600">{actualStockCount} left</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleDrawStock}
+              disabled={!drawStockAllowed || actualStockCount === 0}
+              className={`w-full h-7 px-1 rounded-lg text-[11px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm ${
+                drawStockAllowed && actualStockCount > 0
+                  ? 'btn-game-primary'
+                  : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <ArrowDownCircle className="w-3 h-3 shrink-0" />
+              <span>Draw</span>
+            </button>
+          </div>
+
+          {/* 2. Discard Pile (Mobile) */}
+          <div
+            aria-label="Discard Pile"
+            data-testid="discard-pile-drop-zone-mobile"
+            onDragOver={handleDiscardDragOver}
+            onDragEnter={handleDiscardDragEnter}
+            onDragLeave={handleDiscardDragLeave}
+            onDrop={handleDiscardDrop}
+            className={`flex-1 flex flex-col items-center justify-between p-1.5 rounded-xl table-well-light min-w-0 transition-all ${
+              isDragOverDiscard ? 'ring-2 ring-amber-400 bg-amber-100/90' : ''
+            }`}
+          >
+            <span className="sr-only">Discard Pile</span>
+            <div className="flex items-center gap-1.5 flex-1 min-h-0 relative">
+              {recentCards.length > 0 ? (
+                <div
+                  onClick={handleOpenPeek}
+                  className="relative cursor-pointer hover:scale-105 active:scale-95"
+                  title="Tap to zoom discard pile"
+                >
+                  <PlayingCard card={recentCards[recentCards.length - 1]} size="sm" />
+                </div>
+              ) : (
+                <div className="w-10 h-14 rounded-lg border border-dashed border-stone-300 flex flex-col items-center justify-center p-1 text-center text-stone-500 text-[10px] bg-stone-100">
+                  <span className="font-bold">Empty</span>
+                </div>
+              )}
+              <div className="flex flex-col text-left">
+                <button
+                  type="button"
+                  onClick={handleOpenPeek}
+                  className="text-[11px] font-black text-amber-900 leading-tight flex items-center gap-0.5 cursor-pointer"
+                >
+                  <span>Pile</span>
+                  <ZoomIn className="w-2.5 h-2.5 text-amber-700" />
+                </button>
+                <span className="text-[10px] font-extrabold text-stone-600">{discardPile.length} cards</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleDrawDiscard}
+              disabled={!drawDiscardAllowed || discardPile.length === 0}
+              className={`w-full h-7 px-1 rounded-lg text-[11px] font-black transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm ${
+                drawDiscardAllowed && discardPile.length > 0
+                  ? 'btn-game-amber'
+                  : 'bg-stone-300 text-stone-500 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <ArrowDownCircle className="w-3 h-3 shrink-0" />
+              <span>Take</span>
+            </button>
+          </div>
+
+          {/* 3. Pukar Pool (Mobile) */}
+          <div
+            aria-label="Pukar Pool"
+            className="flex-1 flex flex-col items-center justify-between p-1.5 rounded-xl table-well-light min-w-0"
+          >
+            <span className="sr-only">Pukar Pool (Reserve)</span>
+            <div className="flex items-center gap-1.5 flex-1 min-h-0">
+              <div className="w-10 h-14 rounded-lg bg-gradient-to-br from-emerald-800 to-teal-900 border border-emerald-400 shadow flex flex-col items-center justify-center text-center p-0.5 shrink-0">
+                <span className="font-black uppercase text-amber-300 text-[9px] leading-tight">Pukar</span>
+                <span className="text-[8px] text-emerald-100 font-bold leading-none">13</span>
+              </div>
+              <div className="flex flex-col text-left min-w-0">
+                <span className="text-[11px] font-black text-emerald-800 leading-tight truncate">
+                  {actualPukarCount} Avail
+                </span>
+                <span className="text-[9px] font-bold text-stone-500 leading-tight">+50 pts</span>
+              </div>
+            </div>
+            <div className="w-full text-center py-0.5 px-1 rounded-lg bg-emerald-100/80 border border-emerald-300/60 text-[10px] font-extrabold text-emerald-900 truncate">
+              {actualPukarCount > 0 ? `${actualPukarCount} Pukars` : 'Exhausted'}
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP ARENA GRID (md: and up - full 3D card experience) */}
+        <div className="hidden md:grid md:grid-cols-3 gap-2 sm:gap-3 items-stretch">
           {/* 1. STOCK DECK (LEFT) */}
           <div
             aria-label="Stock Deck"

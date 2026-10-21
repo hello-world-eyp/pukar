@@ -174,12 +174,12 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     return (
       <div
         data-testid="action-controls"
-        className={`h-10 flex items-center justify-center gap-1.5 sm:gap-2 flex-nowrap min-w-0 overflow-hidden ${className}`}
+        className={`min-h-9 sm:min-h-10 flex items-center justify-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap min-w-0 ${className}`}
       >
         {/* DRAW PHASE INLINE GUIDANCE */}
         {!disabled && isDrawPhase && (
-          <div className="h-9 sm:h-10 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950 text-xs sm:text-sm font-black shadow-md animate-pulse shrink-0">
-            <MousePointerClick className="w-4 h-4 text-amber-700 shrink-0" />
+          <div className="h-8 sm:h-10 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-950 text-xs sm:text-sm font-black shadow-md animate-pulse shrink-0">
+            <MousePointerClick className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 shrink-0" />
             <span className="truncate">YOUR TURN: DRAW • Click Deck or Pile</span>
           </div>
         )}
@@ -187,7 +187,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
         {disabled && (
           <div
             data-testid="waiting-turn-indicator"
-            className="h-9 sm:h-10 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 rounded-xl bg-stone-200/80 border border-stone-300 text-stone-600 text-xs font-bold shrink-0"
+            className="h-8 sm:h-10 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 rounded-xl bg-stone-200/80 border border-stone-300 text-stone-600 text-xs font-bold shrink-0"
           >
             <span className="w-2 h-2 rounded-full bg-stone-400 animate-pulse shrink-0" />
             <span>Waiting for turn...</span>
@@ -196,14 +196,14 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
 
         {/* MELD / DISCARD PHASE ACTIONS */}
         {!isDrawPhase && (
-          <div className="h-10 flex items-center gap-1.5 sm:gap-2 flex-nowrap shrink-0 overflow-hidden">
+          <div className="min-h-8 sm:min-h-10 flex items-center justify-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap shrink-0 max-w-full">
             {/* Play New Sequence Button (enabled when valid sequence selected) */}
             <button
               type="button"
               data-testid="btn-play-meld"
               disabled={!canPlayNewMeld}
               onClick={handlePlayMeldClick}
-              className={`h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
+              className={`h-8 sm:h-10 px-2 sm:px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
                 canPlayNewMeld
                   ? 'btn-game-primary'
                   : 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed opacity-60'
@@ -218,17 +218,17 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             </button>
 
             {/* Validation Preview / Tip Badge */}
-            <div data-testid="meld-validation-badge" className="h-9 sm:h-10 flex items-center text-xs sm:text-sm shrink-0">
+            <div data-testid="meld-validation-badge" className="h-8 sm:h-10 flex items-center text-xs sm:text-sm shrink-0">
               {isMeldPhase && (
                 canPlayNewMeld ? (
-                  <span className="inline-flex items-center gap-1 text-emerald-950 font-bold bg-emerald-100 border border-emerald-400 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-sm">
-                    <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-700 shrink-0" />
+                  <span className="inline-flex items-center gap-1 text-emerald-950 font-bold bg-emerald-100 border border-emerald-400 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-sm text-[11px] sm:text-xs">
+                    <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-700 shrink-0" />
                     <span>{`Valid ${meldValidation.type} (+pts)`}</span>
                   </span>
                 ) : selectedCardCount >= 3 ? (
-                  <span className="inline-flex items-center gap-1 text-amber-950 font-bold bg-amber-100 border border-amber-400 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-sm">
-                    <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700 shrink-0" />
-                    <span className="truncate max-w-[140px] sm:max-w-none">{meldValidation.error}</span>
+                  <span className="inline-flex items-center gap-1 text-amber-950 font-bold bg-amber-100 border border-amber-400 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-lg shadow-sm text-[11px] sm:text-xs">
+                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-amber-700 shrink-0" />
+                    <span className="truncate max-w-[100px] sm:max-w-none">{meldValidation.error}</span>
                   </span>
                 ) : null
               )}
@@ -238,7 +238,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
             {selectedCardCount > 0 && isMeldPhase && !canPlayNewMeld && (
               <div
                 data-testid="add-to-sequence-tip"
-                className="hidden 2xl:flex items-center h-9 sm:h-10 gap-1.5 px-2.5 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-xs font-bold shadow-sm shrink-0"
+                className="hidden 2xl:flex items-center h-8 sm:h-10 gap-1.5 px-2.5 rounded-lg bg-yellow-100 border border-yellow-400 text-yellow-950 text-xs font-bold shadow-sm shrink-0"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-600 shrink-0" />
                 <span>Click sequence on table to add</span>
@@ -252,14 +252,15 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
               disabled={!canDiscard}
               onClick={handleDiscardClick}
               title={discardTooltip}
-              className={`h-9 sm:h-10 px-2.5 sm:px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all shadow-md shrink-0 cursor-pointer ${
+              className={`h-8 sm:h-10 px-2 sm:px-3.5 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-1.5 transition-all shadow-md shrink-0 cursor-pointer min-w-fit ${
                 canDiscard
                   ? 'btn-game-danger'
                   : 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed opacity-60'
               }`}
             >
               <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-              <span className="truncate">{discardButtonLabel}</span>
+              <span className="truncate sm:hidden">{selectedCardCount === 1 ? discardButtonLabel : 'Discard'}</span>
+              <span className="truncate hidden sm:inline">{discardButtonLabel}</span>
             </button>
           </div>
         )}

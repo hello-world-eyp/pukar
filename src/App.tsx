@@ -397,6 +397,7 @@ export function App({
     teamAMeldCount >= 3 ||
     teamBMeldCount >= 3 ||
     (isCompactScreen && (teamAMeldCount >= 2 || teamBMeldCount >= 2));
+  const isHandDocked = hasSecondRow || isCompactScreen;
 
   // ---------------------------------------------------------------------------
   // Auspicious Pukar Deck Selection State Tracking
@@ -981,14 +982,14 @@ export function App({
             data-has-second-row={hasSecondRow ? 'true' : undefined}
             data-is-hovering={hasSecondRow ? 'true' : undefined}
             className={`w-full shrink-0 transition-all duration-300 ${
-              hasSecondRow
-                ? 'fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/80 backdrop-blur-md pt-2 sm:pt-2.5 pb-2 sm:pb-3 border-t border-amber-500/30 drop-shadow-[0_-12px_28px_rgba(0,0,0,0.85)]'
+              isHandDocked
+                ? 'fixed bottom-0 inset-x-0 z-40 bg-gradient-to-t from-slate-950 via-slate-950/95 to-slate-950/80 backdrop-blur-md pt-2 sm:pt-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:pb-3 border-t border-amber-500/30 drop-shadow-[0_-12px_28px_rgba(0,0,0,0.85)]'
                 : ''
             }`}
           >
             <div
               className={
-                hasSecondRow
+                isHandDocked
                   ? 'w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 2xl:px-12'
                   : 'w-full'
               }
@@ -1079,9 +1080,9 @@ export function App({
             </div>
           </section>
 
-          {/* 5. Dev Inspector & Hot-Seat Switcher (Hidden in Multiplayer mode for fairness) */}
+          {/* 5. Dev Inspector & Hot-Seat Switcher (Hidden on mobile <768px for clean gameplay, and in Multiplayer mode for fairness) */}
           {(appMode === 'LOCAL' || appMode === 'BOTS') && (
-            <section aria-label="Hot-Seat Tools & Dev Inspector" className="shrink-0">
+            <section aria-label="Hot-Seat Tools & Dev Inspector" className="hidden md:block shrink-0">
               <DevInspector
                 players={gameState.players}
                 currentPlayerIndex={currentViewIndex}
@@ -1107,12 +1108,16 @@ export function App({
             </section>
           )}
 
-          {/* Spacer for bottom hover mode when either team has a second row */}
-          {hasSecondRow && (
+          {/* Spacer for bottom docked hand on mobile or when either team has a second row */}
+          {isHandDocked && (
             <div
               aria-hidden="true"
               data-testid="hand-dock-spacer"
-              className="w-full shrink-0 h-[230px] sm:h-[260px] pointer-events-none"
+              className={`w-full shrink-0 ${
+                isHandCollapsed
+                  ? 'h-14 sm:h-16'
+                  : 'h-[calc(210px+env(safe-area-inset-bottom))] sm:h-[260px]'
+              } pointer-events-none`}
             />
           )}
         </main>

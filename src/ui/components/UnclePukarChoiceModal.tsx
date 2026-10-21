@@ -78,13 +78,13 @@ export const UnclePukarChoiceModal: React.FC<UnclePukarChoiceModalProps> = ({
         {/* ===================================================================
             TOP HEADER: LIVE TIME & JOKE REFERENCE
         ==================================================================== */}
-        <div className="bg-slate-950/80 border-b border-amber-500/30 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-slate-950/80 border-b border-amber-500/30 px-3.5 sm:px-6 py-2.5 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
           <div className="flex items-center gap-3 text-center sm:text-left">
-            <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <Sparkles className="w-6 h-6 animate-pulse" />
+            <div className="p-2 sm:p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+              <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 animate-pulse" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400 tracking-wide">
+              <h2 className="text-lg sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400 tracking-wide">
                 Sid&apos;s Auspicious Pukar Time
               </h2>
               <p className="text-xs sm:text-sm text-slate-300">
@@ -97,10 +97,10 @@ export const UnclePukarChoiceModal: React.FC<UnclePukarChoiceModalProps> = ({
           {/* Real-time Ticking Clock */}
           <div
             data-testid="uncle-live-clock"
-            className="flex items-center gap-2.5 bg-slate-900/90 border border-amber-400/40 px-4 py-2 rounded-2xl shadow-inner shadow-amber-500/10"
+            className="flex items-center gap-2 bg-slate-900/90 border border-amber-400/40 px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-inner shadow-amber-500/10 shrink-0"
           >
-            <Clock className="w-5 h-5 text-amber-400 animate-spin-slow" />
-            <span className="font-mono text-lg sm:text-2xl font-extrabold text-amber-300 tracking-wider">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 animate-spin-slow" />
+            <span className="font-mono text-base sm:text-2xl font-extrabold text-amber-300 tracking-wider">
               {currentTime}
             </span>
           </div>
@@ -109,19 +109,19 @@ export const UnclePukarChoiceModal: React.FC<UnclePukarChoiceModalProps> = ({
         {/* ===================================================================
             BODY: LEFT CARTOON + RIGHT DECK OPTIONS
         ==================================================================== */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div className="p-3.5 sm:p-6 grid grid-cols-1 md:grid-cols-12 gap-3.5 sm:gap-6 items-center">
           {/* Left Side: Uncle Cartoon Illustration */}
-          <div className="md:col-span-5 flex flex-col items-center justify-center bg-gradient-to-b from-amber-500/5 to-slate-950/40 p-4 rounded-2xl border border-amber-500/20">
-            <div className="relative group max-w-[260px] sm:max-w-[290px] w-full flex justify-center">
+          <div className="md:col-span-5 flex flex-col items-center justify-center bg-gradient-to-b from-amber-500/5 to-slate-950/40 p-2 sm:p-4 rounded-2xl border border-amber-500/20">
+            <div className="relative group max-w-[200px] sm:max-w-[290px] w-full flex justify-center">
               <div className="absolute inset-0 bg-gradient-to-t from-amber-500/20 to-transparent blur-xl rounded-full" />
               <img
                 src="/uncle-pukar.png"
                 alt="Sid meditating before Pukar claim"
                 data-testid="uncle-cartoon-image"
-                className="relative z-10 w-auto h-auto max-h-[300px] object-contain drop-shadow-[0_10px_20px_rgba(245,158,11,0.25)] transition-transform duration-300 hover:scale-105"
+                className="relative z-10 w-auto h-auto max-h-[110px] sm:max-h-[220px] md:max-h-[300px] object-contain drop-shadow-[0_10px_20px_rgba(245,158,11,0.25)] transition-transform duration-300 hover:scale-105"
               />
             </div>
-            <p className="mt-3 text-xs text-amber-300/90 font-medium italic text-center">
+            <p className="mt-1.5 sm:mt-3 text-[11px] sm:text-xs text-amber-300/90 font-medium italic text-center">
               &ldquo;Wait, let me see what time it is before taking the Pukar...&rdquo;
             </p>
           </div>

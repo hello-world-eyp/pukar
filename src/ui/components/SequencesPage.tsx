@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Meld, Team } from '../../engine/types';
 import { evaluateMeldScore } from '../../engine/meld-validator';
 import { PlayingCard, getRankLabel, getSuitSymbol } from './PlayingCard';
@@ -63,7 +63,7 @@ export const SequencesPage: React.FC<SequencesPageProps> = ({
   return (
     <div
       data-testid="sequences-page"
-      className={`w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-6 text-slate-100 ${className}`}
+      className={`w-full max-w-[2400px] 2xl:max-w-[2800px] mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6 flex flex-col gap-4 sm:gap-6 text-slate-100 ${className}`}
     >
       {/* =====================================================================
           1. HEADER CONTROLS BAR
@@ -362,11 +362,21 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
   // Check for wildcards
   const wildcardSlot = sortedSlots.find((s) => s.isWildcard);
 
+  // Small screen detection for mobile card sizing
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const check = () => setIsSmallScreen(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   return (
     <div
       data-testid={`enlarged-meld-${meld.id}`}
       data-complete={isPure13 || points === 500 ? 'true' : undefined}
-      className={`rounded-2xl p-4 sm:p-5 border-2 flex flex-col justify-between gap-3 shadow-md transition-all ${
+      className={`rounded-2xl p-3 sm:p-5 border-2 flex flex-col justify-between gap-3 shadow-md transition-all ${
         isPure13 || points === 500
           ? 'bg-stone-200/50 border-stone-300/90 text-stone-600 opacity-65 filter grayscale-[45%] shadow-inner'
           : team === 'A'
@@ -446,11 +456,14 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
               wildLabel = `Wild (${repRank}${repSuit})`;
             }
 
-            const baseMargin = -68;
-            const overlapMargin =
-              sortedSlots.length > 5
-                ? Math.max(-98, baseMargin - (sortedSlots.length - 5) * 5)
-                : baseMargin;
+            const baseMargin = isSmallScreen ? -54 : -68;
+            const overlapMargin = isSmallScreen
+              ? sortedSlots.length > 5
+                ? Math.max(-68, baseMargin - (sortedSlots.length - 5) * 3)
+                : baseMargin
+              : sortedSlots.length > 5
+              ? Math.max(-98, baseMargin - (sortedSlots.length - 5) * 5)
+              : baseMargin;
 
             return (
               <div
@@ -463,7 +476,7 @@ const EnlargedMeldCard: React.FC<EnlargedMeldCardProps> = ({
               >
                 <PlayingCard
                   card={card}
-                  size="lg"
+                  size={isSmallScreen ? 'md' : 'lg'}
                   isWild={isSlotWild}
                   isNew={Boolean(newMeldCardIds && newMeldCardIds.includes(card.id))}
                   representedRank={slot.representedRank}

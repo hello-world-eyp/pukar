@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Card, Suit, Team } from '../../engine/types';
 import { PlayingCard } from './PlayingCard';
 import { X, Pin, Eye, EyeOff } from 'lucide-react';
@@ -303,14 +303,24 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   // Ref to suppress accidental click/selection right after dropping a card
   const dragJustEndedRef = useRef(false);
 
-  // Touch drag state ref for tablet / mobile touchscreens
+  // Touch drag state ref for tablet / mobile touchscreens (supports 300ms long-press to separate scrolling from reordering)
   const touchStateRef = useRef<{
     startIndex: number;
     cardId: string;
     startX: number;
     startY: number;
     hasMoved: boolean;
+    isLongPressed: boolean;
+    timer: any;
   } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (touchStateRef.current?.timer) {
+        clearTimeout(touchStateRef.current.timer);
+      }
+    };
+  }, []);
 
   const activeSortMode = controlledSortMode !== undefined ? controlledSortMode : internalSortMode;
   const activeSortDirection = controlledSortDirection !== undefined ? controlledSortDirection : internalSortDirection;
@@ -499,26 +509,65 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     }, 150);
   };
 
-  // Mobile / Tablet Touch Drag handlers
+  // Mobile / Tablet Touch Drag handlers with 300ms long-press separation
   const handleTouchStart = (e: React.TouchEvent, index: number, card: Card) => {
     if (disabled || e.touches.length !== 1) return;
     const touch = e.touches[0];
+    if (touchStateRef.current?.timer) {
+      clearTimeout(touchStateRef.current.timer);
+    }
+    const timer = setTimeout(() => {
+      if (touchStateRef.current) {
+        touchStateRef.current.isLongPressed = true;
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try {
+            navigator.vibrate(30);
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }, 300);
+
     touchStateRef.current = {
       startIndex: index,
       cardId: card.id,
       startX: touch.clientX,
       startY: touch.clientY,
       hasMoved: false,
+      isLongPressed: false,
+      timer,
     };
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!touchStateRef.current || disabled) return;
+    if (e.touches.length > 1) {
+      // Multi-touch cancellation (e.g. user pinches or uses 2 fingers)
+      if (touchStateRef.current.timer) {
+        clearTimeout(touchStateRef.current.timer);
+      }
+      touchStateRef.current = null;
+      handleDragEnd();
+      return;
+    }
     const touch = e.touches[0];
     const dx = touch.clientX - touchStateRef.current.startX;
     const dy = touch.clientY - touchStateRef.current.startY;
 
-    if (!touchStateRef.current.hasMoved && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+    // If finger moves before 300ms long-press threshold, cancel long-press to allow natural tray scrolling
+    if (!touchStateRef.current.isLongPressed) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        if (touchStateRef.current.timer) {
+          clearTimeout(touchStateRef.current.timer);
+          touchStateRef.current.timer = null;
+        }
+      }
+      return;
+    }
+
+    // Long press was achieved: start card reorder drag
+    if (!touchStateRef.current.hasMoved && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
       touchStateRef.current.hasMoved = true;
       setIsDragging(true);
       setDraggedIndex(touchStateRef.current.startIndex);
@@ -538,17 +587,32 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
   };
 
   const handleTouchEnd = () => {
+    if (touchStateRef.current?.timer) {
+      clearTimeout(touchStateRef.current.timer);
+    }
     if (!touchStateRef.current) {
-      handleDragEnd();
+      if (isDragging) {
+        handleDragEnd();
+      }
       return;
     }
-    const { startIndex, hasMoved } = touchStateRef.current;
+    const { startIndex, hasMoved, isLongPressed } = touchStateRef.current;
     touchStateRef.current = null;
 
-    if (hasMoved && dragOverIndex !== null && dragOverIndex !== startIndex) {
+    if (hasMoved && isLongPressed && dragOverIndex !== null && dragOverIndex !== startIndex) {
       handleMoveCard(startIndex, dragOverIndex);
     }
-    handleDragEnd();
+
+    if (hasMoved || isDragging) {
+      handleDragEnd();
+    } else {
+      // Normal tap without drag: reset transient drag states without setting dragJustEndedRef=true,
+      // so the ensuing click event correctly toggles card selection.
+      setDragOverIndex(null);
+      setDraggedIndex(null);
+      setDraggedCardId(null);
+      setIsDragging(false);
+    }
   };
 
   const handleCardClick = (card: Card) => {
@@ -637,9 +701,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
           </div>
         </div>
 
-        {/* CONTEXTUAL ACTION CONTROLS SLOT (NO SCROLLBARS) */}
+        {/* CONTEXTUAL ACTION CONTROLS SLOT (RESPONSIVE DEDICATED ROW ON MOBILE) */}
         {!isChoosingPukar && actionsSlot && (
-          <div className="flex items-center justify-center my-0 flex-1 min-w-0 max-w-xl mx-auto h-9 overflow-hidden">
+          <div className="w-full md:w-auto order-last md:order-none flex items-center justify-center my-0.5 md:my-0 flex-1 min-w-0 max-w-xl mx-auto min-h-9 md:h-9 overflow-visible md:overflow-hidden">
             {actionsSlot}
           </div>
         )}

@@ -29,10 +29,10 @@ export const FrustrationOverlay: React.FC<FrustrationOverlayProps> = ({
       aria-live="polite"
     >
       <div className="animate-frustration-pop flex flex-col items-center justify-center drop-shadow-[0_20px_35px_rgba(0,0,0,0.7)]">
-        <div className="bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 text-white font-black text-2xl sm:text-4xl md:text-5xl px-8 sm:px-12 py-4 sm:py-5 rounded-3xl shadow-2xl border-4 border-yellow-300 tracking-wider whitespace-nowrap flex items-center gap-3 sm:gap-4 drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]">
-          <span className="text-3xl sm:text-5xl animate-bounce" role="img" aria-label="fire">🔥</span>
+        <div className="bg-gradient-to-r from-red-600 via-orange-500 to-amber-500 text-white font-black text-xl sm:text-4xl md:text-5xl px-4 sm:px-12 py-3 sm:py-5 rounded-3xl shadow-2xl border-4 border-yellow-300 tracking-wider whitespace-normal sm:whitespace-nowrap text-center max-w-[92vw] sm:max-w-none flex items-center justify-center gap-2 sm:gap-4 drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]">
+          <span className="text-2xl sm:text-5xl animate-bounce shrink-0" role="img" aria-label="fire">🔥</span>
           <span>Aap Nahi Samjhoge Meri Duvidha</span>
-          <span className="text-3xl sm:text-5xl animate-bounce" role="img" aria-label="fire">🔥</span>
+          <span className="text-2xl sm:text-5xl animate-bounce shrink-0" role="img" aria-label="fire">🔥</span>
         </div>
         {playerName && (
           <div className="mt-3 text-stone-100 text-sm sm:text-lg font-black bg-stone-950/85 px-5 py-1.5 rounded-full border-2 border-orange-400 shadow-xl backdrop-blur-sm">

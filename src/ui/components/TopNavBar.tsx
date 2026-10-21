@@ -14,6 +14,7 @@ import {
   Lock,
   Unlock,
   X,
+  Menu,
 } from 'lucide-react';
 
 export interface PlayerInfo {
@@ -88,6 +89,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const uncollapsedWidthRef = React.useRef<number | null>(null);
   const [isAutoConsolidated, setIsAutoConsolidated] = React.useState(false);
   const [isAdminVoiceOpen, setIsAdminVoiceOpen] = React.useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   // Close admin voice dropdown if clicked outside
   React.useEffect(() => {
@@ -102,6 +104,20 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isAdminVoiceOpen]);
+
+  // Close mobile menu drawer if Escape key is pressed
+  React.useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
 
   // When consolidatePlayers is explicitly passed, it overrides auto-detection
   const isConsolidated =
@@ -174,14 +190,63 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       ref={headerRef}
       data-testid="top-nav-bar"
       data-consolidated={isConsolidated ? 'true' : 'false'}
-      className={`w-full min-h-[64px] sm:min-h-[72px] bg-[#0e121d] border-b border-slate-800/80 px-4 sm:px-8 py-3 text-slate-100 flex items-center justify-between gap-4 shadow-xl z-30 selection:bg-amber-500/30 overflow-y-hidden ${
+      className={`w-full min-h-[56px] md:min-h-[64px] sm:min-h-[72px] bg-[#0e121d] border-b border-slate-800/80 px-3 sm:px-8 py-2 md:py-3 text-slate-100 flex items-center justify-between gap-3 md:gap-4 shadow-xl z-30 selection:bg-amber-500/30 overflow-y-hidden ${
         isConsolidated ? 'overflow-x-hidden' : 'overflow-x-auto'
       }`}
     >
-      {/* =====================================================================
-          1. LEFT: LOGO, TITLE, AND NAVIGATION PILLS
-      ====================================================================== */}
-      <div className="flex items-center gap-5 sm:gap-7 shrink-0">
+      {/* MOBILE BAR (<768px): Logo + Active Player + Hamburger Toggle */}
+      <div className="flex md:hidden items-center justify-between w-full gap-2">
+        {/* Left: Logo & Title */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="h-9 w-9 rounded-xl bg-lime-400 flex items-center justify-center text-slate-950 font-black text-lg shadow-md shrink-0">
+            ♠
+          </div>
+          <span className="font-black text-lg tracking-tight text-white lowercase">
+            pukar
+          </span>
+          {displayTitle ? (
+            <span className="text-xs text-slate-400 font-semibold truncate max-w-[100px]">
+              {displayTitle}
+            </span>
+          ) : null}
+        </div>
+
+        {/* Right: Active Player Pill & Hamburger Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          {players.length > 0 && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs font-bold text-slate-300">
+              <div
+                className={`h-5 w-5 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
+                  (players[activeIndex]?.team ?? 'A') === 'A'
+                    ? TEAM_AVATAR_PALETTE.A.bg
+                    : TEAM_AVATAR_PALETTE.B.bg
+                }`}
+              >
+                {players[activeIndex]?.name ? players[activeIndex].name.charAt(0).toUpperCase() : 'P'}
+              </div>
+              <span className="truncate max-w-[70px] text-stone-200">{players[activeIndex]?.name}</span>
+            </div>
+          )}
+
+          {/* Hamburger Menu Toggle Button */}
+          <button
+            type="button"
+            data-testid="btn-mobile-menu-toggle"
+            aria-label="Toggle navigation menu"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors flex items-center justify-center cursor-pointer shadow-sm shrink-0"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5 text-slate-200" />}
+          </button>
+        </div>
+      </div>
+
+      {/* DESKTOP NAVBAR (md: and up - untouched layout with full controls) */}
+      <div className="hidden md:flex items-center justify-between w-full gap-4">
+        {/* =====================================================================
+            1. LEFT: LOGO, TITLE, AND NAVIGATION PILLS
+        ====================================================================== */}
+        <div className="flex items-center gap-5 sm:gap-7 shrink-0">
         {/* Branding & Subtitle */}
         <div className="flex items-center gap-3.5 shrink-0">
           <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-lime-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-md shrink-0">
@@ -617,7 +682,221 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <span className="hidden sm:inline">New Game</span>
           </button>
         )}
+        </div>
       </div>
+      {/* End Desktop Navbar container */}
+
+      {/* MOBILE SLIDE-OUT DRAWER OVERLAY (<768px) */}
+      {isMobileMenuOpen && (
+        <div
+          data-testid="mobile-menu-drawer"
+          className="fixed inset-0 z-50 md:hidden bg-slate-950/80 backdrop-blur-sm flex flex-col justify-start animate-fade-in"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div
+            className="bg-[#0e121d] border-b border-slate-800 p-4 shadow-2xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-lime-400 flex items-center justify-center text-slate-950 font-black text-base shadow-sm">
+                  ♠
+                </div>
+                <span className="font-black text-lg text-white">Menu & Navigation</span>
+              </div>
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white border border-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Navigation Tabs in Mobile Drawer */}
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Game Views</span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange('table');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`h-11 px-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeTab === 'table'
+                      ? 'bg-slate-100 text-slate-950 shadow-md font-black'
+                      : 'bg-slate-900 border border-slate-800 text-slate-300'
+                  }`}
+                >
+                  Table
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange('sequences');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`h-11 px-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeTab === 'sequences'
+                      ? 'bg-slate-100 text-slate-950 shadow-md font-black'
+                      : 'bg-slate-900 border border-slate-800 text-slate-300'
+                  }`}
+                >
+                  Sequences
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onTabChange('scoreboard');
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`h-11 px-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    activeTab === 'scoreboard'
+                      ? 'bg-slate-100 text-slate-950 shadow-md font-black'
+                      : 'bg-slate-900 border border-slate-800 text-slate-300'
+                  }`}
+                >
+                  Scoreboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenRules();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="h-11 px-3 rounded-xl text-sm font-bold bg-slate-900 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  How to play
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Actions in Mobile Drawer */}
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-slate-800">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Game Controls</span>
+              <div className="flex flex-col gap-2">
+                {/* Voice Chat in Mobile Drawer */}
+                {voiceChat && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      voiceChat.onToggleMic();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`h-11 px-4 rounded-xl border text-sm font-bold flex items-center justify-between cursor-pointer ${
+                      !voiceChat.isVoiceActive || voiceChat.isMuted
+                        ? 'bg-slate-900 border-slate-800 text-slate-300'
+                        : 'bg-emerald-950 border-emerald-500 text-emerald-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {!voiceChat.isVoiceActive || voiceChat.isMuted ? (
+                        <MicOff className="w-4 h-4 text-stone-400" />
+                      ) : (
+                        <Mic className="w-4 h-4 text-emerald-400" />
+                      )}
+                      <span>Voice Chat</span>
+                    </div>
+                    <span className="text-xs font-mono font-bold">
+                      {!voiceChat.isVoiceActive
+                        ? 'Join Voice'
+                        : voiceChat.isMuted
+                        ? 'Muted'
+                        : 'Active'}
+                    </span>
+                  </button>
+                )}
+
+                {/* Sound Toggle in Mobile Drawer */}
+                {onToggleMute && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleMute();
+                    }}
+                    className="h-11 px-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-sm font-bold flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
+                      <span>Game Sound</span>
+                    </div>
+                    <span className="text-xs font-mono">{isMuted ? 'Muted' : 'Enabled'}</span>
+                  </button>
+                )}
+
+                {/* Hide / Show Hand Cards in Mobile Drawer */}
+                {onToggleHandCollapse && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleHandCollapse();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="h-11 px-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-sm font-bold flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      {isHandCollapsed ? <Eye className="w-4 h-4 text-amber-400" /> : <EyeOff className="w-4 h-4 text-stone-400" />}
+                      <span>Hand Cards</span>
+                    </div>
+                    <span className="text-xs font-mono">{isHandCollapsed ? 'Hidden (Tap to show)' : 'Visible'}</span>
+                  </button>
+                )}
+
+                {/* Download Debug Log in Mobile Drawer */}
+                {onExportDebugLog && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onExportDebugLog();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="h-11 px-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white text-sm font-bold flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Download className="w-4 h-4 text-lime-400" />
+                      <span>Download Debug Log</span>
+                    </div>
+                    <span className="text-xs text-slate-500 font-mono">qq</span>
+                  </button>
+                )}
+
+                {/* Return to Main Menu in Mobile Drawer */}
+                {onExitToMenu && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onExitToMenu();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="h-11 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 text-sm font-bold flex items-center gap-2 cursor-pointer"
+                  >
+                    <Home className="w-4 h-4 text-amber-400" />
+                    <span>Return to Main Menu</span>
+                  </button>
+                )}
+
+                {/* New Game in Mobile Drawer */}
+                {onNewGame && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onNewGame();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="h-11 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Start New Game</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

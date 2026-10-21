@@ -92,6 +92,13 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
     }
   };
 
+  const [mobileActiveTeam, setMobileActiveTeam] = useState<'A' | 'B'>(activeTeam ?? 'A');
+  useEffect(() => {
+    if (activeTeam) {
+      setMobileActiveTeam(activeTeam);
+    }
+  }, [activeTeam]);
+
   const scoreA = calculateTeamPoints(listA);
   const scoreB = calculateTeamPoints(listB);
 
@@ -101,50 +108,84 @@ export const TableMeldBoard: React.FC<TableMeldBoardProps> = ({
       data-testid="table-meld-board"
       className={`w-full ${className}`}
     >
+      {/* Mobile Team Melds Switcher (<640px) */}
+      <div className="sm:hidden flex items-center justify-center p-1 rounded-xl bg-stone-200/90 border border-stone-300 mb-2 gap-1 shadow-inner">
+        <button
+          type="button"
+          onClick={() => setMobileActiveTeam('A')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            mobileActiveTeam === 'A'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'text-stone-700 hover:text-stone-950'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-blue-300" />
+          <span>Team A ({listA.length})</span>
+          <span className="text-[10px] opacity-80">{scoreA} pts</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileActiveTeam('B')}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            mobileActiveTeam === 'B'
+              ? 'bg-amber-600 text-white shadow-md'
+              : 'text-stone-700 hover:text-stone-950'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-300" />
+          <span>Team B ({listB.length})</span>
+          <span className="text-[10px] opacity-80">{scoreB} pts</span>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-2.5">
         {/* TEAM A MELDS COLUMN */}
-        <TeamMeldColumn
-          team="A"
-          teamName="Team A"
-          teamColor="blue"
-          melds={listA}
-          score={scoreA}
-          isActive={activeTeam === 'A'}
-          selectedMeldId={selectedMeldId}
-          onSelectMeld={onSelectMeld}
-          onZoomMeld={onZoomMeld}
-          sortDirection={sortDirection}
-          cardSize={cardSize}
-          selectedCards={effectiveSelectedCards}
-          allHandCards={allHandCards}
-          canAdd={canAdd}
-          onAddToMeld={onAddToMeld}
-          isRippling={isRippling}
-          compactMeldHeaders={compactMeldHeaders}
-          newMeldCardIds={newMeldCardIds}
-        />
+        <div className={mobileActiveTeam === 'A' ? 'block' : 'hidden sm:block'}>
+          <TeamMeldColumn
+            team="A"
+            teamName="Team A"
+            teamColor="blue"
+            melds={listA}
+            score={scoreA}
+            isActive={activeTeam === 'A'}
+            selectedMeldId={selectedMeldId}
+            onSelectMeld={onSelectMeld}
+            onZoomMeld={onZoomMeld}
+            sortDirection={sortDirection}
+            cardSize={cardSize}
+            selectedCards={effectiveSelectedCards}
+            allHandCards={allHandCards}
+            canAdd={canAdd}
+            onAddToMeld={onAddToMeld}
+            isRippling={isRippling}
+            compactMeldHeaders={compactMeldHeaders}
+            newMeldCardIds={newMeldCardIds}
+          />
+        </div>
 
         {/* TEAM B MELDS COLUMN */}
-        <TeamMeldColumn
-          team="B"
-          teamName="Team B"
-          teamColor="amber"
-          melds={listB}
-          score={scoreB}
-          isActive={activeTeam === 'B'}
-          selectedMeldId={selectedMeldId}
-          onSelectMeld={onSelectMeld}
-          onZoomMeld={onZoomMeld}
-          sortDirection={sortDirection}
-          cardSize={cardSize}
-          selectedCards={effectiveSelectedCards}
-          allHandCards={allHandCards}
-          canAdd={canAdd}
-          onAddToMeld={onAddToMeld}
-          isRippling={isRippling}
-          compactMeldHeaders={compactMeldHeaders}
-          newMeldCardIds={newMeldCardIds}
-        />
+        <div className={mobileActiveTeam === 'B' ? 'block' : 'hidden sm:block'}>
+          <TeamMeldColumn
+            team="B"
+            teamName="Team B"
+            teamColor="amber"
+            melds={listB}
+            score={scoreB}
+            isActive={activeTeam === 'B'}
+            selectedMeldId={selectedMeldId}
+            onSelectMeld={onSelectMeld}
+            onZoomMeld={onZoomMeld}
+            sortDirection={sortDirection}
+            cardSize={cardSize}
+            selectedCards={effectiveSelectedCards}
+            allHandCards={allHandCards}
+            canAdd={canAdd}
+            onAddToMeld={onAddToMeld}
+            isRippling={isRippling}
+            compactMeldHeaders={compactMeldHeaders}
+            newMeldCardIds={newMeldCardIds}
+          />
+        </div>
       </div>
     </div>
   );
