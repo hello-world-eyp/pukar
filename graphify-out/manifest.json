@@ -126,9 +126,9 @@
     "semantic_hash": "4506e10ea0fbbb99c7220775fae10fbe"
   },
   "src/engine/meld-validator.ts": {
-    "mtime": 1792319751.95218,
-    "seen": 1792319878.0586932,
-    "ast_hash": "f9d0504897e666d0797204ef4f329053",
+    "mtime": 1792586521.4975083,
+    "seen": 1792586595.934604,
+    "ast_hash": "fe801ba113875977416ba77beb5ec373",
     "semantic_hash": ""
   },
   "src/engine/reducer.ts": {
@@ -480,10 +480,10 @@
     "semantic_hash": "bc4baab8d7597842e96985c0e10fbf77"
   },
   "tests/engine/joker-pickup-and-lock.test.ts": {
-    "mtime": 1792175567.0565112,
-    "seen": 1792235760.4497018,
-    "ast_hash": "a8d900eab5eebf5ff258ddf3ad948561",
-    "semantic_hash": "a8d900eab5eebf5ff258ddf3ad948561"
+    "mtime": 1792586563.3567655,
+    "seen": 1792586595.9346719,
+    "ast_hash": "807eac38333ac52ff1fbb733965c3bbd",
+    "semantic_hash": ""
   },
   "tests/engine/match-analytics.test.ts": {
     "mtime": 1792235217.7158108,

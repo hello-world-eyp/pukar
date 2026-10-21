@@ -798,11 +798,14 @@ export function canAddCardsToMeld(
       const jokerRepresentedSuit = normalJokerSlot.representedSuit ?? runSuit;
 
       // Check if cardsToAdd contains the exact card the Normal Joker represents!
+      // If the Normal Joker represents rank 2 of the run's suit, the matching suited 2 (e.g. 2♥ in a Hearts run)
+      // is the natural replacement card that replaces the Joker and picks it up into hand.
       const hasReplacementCard = cardsToAdd.some(
         (c) =>
-          !isWildcard(c) &&
+          !isNaturalJoker(c) &&
           doesCardMatchRank(c.rank, jokerRepresentedRank) &&
-          c.suit === jokerRepresentedSuit
+          c.suit === jokerRepresentedSuit &&
+          (jokerRepresentedRank === 2 || !isWildcard(c))
       );
 
       if (hasReplacementCard) {

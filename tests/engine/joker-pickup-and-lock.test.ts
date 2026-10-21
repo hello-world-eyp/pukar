@@ -116,6 +116,70 @@ describe('Normal Joker Pickup & Immutability vs "2" Wildcard', () => {
       expect(result.updatedSlots?.every((s) => !s.isWildcard)).toBe(true);
       expect(result.updatedSlots?.find((s) => s.representedRank === 1)?.card.id).toBe('cAd');
     });
+
+    it('auto picks up the Normal Joker when replaced by a suited 2 (rank 2) representing rank 2 in a run', () => {
+      // Represents the user's exact scenario: 6♥, 5♥, 4♥, 3♥, Joker(as 2♥), A♥
+      const cardA = makeCard('cAh', 'HEARTS', 14);
+      const joker = makeCard('joker1', null, 0, true);
+      const card3 = makeCard('c3h', 'HEARTS', 3);
+      const card4 = makeCard('c4h', 'HEARTS', 4);
+      const card5 = makeCard('c5h', 'HEARTS', 5);
+      const card6 = makeCard('c6h', 'HEARTS', 6);
+
+      const meld: Meld = {
+        id: 'meld-run-joker-2-hearts',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [card6, card5, card4, card3, joker, cardA],
+        slots: [
+          { card: cardA, representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: joker, representedRank: 2, representedSuit: 'HEARTS', isWildcard: true },
+          { card: card3, representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card4, representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card5, representedRank: 5, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card6, representedRank: 6, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+      };
+
+      const card2Hearts = makeCard('c2h', 'HEARTS', 2);
+      const result = canAddCardsToMeld(meld, [card2Hearts]);
+
+      expect(result.valid).toBe(true);
+      expect(result.pickedUpCard).toBeDefined();
+      expect(result.pickedUpCard?.id).toBe('joker1');
+      expect(result.updatedSlots).toHaveLength(6);
+      expect(result.updatedSlots?.map((s) => s.representedRank)).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(result.updatedSlots?.every((s) => !s.isWildcard)).toBe(true);
+      expect(result.updatedSlots?.find((s) => s.representedRank === 2)?.card.id).toBe('c2h');
+    });
+
+    it('rejects a cross-suit 2 (e.g. 2♣) from replacing a Normal Joker representing 2♥ in a Hearts run', () => {
+      const cardA = makeCard('cAh', 'HEARTS', 14);
+      const joker = makeCard('joker1', null, 0, true);
+      const card3 = makeCard('c3h', 'HEARTS', 3);
+      const card4 = makeCard('c4h', 'HEARTS', 4);
+
+      const meld: Meld = {
+        id: 'meld-run-joker-hearts',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [card4, card3, joker, cardA],
+        slots: [
+          { card: cardA, representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: joker, representedRank: 2, representedSuit: 'HEARTS', isWildcard: true },
+          { card: card3, representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card4, representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+      };
+
+      const crossSuit2 = makeCard('c2c', 'CLUBS', 2);
+      const result = canAddCardsToMeld(meld, [crossSuit2]);
+      // Should fail because 2♣ is not 2♥ and cannot replace the Joker or shift it
+      expect(result.valid).toBe(false);
+      expect(result.pickedUpCard).toBeUndefined();
+    });
   });
 
   describe('Normal Joker Immutability (Cannot Shift Up or Down)', () => {
@@ -457,6 +521,77 @@ describe('Normal Joker Pickup & Immutability vs "2" Wildcard', () => {
       expect(playerHand.some((c) => c.id === 'card-ad')).toBe(false);
       expect(playerHand.some((c) => c.id === 'card-joker-d')).toBe(true);
       expect(addResult.state.lastPickedUpCard?.id).toBe('card-joker-d');
+    });
+
+    it('picks up Joker into hand when ADD_TO_MELD replaces rank 2 Joker with 2 of Hearts (rank 2 card)', () => {
+      const initialState = dealInitialState(4);
+      const cardAh = makeCard('card-ah', 'HEARTS', 14);
+      const card3h = makeCard('card-3h', 'HEARTS', 3);
+      const card4h = makeCard('card-4h', 'HEARTS', 4);
+      const card5h = makeCard('card-5h', 'HEARTS', 5);
+      const card6h = makeCard('card-6h', 'HEARTS', 6);
+      const joker = makeCard('card-joker-h', null, 0, true);
+
+      const tableMeld: Meld = {
+        id: 'meld-hearts-impure',
+        team: 'A',
+        type: 'RUN',
+        suit: 'HEARTS',
+        cards: [card6h, card5h, card4h, card3h, joker, cardAh],
+        slots: [
+          { card: cardAh, representedRank: 1, representedSuit: 'HEARTS', isWildcard: false },
+          { card: joker, representedRank: 2, representedSuit: 'HEARTS', isWildcard: true },
+          { card: card3h, representedRank: 3, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card4h, representedRank: 4, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card5h, representedRank: 5, representedSuit: 'HEARTS', isWildcard: false },
+          { card: card6h, representedRank: 6, representedSuit: 'HEARTS', isWildcard: false },
+        ],
+        isClean: false,
+        isPure: false,
+        isPure13: false,
+        points: 100,
+      };
+
+      const card2h = makeCard('card-2h', 'HEARTS', 2);
+      const cardExtra = makeCard('card-extra', 'SPADES', 10);
+
+      const stateWithMeld = {
+        ...initialState,
+        currentPlayerIndex: 0,
+        phase: 'MELD' as const,
+        melds: {
+          ...initialState.melds,
+          A: [tableMeld],
+        },
+        players: initialState.players.map((p, idx) =>
+          idx === 0
+            ? { ...p, hand: [card2h, cardExtra] }
+            : p
+        ),
+      };
+
+      const addResult = pukarReducer(stateWithMeld, {
+        type: 'ADD_TO_MELD',
+        meldId: 'meld-hearts-impure',
+        cardIds: ['card-2h'],
+      });
+
+      expect(addResult.error).toBeUndefined();
+      const updatedMeld = addResult.state.melds.A[0];
+      // Joker was removed from table
+      expect(updatedMeld.cards.some((c) => c.id === 'card-joker-h')).toBe(false);
+      // 2♥ was added to table
+      expect(updatedMeld.cards.some((c) => c.id === 'card-2h')).toBe(true);
+      // Run is now natural 1-6 Hearts (all wildcards false)
+      expect(updatedMeld.slots.map((s) => s.representedRank)).toEqual([1, 2, 3, 4, 5, 6]);
+      expect(updatedMeld.slots.every((s) => !s.isWildcard)).toBe(true);
+
+      // Player 0 hand lost 2♥ and GAINED the Joker
+      const playerHand = addResult.state.players[0].hand;
+      expect(playerHand.some((c) => c.id === 'card-2h')).toBe(false);
+      expect(playerHand.some((c) => c.id === 'card-joker-h')).toBe(true);
+      expect(addResult.state.lastPickedUpCard?.id).toBe('card-joker-h');
+      expect(addResult.state.matchStats?.playerStats[0].jokersStolen).toBe(1);
     });
   });
 
